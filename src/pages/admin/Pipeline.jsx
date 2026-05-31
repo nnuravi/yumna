@@ -12,6 +12,15 @@ const ROLE_STAGE_MAP = {
   super:       null,
 }
 
+const STAGE_GROUPS = [
+  { label: 'INTAKE',       stages: ['submitted', 'kyc'] },
+  { label: 'CREDIT',       stages: ['credit_score'] },
+  { label: 'RISK',         stages: ['risk'] },
+  { label: 'LEGAL',        stages: ['legal'] },
+  { label: 'OPS',          stages: ['approved', 'disbursed'] },
+  { label: 'COLLECTIONS',  stages: ['repayment', 'overdue'] },
+]
+
 function riskColor(score) {
   if (score === null) return { bg: '#f1f5f9', text: '#94a3b8' }
   if (score < 30) return { bg: '#ecfdf5', text: '#059669' }
@@ -255,11 +264,14 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
   const currentUser = appState.currentUser
 
   const [cardStage,       setCardStage]       = useState(card.stage)
-  const [showStageMenu,   setShowStageMenu]   = useState(false)
   const [showAssignPanel, setShowAssignPanel] = useState(false)
   const [assignTarget,    setAssignTarget]    = useState(null)
   const [assignNote,      setAssignNote]      = useState('')
   const [assignedTo,      setAssignedTo]      = useState(card.assignedTo)
+  const [converted,       setConverted]       = useState(false)
+  const [extraDocs,       setExtraDocs]       = useState(0)
+  const [extraMeetings,   setExtraMeetings]   = useState(0)
+  const [extraQuotes,     setExtraQuotes]     = useState(0)
 
   const stageInfo = PIPELINE_STAGES.find(s => s.id === cardStage)
 
@@ -278,6 +290,14 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
   const missingDocs      = card.documents.filter(d => d.status === 'missing').length
   const paidInstalments  = card.stage === 'overdue' ? 2 : card.stage === 'repayment' ? 1 : 0
   const overdueInstalments = card.stage === 'overdue' ? 1 : 0
+
+  const cardNum = parseInt(card.id.replace('FR-', ''))
+  const smartCounts = {
+    documents:  card.documents.length + extraDocs,
+    meetings:   (cardNum * 7 % 5) + 1 + extraMeetings,
+    quotations: (cardNum * 3 % 3) + 1 + extraQuotes,
+    similar:    (cardNum * 11 % 8) + 2,
+  }
 
   const missingDocNames = card.documents.filter(d => d.status === 'missing').map(d => d.name)
   const pendingDocCount = card.documents.filter(d => d.status === 'pending').length
@@ -340,7 +360,6 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
   const handleMoveStage = (newStageId) => {
     const label = PIPELINE_STAGES.find(s => s.id === newStageId)?.label || newStageId
     setCardStage(newStageId)
-    setShowStageMenu(false)
     setTimeline(prev => [...prev, {
       id: `hist-${Date.now()}`, type: 'history', icon: '📋',
       text: `Stage moved to ${label} by ${currentUser?.name || 'You'}`,
@@ -353,7 +372,6 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
     const nextStage = cardStage === 'legal' ? 'approved' : 'disbursed'
     const label = cardStage === 'legal' ? 'APPROVED' : 'DISBURSED'
     setCardStage(nextStage)
-    setShowStageMenu(false)
     setTimeline(prev => [...prev, {
       id: `approval-${Date.now()}`, type: 'history', icon: '✅',
       text: `Finance request ${label} by ${currentUser?.name || 'You'}`,
@@ -405,12 +423,6 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
         </button>
         <span className="text-slate-300">/</span>
         <span className="font-semibold text-slate-800 text-[13px]">{card.id}</span>
-        {stageInfo && (
-          <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full"
-            style={{ background: stageInfo.color + '22', color: stageInfo.color }}>
-            {stageInfo.label}
-          </span>
-        )}
 
         {/* Smart profile buttons */}
         <div className="flex gap-2 ml-2">
@@ -442,6 +454,146 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
             </svg>
           </button>
         </div>
+      </div>
+
+      {/* ── Row 2: Pipeline Stage Bar ── */}
+      <div className="px-5 py-2 border-b border-slate-100 bg-white shrink-0 overflow-x-auto">
+        <div className="flex items-center gap-0" style={{ minWidth: 'max-content' }}>
+          {STAGE_GROUPS.map((group, gi) => {
+            const stageOrder = PIPELINE_STAGES.map(s => s.id)
+            const currentIdx = stageOrder.indexOf(cardStage)
+            return (
+              <div key={group.label} className="flex items-center">
+                {gi > 0 && <span style={{ color: '#e2e8f0', margin: '0 8px', fontSize: 18, lineHeight: 1 }}>|</span>}
+                <div className="flex items-center gap-0">
+                  <span style={{ fontSize: 9, fontWeight: 700, color: '#94a3b8', letterSpacing: '0.1em', marginRight: 6, textTransform: 'uppercase' }}>
+                    {group.label}
+                  </span>
+                  {group.stages.map((stageId, si) => {
+                    const s = PIPELINE_STAGES.find(p => p.id === stageId)
+                    if (!s) return null
+                    const sIdx = stageOrder.indexOf(stageId)
+                    const isPast    = sIdx < currentIdx
+                    const isCurrent = stageId === cardStage
+                    const isFuture  = sIdx > currentIdx
+                    return (
+                      <div key={stageId} className="flex items-center">
+                        {si > 0 && <span style={{ color: '#d1d5db', fontSize: 10, margin: '0 4px' }}>›</span>}
+                        <button
+                          onClick={() => !isCurrent && handleMoveStage(stageId)}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: 5,
+                            padding: '4px 6px', borderRadius: 8, border: 'none',
+                            background: isCurrent ? s.color + '14' : 'transparent',
+                            cursor: isCurrent ? 'default' : 'pointer',
+                          }}>
+                          <span style={{
+                            width: 14, height: 14, borderRadius: '50%',
+                            border: `1.5px solid ${isPast ? '#cbd5e1' : isCurrent ? s.color : '#d1d5db'}`,
+                            background: isPast ? '#f1f5f9' : isCurrent ? s.color : 'transparent',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: 8, color: isPast ? '#94a3b8' : 'white',
+                            flexShrink: 0,
+                          }}>
+                            {isPast ? '✓' : ''}
+                          </span>
+                          <span style={{
+                            fontSize: 11,
+                            fontWeight: isCurrent ? 700 : 400,
+                            color: isCurrent ? s.color : isPast ? '#94a3b8' : '#64748b',
+                            whiteSpace: 'nowrap',
+                          }}>
+                            {s.label}
+                          </span>
+                        </button>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* ── Row 3: Smart Buttons + Quick Actions ── */}
+      <div className="px-5 py-2 border-b border-slate-100 bg-white shrink-0 flex items-center gap-2 flex-wrap">
+        {/* Smart Buttons */}
+        {[
+          { icon: '📄', label: 'Documents',    count: smartCounts.documents,  onAdd: () => setExtraDocs(n => n + 1) },
+          { icon: '📅', label: 'Meetings',     count: smartCounts.meetings,   onAdd: () => setExtraMeetings(n => n + 1) },
+          { icon: '📋', label: 'Quotations',   count: smartCounts.quotations, onAdd: () => setExtraQuotes(n => n + 1) },
+          { icon: '👥', label: 'Similar Leads', count: smartCounts.similar,   onAdd: null },
+        ].map(({ icon, label, count, onAdd }) => (
+          <button key={label} onClick={onAdd || undefined}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-[11px] font-semibold text-slate-600 hover:border-indigo-100 hover:text-indigo-700 hover:bg-indigo-50 transition-colors">
+            <span>{icon}</span>
+            <span className="tabular-nums">{count}</span>
+            <span>{label}</span>
+            {onAdd && <span style={{ fontSize: 10, color: '#94a3b8', marginLeft: 2 }}>+</span>}
+          </button>
+        ))}
+
+        <div className="flex-1" />
+
+        {/* Quick Actions (role-gated) */}
+        {['super', 'account_mgr'].includes(currentUser?.adminRole) && (
+          <button
+            onClick={() => {
+              if (!converted) {
+                setConverted(true)
+                setTimeline(prev => [...prev, {
+                  id: `conv-${Date.now()}`, type: 'history', icon: '↗',
+                  text: `Promoted to formal pipeline entry by ${currentUser?.name || 'You'}`,
+                  date: new Date().toLocaleString('en-SA', { dateStyle: 'short', timeStyle: 'short' }),
+                }])
+              }
+            }}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 5,
+              padding: '5px 12px', borderRadius: 8,
+              border: converted ? '1.5px solid #10b981' : '1.5px solid rgba(99,102,241,0.35)',
+              background: converted ? '#f0fdf4' : 'rgba(99,102,241,0.05)',
+              fontSize: 11, fontWeight: 600,
+              color: converted ? '#059669' : '#4f46e5', cursor: 'pointer',
+            }}>
+            {converted ? '✓ Converted' : '↗ Convert Pipeline'}
+          </button>
+        )}
+        {['super', 'account_mgr', 'legal'].includes(currentUser?.adminRole) && (
+          <button
+            onClick={() => {
+              setExtraQuotes(n => n + 1)
+              setTimeline(prev => [...prev, {
+                id: `quote-${Date.now()}`, type: 'history', icon: '📋',
+                text: `New quotation created by ${currentUser?.name || 'You'}`,
+                date: new Date().toLocaleString('en-SA', { dateStyle: 'short', timeStyle: 'short' }),
+              }])
+            }}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 5,
+              padding: '5px 12px', borderRadius: 8,
+              border: '1.5px solid #e2e8f0', background: 'white',
+              fontSize: 11, fontWeight: 600, color: '#374151', cursor: 'pointer',
+            }}>
+            + New Quotation
+          </button>
+        )}
+        <button
+          onClick={() => setTimeline(prev => [...prev, {
+            id: `enrich-${Date.now()}`, type: 'correspondence', from: 'Yumi AI',
+            message: 'Data enrichment initiated. I will update buyer credit profile, cross-reference SIMAH records, and surface similar sector transactions.',
+            autoRead: true,
+            date: new Date().toLocaleString('en-SA', { dateStyle: 'short', timeStyle: 'short' }),
+          }])}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 5,
+            padding: '5px 12px', borderRadius: 8,
+            border: '1.5px solid rgba(139,92,246,0.3)', background: 'rgba(139,92,246,0.05)',
+            fontSize: 11, fontWeight: 600, color: '#7c3aed', cursor: 'pointer',
+          }}>
+          ✦ Enrich
+        </button>
       </div>
 
       {/* ── Body: form + chatter ── */}
@@ -845,45 +997,6 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
               padding: '10px 24px',
               display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
             }}>
-              {/* Move Stage */}
-              <div style={{ position: 'relative' }}>
-                {showStageMenu && (
-                  <div onClick={() => setShowStageMenu(false)} style={{ position: 'fixed', inset: 0, zIndex: 40 }} />
-                )}
-                <button onClick={() => setShowStageMenu(v => !v)} style={{
-                  display: 'flex', alignItems: 'center', gap: 6,
-                  padding: '6px 12px', borderRadius: 20,
-                  background: 'white', border: '1.5px solid #e2e8f0',
-                  fontSize: 12, fontWeight: 600, color: '#374151', cursor: 'pointer',
-                }}>
-                  <span>📋</span>
-                  Move Stage
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                    <polyline points="6 9 12 15 18 9"/>
-                  </svg>
-                </button>
-                {showStageMenu && (
-                  <div style={{
-                    position: 'absolute', bottom: '110%', left: 0, zIndex: 50,
-                    background: 'white', borderRadius: 12, border: '1px solid #e2e8f0',
-                    boxShadow: '0 4px 24px rgba(0,0,0,0.12)', padding: '6px 0', minWidth: 200,
-                  }}>
-                    {PIPELINE_STAGES.map(s => (
-                      <button key={s.id} onClick={() => handleMoveStage(s.id)} disabled={s.id === cardStage} style={{
-                        display: 'block', width: '100%', textAlign: 'left',
-                        padding: '7px 14px', fontSize: 12, cursor: s.id === cardStage ? 'default' : 'pointer',
-                        background: s.id === cardStage ? '#f8fafc' : 'transparent',
-                        color: s.id === cardStage ? '#94a3b8' : '#334155',
-                        fontWeight: s.id === cardStage ? 700 : 500, border: 'none',
-                      }}>
-                        <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: s.color, marginRight: 8 }} />
-                        {s.label}{s.id === cardStage && ' ← current'}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
               {/* Approve (role-gated) */}
               {canApprove && (
                 <button onClick={handleApprove} style={{
