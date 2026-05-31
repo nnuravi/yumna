@@ -251,7 +251,7 @@ function ChatterPanel({ timeline, chatterMode, setChatterMode, draftText, setDra
 
 // ── Card Detail Page ──────────────────────────────────────────────────────────
 
-function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext, onNavigate, onCardUpdate }) {
+function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext, onNavigate, onCardUpdate, onPrevInLane, onNextInLane, laneIdx, laneTotal, laneLabel }) {
   const [mdrPayer, setMdrPayer] = useState('split_50_50')
   const [emiFreq, setEmiFreq] = useState(card.emiFrequency || 'bimonthly')
   const [invoiceGenerated, setInvoiceGenerated] = useState(false)
@@ -600,7 +600,7 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
       <div className="flex-1 flex overflow-hidden">
 
         {/* LEFT — scrollable form */}
-        <div className="flex-1 overflow-y-auto" style={{ background: '#f8fafc', position: 'relative' }}>
+        <div className="flex-1 overflow-y-auto" style={{ background: '#f8fafc' }}>
           <style>{`@keyframes yumi-pulse { 0%,100%{opacity:1} 50%{opacity:0.35} }`}</style>
           <div className="max-w-2xl mx-auto p-6 space-y-6">
 
@@ -899,134 +899,6 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
             </Section>
 
           </div>
-
-          {/* STICKY ACTION BAR + ASSIGN PANEL */}
-          <div style={{ position: 'sticky', bottom: 0, zIndex: 20 }}>
-
-            {/* Assign panel — slides up above the action bar */}
-            {showAssignPanel && (
-              <div style={{
-                background: 'white',
-                borderTop: '1px solid #e2e8f0',
-                boxShadow: '0 -8px 32px rgba(0,0,0,0.08)',
-                padding: '16px 24px 20px',
-                maxHeight: 340, overflowY: 'auto',
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: '#334155' }}>Reassign ticket</span>
-                  <button
-                    onClick={() => { setShowAssignPanel(false); setAssignTarget(null); setAssignNote('') }}
-                    style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: 4 }}>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                      <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-                    </svg>
-                  </button>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
-                  {adminUsers.map(user => (
-                    <button key={user.id}
-                      onClick={() => setAssignTarget(Object.keys(USERS).find(k => USERS[k].id === user.id))}
-                      style={{
-                        display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px',
-                        borderRadius: 10, border: '1.5px solid',
-                        borderColor: assignTarget && USERS[assignTarget]?.id === user.id ? 'rgba(139,92,246,0.4)' : '#f1f5f9',
-                        background: assignTarget && USERS[assignTarget]?.id === user.id ? 'rgba(139,92,246,0.05)' : 'transparent',
-                        cursor: 'pointer', textAlign: 'left',
-                      }}>
-                      <div style={{
-                        width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
-                        background: user.avatar, display: 'flex', alignItems: 'center',
-                        justifyContent: 'center', fontSize: 11, fontWeight: 700, color: 'white',
-                      }}>
-                        {user.initials}
-                      </div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 12, fontWeight: 600, color: '#334155' }}>{user.name}</div>
-                        <div style={{ fontSize: 10, color: '#94a3b8' }}>{user.title} · {user.adminRole}</div>
-                      </div>
-                      {user.name === assignedTo && (
-                        <span style={{ fontSize: 10, fontWeight: 600, color: '#10b981' }}>current</span>
-                      )}
-                    </button>
-                  ))}
-                </div>
-                {assignTarget && (
-                  <div style={{ marginBottom: 10 }}>
-                    <div style={{ fontSize: 10, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
-                      Note to assignee (optional)
-                    </div>
-                    <textarea
-                      value={assignNote}
-                      onChange={e => setAssignNote(e.target.value)}
-                      rows={3}
-                      placeholder="Explain why you're reassigning this ticket…"
-                      style={{
-                        width: '100%', padding: '8px 12px', borderRadius: 8,
-                        border: '1.5px solid #e2e8f0', fontSize: 12, resize: 'none',
-                        fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box',
-                        color: '#334155',
-                      }}
-                    />
-                  </div>
-                )}
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button onClick={handleAssignConfirm} disabled={!assignTarget} style={{
-                    flex: 1, padding: '8px 0', borderRadius: 10,
-                    background: assignTarget ? '#8b5cf6' : '#e2e8f0',
-                    border: 'none', fontSize: 12, fontWeight: 700,
-                    color: assignTarget ? 'white' : '#94a3b8', cursor: assignTarget ? 'pointer' : 'default',
-                  }}>
-                    Confirm Reassignment
-                  </button>
-                  <button onClick={() => { setShowAssignPanel(false); setAssignTarget(null); setAssignNote('') }} style={{
-                    padding: '8px 16px', borderRadius: 10, background: 'none',
-                    border: '1.5px solid #e2e8f0', fontSize: 12, fontWeight: 600,
-                    color: '#64748b', cursor: 'pointer',
-                  }}>
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Action bar */}
-            <div style={{
-              background: 'rgba(248,250,252,0.97)',
-              backdropFilter: 'blur(8px)',
-              borderTop: '1px solid #e2e8f0',
-              padding: '10px 24px',
-              display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
-            }}>
-              {/* Approve (role-gated) */}
-              {canApprove && (
-                <button onClick={handleApprove} style={{
-                  display: 'flex', alignItems: 'center', gap: 6,
-                  padding: '6px 14px', borderRadius: 20,
-                  background: '#10b981', border: 'none',
-                  fontSize: 12, fontWeight: 700, color: 'white', cursor: 'pointer',
-                }}>
-                  ✓ {cardStage === 'legal' ? 'Approve Finance Request' : 'Confirm Disbursement'}
-                </button>
-              )}
-
-              {/* Assign */}
-              <button onClick={() => setShowAssignPanel(v => !v)} style={{
-                display: 'flex', alignItems: 'center', gap: 6,
-                padding: '6px 12px', borderRadius: 20,
-                background: showAssignPanel ? 'rgba(139,92,246,0.08)' : 'white',
-                border: '1.5px solid',
-                borderColor: showAssignPanel ? 'rgba(139,92,246,0.35)' : '#e2e8f0',
-                fontSize: 12, fontWeight: 600,
-                color: showAssignPanel ? '#7c3aed' : '#374151', cursor: 'pointer',
-              }}>
-                <span>👤</span> Assign
-              </button>
-
-              <span style={{ fontSize: 11, color: '#94a3b8', marginLeft: 'auto' }}>
-                Assigned: <strong style={{ color: '#374151' }}>{assignedTo}</strong>
-              </span>
-            </div>
-          </div>
         </div>
 
         {/* RIGHT — Chatter */}
@@ -1038,6 +910,154 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
           setDraftText={setDraftText}
           onSend={handleChatterSend}
         />
+      </div>
+
+      {/* ASSIGN PANEL — full width, slides up above action bar */}
+      {showAssignPanel && (
+        <div style={{
+          background: 'white',
+          borderTop: '1px solid #e2e8f0',
+          boxShadow: '0 -8px 32px rgba(0,0,0,0.08)',
+          padding: '16px 24px 20px',
+          maxHeight: 340, overflowY: 'auto', flexShrink: 0,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color: '#334155' }}>Reassign ticket</span>
+            <button
+              onClick={() => { setShowAssignPanel(false); setAssignTarget(null); setAssignNote('') }}
+              style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: 4 }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
+            {adminUsers.map(user => (
+              <button key={user.id}
+                onClick={() => setAssignTarget(Object.keys(USERS).find(k => USERS[k].id === user.id))}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px',
+                  borderRadius: 10, border: '1.5px solid',
+                  borderColor: assignTarget && USERS[assignTarget]?.id === user.id ? 'rgba(139,92,246,0.4)' : '#f1f5f9',
+                  background: assignTarget && USERS[assignTarget]?.id === user.id ? 'rgba(139,92,246,0.05)' : 'transparent',
+                  cursor: 'pointer', textAlign: 'left',
+                }}>
+                <div style={{
+                  width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
+                  background: user.avatar, display: 'flex', alignItems: 'center',
+                  justifyContent: 'center', fontSize: 11, fontWeight: 700, color: 'white',
+                }}>
+                  {user.initials}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: '#334155' }}>{user.name}</div>
+                  <div style={{ fontSize: 10, color: '#94a3b8' }}>{user.title} · {user.adminRole}</div>
+                </div>
+                {user.name === assignedTo && (
+                  <span style={{ fontSize: 10, fontWeight: 600, color: '#10b981' }}>current</span>
+                )}
+              </button>
+            ))}
+          </div>
+          {assignTarget && (
+            <div style={{ marginBottom: 10 }}>
+              <div style={{ fontSize: 10, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
+                Note to assignee (optional)
+              </div>
+              <textarea
+                value={assignNote}
+                onChange={e => setAssignNote(e.target.value)}
+                rows={3}
+                placeholder="Explain why you're reassigning this ticket…"
+                style={{
+                  width: '100%', padding: '8px 12px', borderRadius: 8,
+                  border: '1.5px solid #e2e8f0', fontSize: 12, resize: 'none',
+                  fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box',
+                  color: '#334155',
+                }}
+              />
+            </div>
+          )}
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button onClick={handleAssignConfirm} disabled={!assignTarget} style={{
+              flex: 1, padding: '8px 0', borderRadius: 10,
+              background: assignTarget ? '#8b5cf6' : '#e2e8f0',
+              border: 'none', fontSize: 12, fontWeight: 700,
+              color: assignTarget ? 'white' : '#94a3b8', cursor: assignTarget ? 'pointer' : 'default',
+            }}>
+              Confirm Reassignment
+            </button>
+            <button onClick={() => { setShowAssignPanel(false); setAssignTarget(null); setAssignNote('') }} style={{
+              padding: '8px 16px', borderRadius: 10, background: 'none',
+              border: '1.5px solid #e2e8f0', fontSize: 12, fontWeight: 600,
+              color: '#64748b', cursor: 'pointer',
+            }}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ACTION BAR — full width */}
+      <div style={{
+        background: 'rgba(248,250,252,0.97)',
+        backdropFilter: 'blur(8px)',
+        borderTop: '1px solid #e2e8f0',
+        padding: '10px 24px',
+        display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', flexShrink: 0,
+      }}>
+        {/* Lane navigation */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <button onClick={onPrevInLane} disabled={laneIdx <= 0}
+            className="w-7 h-7 rounded-lg border border-slate-200 bg-white flex items-center justify-center text-slate-500 hover:bg-slate-50 hover:text-slate-800 disabled:opacity-30 disabled:cursor-not-allowed transition-all">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+              <polyline points="15 18 9 12 15 6"/>
+            </svg>
+          </button>
+          <span style={{ fontSize: 11, color: '#64748b', whiteSpace: 'nowrap' }}>
+            {laneTotal === 1
+              ? <span>Only ticket in <strong style={{ color: '#334155' }}>{laneLabel}</strong></span>
+              : <><strong style={{ color: '#334155' }}>{(laneIdx ?? 0) + 1}</strong> / {laneTotal} in <strong style={{ color: '#334155' }}>{laneLabel}</strong></>
+            }
+          </span>
+          <button onClick={onNextInLane} disabled={laneIdx >= laneTotal - 1}
+            className="w-7 h-7 rounded-lg border border-slate-200 bg-white flex items-center justify-center text-slate-500 hover:bg-slate-50 hover:text-slate-800 disabled:opacity-30 disabled:cursor-not-allowed transition-all">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+              <polyline points="9 18 15 12 9 6"/>
+            </svg>
+          </button>
+        </div>
+
+        <span style={{ width: 1, height: 18, background: '#e2e8f0', flexShrink: 0 }} />
+
+        {/* Approve (role-gated) */}
+        {canApprove && (
+          <button onClick={handleApprove} style={{
+            display: 'flex', alignItems: 'center', gap: 6,
+            padding: '6px 14px', borderRadius: 20,
+            background: '#10b981', border: 'none',
+            fontSize: 12, fontWeight: 700, color: 'white', cursor: 'pointer',
+          }}>
+            ✓ {cardStage === 'legal' ? 'Approve Finance Request' : 'Confirm Disbursement'}
+          </button>
+        )}
+
+        {/* Assign */}
+        <button onClick={() => setShowAssignPanel(v => !v)} style={{
+          display: 'flex', alignItems: 'center', gap: 6,
+          padding: '6px 12px', borderRadius: 20,
+          background: showAssignPanel ? 'rgba(139,92,246,0.08)' : 'white',
+          border: '1.5px solid',
+          borderColor: showAssignPanel ? 'rgba(139,92,246,0.35)' : '#e2e8f0',
+          fontSize: 12, fontWeight: 600,
+          color: showAssignPanel ? '#7c3aed' : '#374151', cursor: 'pointer',
+        }}>
+          <span>👤</span> Assign
+        </button>
+
+        <span style={{ fontSize: 11, color: '#94a3b8', marginLeft: 'auto' }}>
+          Assigned: <strong style={{ color: '#374151' }}>{assignedTo}</strong>
+        </span>
       </div>
     </div>
   )
@@ -1060,6 +1080,9 @@ export default function Pipeline({ onNavigate }) {
 
   const myStages = ROLE_STAGE_MAP[adminRole] || PIPELINE_STAGES.map(s => s.id)
   const currentIdx = selectedCard ? cards.findIndex(c => c.id === selectedCard.id) : -1
+  const laneCards  = selectedCard ? cards.filter(c => c.stage === selectedCard.stage) : []
+  const laneIdx    = selectedCard ? laneCards.findIndex(c => c.id === selectedCard.id) : -1
+  const laneLabel  = selectedCard ? (PIPELINE_STAGES.find(s => s.id === selectedCard.stage)?.label || '') : ''
 
   if (selectedCard) return (
     <CardDetailPage
@@ -1072,6 +1095,11 @@ export default function Pipeline({ onNavigate }) {
       onNext={() => currentIdx < cards.length - 1 && setSelectedCard(cards[currentIdx + 1])}
       onNavigate={onNavigate}
       onCardUpdate={handleCardUpdate}
+      onPrevInLane={() => laneIdx > 0 && setSelectedCard(laneCards[laneIdx - 1])}
+      onNextInLane={() => laneIdx < laneCards.length - 1 && setSelectedCard(laneCards[laneIdx + 1])}
+      laneIdx={laneIdx}
+      laneTotal={laneCards.length}
+      laneLabel={laneLabel}
     />
   )
 
