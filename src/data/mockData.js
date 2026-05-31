@@ -666,6 +666,9 @@ export const PIPELINE_CARDS = [
   {
     id: 'FR-0041',
     type: 'onboarding',
+    proposedAmount: null, proposedTenure: null, proposedMdrRate: null,
+    counterProposedBy: null, counterProposedAt: null,
+    contracts: [],
     seller: 'Zahrani Trading Co.',
     sellerId: 'seller-001',
     buyer: 'Khalid Group',
@@ -851,6 +854,11 @@ export const PIPELINE_CARDS = [
   {
     id: 'FR-0046',
     type: 'onboarding',
+    proposedAmount: null, proposedTenure: null, proposedMdrRate: null,
+    counterProposedBy: null, counterProposedAt: null,
+    contracts: [
+      { id: 'c-0046-1', name: 'Credit Facility Agreement', status: 'Sent', addedBy: 'Tariq Al-Ghamdi', addedAt: '2026-05-30 14:00' },
+    ],
     seller: 'Amoudi Distribution',
     sellerId: 'seller-002',
     buyer: 'Lava Trading',

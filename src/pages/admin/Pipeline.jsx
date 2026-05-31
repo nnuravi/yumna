@@ -276,6 +276,40 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
   const [extraMeetings,   setExtraMeetings]   = useState(0)
   const [extraQuotes,     setExtraQuotes]     = useState(0)
 
+  // Counter-proposal (risk stage)
+  const [editingField,    setEditingField]    = useState(null)  // 'amount'|'tenure'|'mdr'|null
+  const [propAmount,      setPropAmount]      = useState(String(card.proposedAmount || card.amount))
+  const [propTenure,      setPropTenure]      = useState(String(card.proposedTenure || card.tenure))
+  const [propMdrRate,     setPropMdrRate]     = useState(String(card.proposedMdrRate || card.mdrRate))
+  const [counterProposal, setCounterProposal] = useState(
+    card.proposedAmount ? { amount: card.proposedAmount, tenure: card.proposedTenure, mdrRate: card.proposedMdrRate, by: card.counterProposedBy, at: card.counterProposedAt } : null
+  )
+
+  // Stage brief editable state
+  const [docStatuses,     setDocStatuses]     = useState(
+    Object.fromEntries(card.documents.map(d => [d.name, d.status]))
+  )
+  const [simahInput,      setSimahInput]      = useState(card.riskScore !== null ? String(card.riskScore) : '')
+  const [riskDecision,    setRiskDecision]    = useState('approve')
+  const [nafathVerified,  setNafathVerified]  = useState(
+    card.documents.some(d => d.name.toLowerCase().includes('nafath') && d.status === 'verified')
+  )
+  const [crVerified,      setCrVerified]      = useState(
+    card.documents.some(d => d.name.toLowerCase().includes('commercial') && d.status === 'verified')
+  )
+
+  // Contracts (legal stage)
+  const [contracts,       setContracts]       = useState(card.contracts || [])
+  const [showContractAdd, setShowContractAdd] = useState(false)
+  const [contractMode,    setContractMode]    = useState('template')
+  const [selectedTpl,     setSelectedTpl]     = useState('')
+  const [uploadName,      setUploadName]      = useState('')
+
+  // Tabs
+  const [activeTab,    setActiveTab]    = useState('overview')
+  const [selectedDoc,  setSelectedDoc]  = useState(null)
+  const [docNotes,     setDocNotes]     = useState({})
+
   const stageInfo = PIPELINE_STAGES.find(s => s.id === cardStage)
 
   const EMI_FREQS       = { weekly: 7, bimonthly: 15, monthly: 30 }
@@ -423,6 +457,99 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
       { id: `yumi-${Date.now()}`, type: 'correspondence', from: 'Yumi AI', message: 'Message sent. I will monitor the reply and auto-attach any documents received from the client.', autoRead: true, date: 'Just now' },
     ])
     setSent(true)
+  }
+
+  // ── Primary action per stage ──────────────────────────────────────────────
+  const STAGE_PRIMARY = {
+    submitted:    { label: '✓ Confirm Receipt',    next: 'kyc',          msg: 'Documents received. KYC initiated.' },
+    kyc:          { label: '✓ Clear KYC',          next: 'credit_score', msg: 'KYC cleared. Forwarding to credit team.' },
+    credit_score: { label: '✓ Submit Score',        next: 'risk',         msg: () => `Credit score submitted: ${simahInput || card.riskScore || '—'}. Moving to risk assessment.` },
+    risk:         { label: '✓ Complete Assessment', next: 'legal',        msg: 'Risk assessment complete. Forwarding to legal.' },
+    legal:        { label: '✓ Docs Signed',         next: 'approved',     msg: 'Documents signed. Forwarding for approval.' },
+    approved:     { label: '✓ Disburse',            next: 'disbursed',    msg: 'Finance approved and disbursed to merchant.' },
+    disbursed:    { label: '✓ Confirm Active',      next: 'repayment',    msg: 'Finance active. Repayment schedule initiated.' },
+    repayment:    { label: '✓ Log Payment',         next: null,           msg: 'Payment logged.' },
+    overdue:      { label: '⚡ Escalate',           next: null,           msg: 'Escalated for collections action.' },
+  }
+  const primaryAction  = STAGE_PRIMARY[cardStage]
+  const canPrimary     = primaryAction && (stageInfo?.assignedRole === currentUser?.adminRole || currentUser?.adminRole === 'super')
+
+  const handlePrimaryAction = () => {
+    if (!primaryAction) return
+    const msg = typeof primaryAction.msg === 'function' ? primaryAction.msg() : primaryAction.msg
+    setTimeline(prev => [...prev, {
+      id: `primary-${Date.now()}`, type: 'history', icon: '✅',
+      text: `${msg} — by ${currentUser?.name || 'You'}`,
+      date: new Date().toLocaleString('en-SA', { dateStyle: 'short', timeStyle: 'short' }),
+    }])
+    if (primaryAction.next) handleMoveStage(primaryAction.next)
+  }
+
+  // ── Contract helpers ──────────────────────────────────────────────────────
+  const CONTRACT_TEMPLATES = {
+    invoice_finance: [
+      { id: 'promissory_note',   label: 'Promissory Note',             desc: 'Binding payment promise from buyer' },
+      { id: 'finance_agreement', label: 'Finance Agreement',           desc: 'Full terms of the credit facility' },
+      { id: 'mdr_disclosure',    label: 'MDR Disclosure Letter',       desc: 'Fee structure disclosure to merchant' },
+    ],
+    onboarding: [
+      { id: 'credit_facility',   label: 'Credit Facility Agreement',   desc: 'Master credit facility terms' },
+      { id: 'merchant_toc',      label: 'Merchant Terms & Conditions', desc: 'Platform usage agreement' },
+      { id: 'kyc_declaration',   label: 'KYC Declaration',             desc: 'Identity and beneficial owner declaration' },
+    ],
+  }
+  const availableTemplates = CONTRACT_TEMPLATES[card.type] || CONTRACT_TEMPLATES.onboarding
+
+  const addContractFromTemplate = () => {
+    if (!selectedTpl) return
+    const tpl = availableTemplates.find(t => t.id === selectedTpl)
+    if (!tpl) return
+    const newContract = { id: `c-${Date.now()}`, name: tpl.label, status: 'Draft', addedBy: currentUser?.name || 'You', addedAt: new Date().toLocaleString('en-SA', { dateStyle: 'short', timeStyle: 'short' }) }
+    setContracts(prev => [...prev, newContract])
+    setTimeline(prev => [...prev, { id: `contract-${Date.now()}`, type: 'history', icon: '📋', text: `${tpl.label} added (Draft) by ${currentUser?.name || 'You'}`, date: newContract.addedAt }])
+    setSelectedTpl('')
+    setShowContractAdd(false)
+  }
+
+  const addContractManual = () => {
+    if (!uploadName.trim()) return
+    const newContract = { id: `c-${Date.now()}`, name: uploadName.trim(), status: 'Draft', addedBy: currentUser?.name || 'You', addedAt: new Date().toLocaleString('en-SA', { dateStyle: 'short', timeStyle: 'short' }) }
+    setContracts(prev => [...prev, newContract])
+    setTimeline(prev => [...prev, { id: `contract-${Date.now()}`, type: 'history', icon: '📎', text: `${uploadName.trim()} uploaded by ${currentUser?.name || 'You'}`, date: newContract.addedAt }])
+    setUploadName('')
+    setShowContractAdd(false)
+  }
+
+  const sendContract = (contractId) => {
+    setContracts(prev => prev.map(c => c.id === contractId ? { ...c, status: 'Sent' } : c))
+    const c = contracts.find(x => x.id === contractId)
+    if (c) setTimeline(prev => [...prev, { id: `send-${Date.now()}`, type: 'history', icon: '📤', text: `${c.name} sent to ${card.buyer} by ${currentUser?.name || 'You'}`, date: new Date().toLocaleString('en-SA', { dateStyle: 'short', timeStyle: 'short' }) }])
+  }
+
+  // ── Counter-proposal handler ──────────────────────────────────────────────
+  const submitCounterProposal = () => {
+    if (!propAmount || !propTenure || !propMdrRate) return
+    const cp = {
+      amount:   Number(propAmount),
+      tenure:   Number(propTenure),
+      mdrRate:  Number(propMdrRate),
+      by: currentUser?.name || 'You',
+      at: new Date().toLocaleString('en-SA', { dateStyle: 'short', timeStyle: 'short' }),
+    }
+    setCounterProposal(cp)
+    setEditingField(null)
+    setTimeline(prev => [...prev, {
+      id: `cp-${Date.now()}`, type: 'history', icon: '⚖️',
+      text: `Counter-proposal by ${cp.by}: Amount ${formatSAR(card.amount)} → ${formatSAR(cp.amount)}, Tenure ${card.tenure}d → ${cp.tenure}d, MDR ${card.mdrRate}% → ${cp.mdrRate}%. Pending buyer acceptance.`,
+      date: cp.at,
+    }])
+    onCardUpdate?.({ ...card, stage: cardStage, assignedTo, proposedAmount: cp.amount, proposedTenure: cp.tenure, proposedMdrRate: cp.mdrRate, counterProposedBy: cp.by, counterProposedAt: cp.at })
+  }
+
+  const withdrawCounterProposal = () => {
+    setCounterProposal(null)
+    setTimeline(prev => [...prev, { id: `cpw-${Date.now()}`, type: 'history', icon: '↩️', text: `Counter-proposal withdrawn by ${currentUser?.name || 'You'}`, date: new Date().toLocaleString('en-SA', { dateStyle: 'short', timeStyle: 'short' }) }])
+    onCardUpdate?.({ ...card, stage: cardStage, assignedTo, proposedAmount: null, proposedTenure: null, proposedMdrRate: null, counterProposedBy: null, counterProposedAt: null })
   }
 
   return (
@@ -620,8 +747,141 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
       <div className="flex-1 flex overflow-hidden">
 
         {/* LEFT — scrollable form */}
-        <div className="flex-1 overflow-y-auto" style={{ background: '#f8fafc' }}>
-          <style>{`@keyframes yumi-pulse { 0%,100%{opacity:1} 50%{opacity:0.35} }`}</style>
+        <style>{`@keyframes yumi-pulse { 0%,100%{opacity:1} 50%{opacity:0.35} }`}</style>
+        <div className="flex-1 flex flex-col overflow-hidden" style={{ background: '#f8fafc' }}>
+
+          {/* Tab bar */}
+          <div className="flex items-end gap-0 px-6 pt-2 border-b border-slate-200 bg-white shrink-0">
+            {[
+              { id: 'overview',   label: 'Deal Overview' },
+              { id: 'documents',  label: `Documents (${card.documents.length})` },
+            ].map(tab => (
+              <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{
+                padding: '7px 16px 8px',
+                fontSize: 12, fontWeight: activeTab === tab.id ? 700 : 500,
+                color: activeTab === tab.id ? 'var(--color-primary)' : '#64748b',
+                borderBottom: activeTab === tab.id ? '2.5px solid var(--color-primary)' : '2.5px solid transparent',
+                background: 'none', border: 'none',
+                borderBottom: activeTab === tab.id ? '2.5px solid var(--color-primary)' : '2.5px solid transparent',
+                cursor: 'pointer', whiteSpace: 'nowrap',
+              }}>
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Documents tab */}
+          {activeTab === 'documents' && (
+            <div className="flex-1 flex overflow-hidden">
+              {/* Document list */}
+              <div className="overflow-y-auto border-r border-slate-100 shrink-0 p-4" style={{ width: 300, background: 'white' }}>
+                <div className="flex flex-col gap-2">
+                  {card.documents.map((doc, i) => {
+                    const st = docStatuses[doc.name] || doc.status
+                    const sc = statusColor(st)
+                    const isSelected = selectedDoc?.name === doc.name
+                    return (
+                      <button key={i} onClick={() => setSelectedDoc(doc)}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px',
+                          borderRadius: 10, border: '1.5px solid',
+                          borderColor: isSelected ? 'rgba(99,102,241,0.4)' : '#f1f5f9',
+                          background: isSelected ? 'rgba(99,102,241,0.04)' : 'white',
+                          borderLeft: isSelected ? '3px solid var(--color-primary)' : '1.5px solid #f1f5f9',
+                          cursor: 'pointer', textAlign: 'left',
+                        }}>
+                        <span style={{ fontSize: 18, color: sc.color }}>
+                          {st === 'verified' ? '✓' : st === 'missing' ? '✗' : '○'}
+                        </span>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 12, fontWeight: 600, color: '#334155' }}>{doc.name}</div>
+                        </div>
+                        <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 20, background: sc.bg, color: sc.color, textTransform: 'capitalize' }}>{st}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Document preview */}
+              <div className="flex-1 overflow-y-auto p-6" style={{ background: '#f8fafc' }}>
+                {!selectedDoc ? (
+                  <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 8, color: '#94a3b8' }}>
+                    <span style={{ fontSize: 40 }}>📄</span>
+                    <span style={{ fontSize: 13 }}>Select a document to preview</span>
+                  </div>
+                ) : (() => {
+                  const st = docStatuses[selectedDoc.name] || selectedDoc.status
+                  const sc = statusColor(st)
+                  const canEdit = currentUser?.adminRole === 'verifier' || currentUser?.adminRole === 'super'
+                  return (
+                    <div style={{ maxWidth: 480, display: 'flex', flexDirection: 'column', gap: 16 }}>
+                      {/* Header */}
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                        <span style={{ fontSize: 32, marginTop: 2 }}>📄</span>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 16, fontWeight: 700, color: '#1e293b', marginBottom: 4 }}>{selectedDoc.name}</div>
+                          {canEdit ? (
+                            <select value={st} onChange={e => setDocStatuses(prev => ({ ...prev, [selectedDoc.name]: e.target.value }))}
+                              style={{ border: '1.5px solid #e2e8f0', borderRadius: 8, padding: '4px 10px', fontSize: 12, outline: 'none', fontFamily: 'inherit', color: sc.color, background: sc.bg, fontWeight: 600, cursor: 'pointer' }}>
+                              {['verified', 'pending', 'missing'].map(s => <option key={s} value={s} style={{ color: '#334155', background: 'white' }}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
+                            </select>
+                          ) : (
+                            <span style={{ fontSize: 12, fontWeight: 600, padding: '3px 10px', borderRadius: 20, background: sc.bg, color: sc.color, textTransform: 'capitalize' }}>{st}</span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Meta */}
+                      <div style={{ padding: '12px 16px', borderRadius: 10, background: 'white', border: '1px solid #f1f5f9', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                        {[
+                          ['Finance Request', card.id],
+                          ['Buyer', card.buyer],
+                          ['Stage', stageInfo?.label || cardStage],
+                          ['Days in Stage', `${card.daysInStage}d`],
+                        ].map(([label, value]) => (
+                          <div key={label}>
+                            <div style={{ fontSize: 10, color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>{label}</div>
+                            <div style={{ fontSize: 12, color: '#334155', fontWeight: 500 }}>{value}</div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Notes */}
+                      <div>
+                        <div style={{ fontSize: 10, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Notes</div>
+                        <textarea
+                          value={docNotes[selectedDoc.name] || ''}
+                          onChange={e => setDocNotes(prev => ({ ...prev, [selectedDoc.name]: e.target.value }))}
+                          rows={3}
+                          placeholder="Add a note about this document…"
+                          style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1.5px solid #e2e8f0', fontSize: 12, resize: 'none', fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box', color: '#334155' }}
+                        />
+                      </div>
+
+                      {/* Actions */}
+                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                        {st === 'missing' && (
+                          <button onClick={handleYumiAction} style={{ padding: '7px 16px', borderRadius: 10, background: 'var(--color-primary)', border: 'none', fontSize: 12, fontWeight: 700, color: 'white', cursor: 'pointer' }}>
+                            Request from buyer →
+                          </button>
+                        )}
+                        {canEdit && st !== 'verified' && (
+                          <button onClick={() => setDocStatuses(prev => ({ ...prev, [selectedDoc.name]: 'verified' }))} style={{ padding: '7px 16px', borderRadius: 10, background: '#10b981', border: 'none', fontSize: 12, fontWeight: 700, color: 'white', cursor: 'pointer' }}>
+                            ✓ Mark as Verified
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })()}
+              </div>
+            </div>
+          )}
+
+          {/* Overview tab */}
+          {activeTab === 'overview' && (
+          <div className="flex-1 overflow-y-auto">
           <div className="max-w-2xl mx-auto p-6 space-y-6">
 
             {/* YUMI BRIEFING */}
@@ -724,6 +984,119 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
               </div>
             </div>
 
+            {/* STAGE BRIEF — editable, role-gated */}
+            {(currentUser?.adminRole === stageInfo?.assignedRole || currentUser?.adminRole === 'super') && (() => {
+              const fieldStyle = { border: '1px solid #e2e8f0', borderRadius: 8, padding: '5px 10px', fontSize: 12, outline: 'none', fontFamily: 'inherit', color: '#334155', background: 'white' }
+              const toggleDoc = (name) => setDocStatuses(prev => {
+                const next = { missing: 'pending', pending: 'verified', verified: 'missing' }
+                return { ...prev, [name]: next[prev[name]] || 'pending' }
+              })
+              const docStatusColor = { verified: '#10b981', pending: '#f59e0b', missing: '#e5484d' }
+              return (
+                <Section title={`${stageInfo?.label || ''} — Stage Actions`} badge="Your Stage" badgeColor={stageInfo?.color || '#6b7280'}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+
+                    {/* VERIFIER — submitted / kyc */}
+                    {['submitted', 'kyc'].includes(cardStage) && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        <div style={{ fontSize: 11, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Document Status — click to toggle</div>
+                        {card.documents.map(doc => (
+                          <button key={doc.name} onClick={() => toggleDoc(doc.name)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 10, border: '1.5px solid #f1f5f9', background: 'white', cursor: 'pointer', textAlign: 'left' }}>
+                            <span style={{ fontSize: 16, color: docStatusColor[docStatuses[doc.name] || doc.status] }}>
+                              {docStatuses[doc.name] === 'verified' ? '✓' : docStatuses[doc.name] === 'missing' ? '✗' : '○'}
+                            </span>
+                            <span style={{ fontSize: 12, flex: 1, color: '#334155' }}>{doc.name}</span>
+                            <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 20, background: docStatusColor[docStatuses[doc.name] || doc.status] + '18', color: docStatusColor[docStatuses[doc.name] || doc.status] }}>
+                              {docStatuses[doc.name] || doc.status}
+                            </span>
+                          </button>
+                        ))}
+                        {cardStage === 'kyc' && (
+                          <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+                            {[['Nafath Verified', nafathVerified, setNafathVerified], ['CR Verified', crVerified, setCrVerified]].map(([label, val, setter]) => (
+                              <button key={label} onClick={() => setter(!val)} style={{ flex: 1, padding: '7px 10px', borderRadius: 10, border: '1.5px solid', borderColor: val ? '#10b981' : '#e2e8f0', background: val ? '#f0fdf4' : 'white', fontSize: 12, fontWeight: 600, color: val ? '#059669' : '#64748b', cursor: 'pointer' }}>
+                                {val ? '✓ ' : '○ '}{label}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* CREDIT — credit_score */}
+                    {cardStage === 'credit_score' && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <label style={{ fontSize: 11, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>SIMAH Score</label>
+                          <input type="number" min="0" max="999" value={simahInput} onChange={e => setSimahInput(e.target.value)}
+                            placeholder="Enter score…" style={{ ...fieldStyle, width: 100 }} />
+                          {simahInput && (
+                            <span style={{ fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 20,
+                              background: Number(simahInput) >= 700 ? '#f0fdf4' : Number(simahInput) >= 600 ? '#fffbeb' : '#fef2f2',
+                              color:      Number(simahInput) >= 700 ? '#059669' : Number(simahInput) >= 600 ? '#d97706' : '#dc2626' }}>
+                              {Number(simahInput) >= 700 ? 'Excellent' : Number(simahInput) >= 600 ? 'Good' : Number(simahInput) >= 500 ? 'Fair' : 'Poor'}
+                            </span>
+                          )}
+                        </div>
+                        {buyerInfo && (
+                          <div style={{ padding: '10px 12px', borderRadius: 10, background: '#f8fafc', border: '1px solid #e2e8f0', fontSize: 12, color: '#334155' }}>
+                            Credit utilisation: <strong>{formatSAR(buyerInfo.creditUsed)}</strong> used of <strong>{formatSAR(buyerInfo.creditLimit)}</strong>
+                            {' '}({Math.round(buyerInfo.creditUsed / buyerInfo.creditLimit * 100)}% utilised)
+                            {isAboveLimit && <span style={{ color: '#dc2626', fontWeight: 700, marginLeft: 8 }}>⚠️ This request exceeds remaining limit</span>}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* RISK — risk */}
+                    {cardStage === 'risk' && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                          <label style={{ fontSize: 11, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Risk Decision</label>
+                          {['approve', 'counter_propose', 'reject'].map(d => (
+                            <button key={d} onClick={() => setRiskDecision(d)} style={{ padding: '5px 12px', borderRadius: 20, border: '1.5px solid', borderColor: riskDecision === d ? (d === 'reject' ? '#dc2626' : d === 'counter_propose' ? '#f59e0b' : '#10b981') : '#e2e8f0', background: riskDecision === d ? (d === 'reject' ? '#fef2f2' : d === 'counter_propose' ? '#fffbeb' : '#f0fdf4') : 'white', fontSize: 11, fontWeight: 600, color: riskDecision === d ? (d === 'reject' ? '#dc2626' : d === 'counter_propose' ? '#d97706' : '#059669') : '#64748b', cursor: 'pointer' }}>
+                              {d === 'approve' ? '✓ Approve' : d === 'counter_propose' ? '⚖️ Counter-propose' : '✗ Reject'}
+                            </button>
+                          ))}
+                        </div>
+                        {isAboveLimit && (
+                          <div style={{ padding: '8px 12px', borderRadius: 10, background: '#fef2f2', border: '1px solid #fecaca', fontSize: 12, color: '#dc2626', fontWeight: 600 }}>
+                            ⚠️ Amount exceeds buyer's remaining limit by {formatSAR(card.amount - remainingCredit)}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* ACCOUNT MGR — approved */}
+                    {cardStage === 'approved' && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        <div style={{ fontSize: 11, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Confirm disbursement details</div>
+                        <div style={{ padding: '10px 12px', borderRadius: 10, background: '#f0fdf4', border: '1px solid #bbf7d0', fontSize: 12 }}>
+                          Merchant receives <strong style={{ color: '#059669' }}>{formatSAR(merchantDisbursement)}</strong> after MDR deduction
+                        </div>
+                      </div>
+                    )}
+
+                    {/* COLLECTIONS — repayment */}
+                    {cardStage === 'repayment' && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <label style={{ fontSize: 11, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>Log Payment</label>
+                        <input type="number" placeholder="Amount (SAR)…" style={{ ...fieldStyle, flex: 1 }}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter' && e.target.value) {
+                              setTimeline(prev => [...prev, { id: `pay-${Date.now()}`, type: 'payment', amount: Number(e.target.value), instalment: paidInstalments + 1, date: new Date().toLocaleString('en-SA', { dateStyle: 'short', timeStyle: 'short' }) }])
+                              e.target.value = ''
+                            }
+                          }} />
+                        <span style={{ fontSize: 11, color: '#94a3b8' }}>Press Enter to log</span>
+                      </div>
+                    )}
+
+                  </div>
+                </Section>
+              )
+            })()}
+
             {/* CUSTOMER & BASIC INFO */}
             <Section title="Customer & Basic Info">
               <div className="grid grid-cols-2 gap-x-6 gap-y-4">
@@ -774,175 +1147,391 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
               </div>
             </Section>
 
-            {/* FINANCE TERMS */}
-            <Section title="Finance Terms">
-              <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-                <Field label="Product Value">
-                  <span className="text-[13px] font-bold text-slate-800 tabular-nums">{formatSAR(card.amount)}</span>
-                </Field>
-                <Field label="MDR Rate">
-                  <span className="text-[13px] text-slate-700">{card.mdrRate}% per month</span>
-                </Field>
-                <Field label="Tenure">
-                  <span className="text-[13px] text-slate-700">{card.tenure} days</span>
-                </Field>
-                <Field label="Sector">
-                  <span className="text-[13px] text-slate-700">{card.sector}</span>
-                </Field>
-                <Field label="Risk Score">
-                  {card.riskScore !== null
-                    ? <span className="inline-block text-[12px] font-bold px-2.5 py-0.5 rounded-full"
-                        style={{ background: riskColor(card.riskScore).bg, color: riskColor(card.riskScore).text }}>
-                        {card.riskScore}
+            {/* ── FINANCE REQUEST ── */}
+            {(() => {
+              const canEditCore   = cardStage === 'risk'     && ['risk',        'super'].includes(currentUser?.adminRole)
+              const canEditFee    = cardStage === 'approved' && ['account_mgr', 'super'].includes(currentUser?.adminRole)
+              const activeAmount  = Number(propAmount)  || card.amount
+              const activeTenure  = Number(propTenure)  || card.tenure
+              const activeMdr     = Number(propMdrRate) || card.mdrRate
+              const hasChanges    = activeAmount !== card.amount || activeTenure !== card.tenure || activeMdr !== card.mdrRate
+              const mdrFeeCalc    = activeAmount * (activeMdr / 100)
+              const buyerFeeCalc  = mdrPayer === 'buyer_full' ? mdrFeeCalc : mdrPayer === 'split_50_50' ? mdrFeeCalc / 2 : 0
+              const merchantMDRCalc = mdrPayer === 'merchant_full' ? mdrFeeCalc : mdrPayer === 'split_50_50' ? mdrFeeCalc / 2 : 0
+              const totalRepayCalc  = activeAmount + buyerFeeCalc
+              const disbursementCalc = activeAmount - merchantMDRCalc
+              const emiDaysCalc   = EMI_FREQS[emiFreq]
+              const instCountCalc = Math.ceil(activeTenure / emiDaysCalc)
+              const perEMICalc    = totalRepayCalc / instCountCalc
+
+              const EditableField = ({ id, label, value, original, unit, setter }) => {
+                const changed = String(value) !== String(original)
+                return editingField === id ? (
+                  <input
+                    type="number" autoFocus value={value}
+                    onChange={e => setter(e.target.value)}
+                    onBlur={() => setEditingField(null)}
+                    onKeyDown={e => e.key === 'Enter' && setEditingField(null)}
+                    style={{ width: '100%', border: 'none', borderBottom: '2px solid #f59e0b', background: 'transparent', fontSize: 20, fontWeight: 700, color: '#334155', outline: 'none', fontFamily: 'inherit', padding: '2px 0' }}
+                  />
+                ) : (
+                  <div
+                    onClick={() => canEditCore && setEditingField(id)}
+                    style={{ display: 'flex', alignItems: 'baseline', gap: 4, cursor: canEditCore ? 'pointer' : 'default', borderBottom: changed ? '2px solid #f59e0b' : '2px solid transparent', paddingBottom: 1 }}>
+                    <span style={{ fontSize: 20, fontWeight: 700, color: changed ? '#d97706' : '#1e293b', fontVariantNumeric: 'tabular-nums' }}>{value}</span>
+                    <span style={{ fontSize: 11, color: '#64748b' }}>{unit}</span>
+                    {canEditCore && <span style={{ fontSize: 11, color: '#cbd5e1', marginLeft: 4 }}>✎</span>}
+                  </div>
+                )
+              }
+
+              return (
+                <div style={{ borderRadius: 14, background: 'white', border: '1px solid #e2e8f0', borderLeft: `4px solid ${stageInfo?.color || '#6b7280'}`, overflow: 'hidden' }}>
+
+                  {/* Counter-proposal banner */}
+                  {counterProposal && (
+                    <div style={{ padding: '10px 16px', background: '#fffbeb', borderBottom: '1px solid #fcd34d', display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 14 }}>⚖️</span>
+                      <span style={{ fontSize: 12, color: '#92400e', flex: 1 }}>Counter-proposal by <strong>{counterProposal.by}</strong> — pending buyer acceptance</span>
+                      {(currentUser?.adminRole === 'risk' || currentUser?.adminRole === 'super') && (
+                        <button onClick={withdrawCounterProposal} style={{ fontSize: 11, fontWeight: 600, color: '#dc2626', background: 'none', border: '1px solid #fca5a5', borderRadius: 8, padding: '3px 10px', cursor: 'pointer' }}>Withdraw</button>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Header: Finance Request + sector/risk badges */}
+                  <div style={{ padding: '12px 16px 0', display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em', flex: 1 }}>Finance Request</span>
+                    <span style={{ fontSize: 11, color: '#64748b' }}>{card.sector}</span>
+                    {card.riskScore !== null && (
+                      <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 20, background: riskColor(card.riskScore).bg, color: riskColor(card.riskScore).text }}>
+                        Risk {card.riskScore}
                       </span>
-                    : <span className="text-[12px] text-slate-400 italic">Pending scoring</span>}
-                </Field>
-                <Field label="EMI Frequency">
-                  <span className="text-[13px] text-slate-700 capitalize">{card.emiFrequency || '—'}</span>
-                </Field>
-              </div>
-            </Section>
+                    )}
+                  </div>
 
-            {/* DOCUMENTS */}
-            <Section title="Documents" badge={missingDocs > 0 ? `${missingDocs} missing` : null} badgeColor="#e5484d">
-              <div className="space-y-2">
-                {card.documents.map((doc, i) => {
-                  const sc = statusColor(doc.status)
-                  return (
-                    <div key={i} className="flex items-center gap-3 px-3 py-2.5 rounded-xl border"
-                      style={{ borderColor: '#f1f5f9', background: sc.bg + '40' }}>
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={sc.color} strokeWidth="1.8" strokeLinecap="round">
-                        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
-                        <polyline points="14 2 14 8 20 8"/>
-                      </svg>
-                      <span className="flex-1 text-[13px] text-slate-700">{doc.name}</span>
-                      <span className="text-[11px] font-semibold capitalize" style={{ color: sc.color }}>{doc.status}</span>
+                  {/* Headline: Amount / Tenure / MDR */}
+                  <div style={{ padding: '10px 16px 14px', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, borderBottom: '1px solid #f1f5f9' }}>
+                    <div>
+                      <div style={{ fontSize: 10, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Amount</div>
+                      <EditableField id="amount" value={propAmount || card.amount} original={card.amount} unit="SAR" setter={v => setPropAmount(v)} />
                     </div>
-                  )
-                })}
-              </div>
-            </Section>
+                    <div>
+                      <div style={{ fontSize: 10, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Tenure</div>
+                      <EditableField id="tenure" value={propTenure || card.tenure} original={card.tenure} unit="days" setter={v => setPropTenure(v)} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 10, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>MDR Rate</div>
+                      <EditableField id="mdr" value={propMdrRate || card.mdrRate} original={card.mdrRate} unit="% / mo" setter={v => setPropMdrRate(v)} />
+                    </div>
+                  </div>
 
-            {/* FEE STRUCTURE & DISTRIBUTION */}
-            <Section title="Fee Structure & Distribution">
-              <div className="space-y-4">
-                <div>
-                  <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-2">Fee Sharing Model</div>
-                  <div className="space-y-1.5">
-                    {[
-                      { id: 'merchant_full', label: 'Merchant Bears Full Cost',       desc: 'Buyer repays principal only — MDR deducted from merchant disbursement' },
-                      { id: 'split_50_50',   label: 'Split 50/50 (Merchant & Buyer)', desc: 'Each party pays half the MDR' },
-                      { id: 'buyer_full',    label: 'Buyer Bears Full Cost',          desc: 'Buyer repays principal + full MDR — merchant receives full disbursement' },
-                    ].map(opt => (
-                      <button key={opt.id} onClick={() => { setMdrPayer(opt.id); setInvoiceGenerated(false) }}
-                        className="w-full text-start p-3 rounded-xl border transition-all"
-                        style={{
-                          borderColor: mdrPayer === opt.id ? 'var(--color-primary)' : '#e2e8f0',
-                          background: mdrPayer === opt.id ? 'rgba(143,133,255,0.06)' : 'white',
-                        }}>
-                        <div className="flex items-center gap-2">
-                          <div className="w-3.5 h-3.5 rounded-full border-2 shrink-0 flex items-center justify-center"
-                            style={{ borderColor: mdrPayer === opt.id ? 'var(--color-primary)' : '#cbd5e1' }}>
-                            {mdrPayer === opt.id && <div className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--color-primary)' }} />}
+                  {/* Fee Structure */}
+                  <div style={{ padding: '12px 16px', borderBottom: '1px solid #f1f5f9' }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>Fee Structure</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 10, ...(!canEditFee ? { pointerEvents: 'none', opacity: 0.65 } : {}) }}>
+                      {[
+                        { id: 'merchant_full', label: 'Merchant Bears Full Cost',       desc: 'MDR deducted from merchant disbursement' },
+                        { id: 'split_50_50',   label: 'Split 50/50 (Merchant & Buyer)', desc: 'Each party pays half the MDR' },
+                        { id: 'buyer_full',    label: 'Buyer Bears Full Cost',          desc: 'Buyer repays principal + full MDR' },
+                      ].map(opt => (
+                        <button key={opt.id} onClick={() => { setMdrPayer(opt.id); setInvoiceGenerated(false) }}
+                          style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 10, border: '1.5px solid', borderColor: mdrPayer === opt.id ? 'var(--color-primary)' : '#f1f5f9', background: mdrPayer === opt.id ? 'rgba(143,133,255,0.06)' : 'transparent', cursor: 'pointer', textAlign: 'left' }}>
+                          <div style={{ width: 14, height: 14, borderRadius: '50%', border: '2px solid', borderColor: mdrPayer === opt.id ? 'var(--color-primary)' : '#cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            {mdrPayer === opt.id && <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--color-primary)' }} />}
                           </div>
-                          <span className="text-[12px] font-semibold" style={{ color: mdrPayer === opt.id ? 'var(--color-primary)' : '#334155' }}>{opt.label}</span>
-                        </div>
-                        <p className="text-[11px] text-slate-400 mt-0.5 ml-5">{opt.desc}</p>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-2">EMI Frequency</div>
-                  <div className="flex gap-1.5">
-                    {Object.entries(EMI_FREQ_LABELS).map(([key, lbl]) => (
-                      <button key={key} onClick={() => { setEmiFreq(key); setInvoiceGenerated(false) }}
-                        className="flex-1 py-2 rounded-xl text-[11px] font-semibold border transition-all"
-                        style={{
-                          background: emiFreq === key ? 'var(--color-primary)' : 'white',
-                          color: emiFreq === key ? 'white' : '#64748b',
-                          borderColor: emiFreq === key ? 'transparent' : '#e2e8f0',
-                        }}>
-                        {lbl}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </Section>
-
-            {/* FINANCIAL SUMMARY */}
-            <Section title="Financial Summary">
-              <div className="rounded-xl border border-slate-100 overflow-hidden bg-white">
-                {[
-                  { label: 'Merchant MDR Amount',   value: formatSAR(merchantMDR),          color: merchantMDR > 0 ? '#f59e0b' : '#94a3b8', bold: false },
-                  { label: 'Buyer Fee Amount',       value: formatSAR(buyerFee),             color: buyerFee > 0 ? '#e5484d' : '#94a3b8',    bold: false },
-                  { label: 'Merchant Disbursement',  value: formatSAR(merchantDisbursement), color: '#10b981',                                bold: true  },
-                  { label: 'Buyer Total Repayment',  value: formatSAR(totalBuyerRepayment),  color: '#334155',                                bold: true  },
-                  { label: 'Per EMI Amount',         value: `${formatSAR(perEMI)} × ${instalmentCount}`, color: '#334155',                   bold: false },
-                ].map((row, i, arr) => (
-                  <div key={row.label} className={`flex items-center justify-between px-4 py-3 ${i < arr.length - 1 ? 'border-b border-slate-50' : ''}`}>
-                    <span className="text-[13px] text-slate-500">{row.label}</span>
-                    <span className={`text-[13px] tabular-nums ${row.bold ? 'font-bold' : 'font-semibold'}`} style={{ color: row.color }}>{row.value}</span>
-                  </div>
-                ))}
-              </div>
-            </Section>
-
-            {/* INSTALMENT SCHEDULE */}
-            <Section title="Instalment Schedule">
-              <div className="rounded-xl border border-slate-100 overflow-hidden bg-white">
-                {/* Summary stats */}
-                <div className="grid grid-cols-4 border-b border-slate-100">
-                  {[
-                    { label: 'Total',   value: instalmentCount,                                                           danger: false },
-                    { label: 'Paid',    value: paidInstalments,                                                           danger: false },
-                    { label: 'Pending', value: Math.max(0, instalmentCount - paidInstalments - overdueInstalments),       danger: false },
-                    { label: 'Overdue', value: overdueInstalments,                                                        danger: true  },
-                  ].map((stat, i) => (
-                    <div key={stat.label} className={`px-4 py-3 text-center ${i < 3 ? 'border-r border-slate-100' : ''}`}>
-                      <div className={`text-[20px] font-bold ${stat.danger && stat.value > 0 ? 'text-red-500' : 'text-slate-800'}`}>{stat.value}</div>
-                      <div className="text-[10px] text-slate-400">{stat.label}</div>
+                          <div>
+                            <div style={{ fontSize: 12, fontWeight: 600, color: mdrPayer === opt.id ? 'var(--color-primary)' : '#334155' }}>{opt.label}</div>
+                            <div style={{ fontSize: 10, color: '#94a3b8' }}>{opt.desc}</div>
+                          </div>
+                        </button>
+                      ))}
                     </div>
-                  ))}
-                </div>
-                {/* Schedule table */}
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-slate-50" style={{ background: '#f8fafc' }}>
-                      <th className="px-4 py-2 text-start text-[10px] font-semibold text-slate-400 uppercase tracking-wide">No.</th>
-                      <th className="px-4 py-2 text-start text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Due Date</th>
-                      <th className="px-4 py-2 text-end text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Amount</th>
-                      <th className="px-4 py-2 text-end text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {Array.from({ length: instalmentCount }, (_, i) => {
-                      const dueMs = new Date('2026-06-01').getTime() + (i + 1) * emiDays * 86400000
-                      const dueDate = new Date(dueMs).toISOString().slice(0, 10)
-                      const isPaid    = i < paidInstalments
-                      const isOverdue = !isPaid && i < paidInstalments + overdueInstalments
-                      return (
-                        <tr key={i} className="border-b border-slate-50 last:border-0">
-                          <td className="px-4 py-2.5 text-[12px] text-slate-400">{i + 1}</td>
-                          <td className="px-4 py-2.5 text-[12px] text-slate-600">{dueDate}</td>
-                          <td className="px-4 py-2.5 text-[12px] text-end tabular-nums font-medium text-slate-700">{formatSAR(perEMI)}</td>
-                          <td className="px-4 py-2.5 text-end">
-                            {isPaid
-                              ? <span className="text-[11px] font-semibold text-emerald-600">✓ Paid</span>
-                              : isOverdue
-                              ? <span className="text-[11px] font-semibold text-red-500">Overdue</span>
-                              : <span className="text-[11px] text-slate-400">Pending</span>}
-                          </td>
+                    <div style={{ display: 'flex', gap: 6, ...(!canEditFee ? { pointerEvents: 'none', opacity: 0.65 } : {}) }}>
+                      {Object.entries(EMI_FREQ_LABELS).map(([key, lbl]) => (
+                        <button key={key} onClick={() => { setEmiFreq(key); setInvoiceGenerated(false) }}
+                          style={{ flex: 1, padding: '6px 0', borderRadius: 10, fontSize: 11, fontWeight: 600, border: '1.5px solid', background: emiFreq === key ? 'var(--color-primary)' : 'white', color: emiFreq === key ? 'white' : '#64748b', borderColor: emiFreq === key ? 'transparent' : '#e2e8f0', cursor: 'pointer' }}>
+                          {lbl}
+                        </button>
+                      ))}
+                    </div>
+                    {!canEditFee && <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 6, fontStyle: 'italic' }}>Fee structure finalised by Account Manager at approval stage.</div>}
+                  </div>
+
+                  {/* Deal Outcomes */}
+                  <div style={{ padding: '12px 16px', borderBottom: '1px solid #f1f5f9' }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>Deal Outcomes</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                      {[
+                        { label: 'Merchant MDR',   value: formatSAR(merchantMDRCalc),   color: merchantMDRCalc > 0 ? '#f59e0b' : '#94a3b8' },
+                        { label: 'Buyer Fee',       value: formatSAR(buyerFeeCalc),      color: buyerFeeCalc > 0 ? '#e5484d' : '#94a3b8' },
+                        { label: 'Disbursement',    value: formatSAR(disbursementCalc),  color: '#10b981' },
+                        { label: 'Total Repayment', value: formatSAR(totalRepayCalc),    color: '#334155' },
+                      ].map(row => (
+                        <div key={row.label} style={{ padding: '8px 10px', borderRadius: 10, background: '#f8fafc', border: '1px solid #f1f5f9' }}>
+                          <div style={{ fontSize: 10, color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>{row.label}</div>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: row.color, fontVariantNumeric: 'tabular-nums' }}>{row.value}</div>
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{ marginTop: 8, padding: '6px 10px', borderRadius: 8, background: '#f8fafc', fontSize: 12, color: '#64748b' }}>
+                      Per instalment: <strong style={{ color: '#334155' }}>{formatSAR(perEMICalc)}</strong> × {instCountCalc}
+                    </div>
+                  </div>
+
+                  {/* Repayment Schedule */}
+                  <div>
+                    <div style={{ padding: '10px 16px 6px', fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Repayment Schedule</div>
+                    <div className="grid grid-cols-4 border-b border-slate-100">
+                      {[
+                        { label: 'Total',   value: instCountCalc,                                                        danger: false },
+                        { label: 'Paid',    value: paidInstalments,                                                      danger: false },
+                        { label: 'Pending', value: Math.max(0, instCountCalc - paidInstalments - overdueInstalments),   danger: false },
+                        { label: 'Overdue', value: overdueInstalments,                                                   danger: true  },
+                      ].map((stat, i) => (
+                        <div key={stat.label} className={`px-4 py-2.5 text-center ${i < 3 ? 'border-r border-slate-100' : ''}`}>
+                          <div className={`text-[18px] font-bold ${stat.danger && stat.value > 0 ? 'text-red-500' : 'text-slate-800'}`}>{stat.value}</div>
+                          <div className="text-[10px] text-slate-400">{stat.label}</div>
+                        </div>
+                      ))}
+                    </div>
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-slate-50" style={{ background: '#f8fafc' }}>
+                          {['No.','Due Date','Amount','Status'].map((h, i) => (
+                            <th key={h} className={`px-4 py-2 text-[10px] font-semibold text-slate-400 uppercase tracking-wide ${i >= 2 ? 'text-end' : 'text-start'}`}>{h}</th>
+                          ))}
                         </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </Section>
+                      </thead>
+                      <tbody>
+                        {Array.from({ length: instCountCalc }, (_, i) => {
+                          const dueMs = new Date('2026-06-01').getTime() + (i + 1) * emiDaysCalc * 86400000
+                          const dueDate = new Date(dueMs).toISOString().slice(0, 10)
+                          const isPaid    = i < paidInstalments
+                          const isOverdue = !isPaid && i < paidInstalments + overdueInstalments
+                          return (
+                            <tr key={i} className="border-b border-slate-50 last:border-0">
+                              <td className="px-4 py-2.5 text-[12px] text-slate-400">{i + 1}</td>
+                              <td className="px-4 py-2.5 text-[12px] text-slate-600">{dueDate}</td>
+                              <td className="px-4 py-2.5 text-[12px] text-end tabular-nums font-medium text-slate-700">{formatSAR(perEMICalc)}</td>
+                              <td className="px-4 py-2.5 text-end">
+                                {isPaid ? <span className="text-[11px] font-semibold text-emerald-600">✓ Paid</span>
+                                  : isOverdue ? <span className="text-[11px] font-semibold text-red-500">Overdue</span>
+                                  : <span className="text-[11px] text-slate-400">Pending</span>}
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Submit counter-proposal (only when values changed, risk stage) */}
+                  {canEditCore && hasChanges && !counterProposal && (
+                    <div style={{ padding: '12px 16px', borderTop: '1px solid #fcd34d', background: '#fffbeb', display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 12, color: '#92400e', flex: 1 }}>Changes detected — submit as counter-proposal?</span>
+                      <button onClick={submitCounterProposal} style={{ padding: '6px 14px', borderRadius: 10, background: '#f59e0b', border: 'none', fontSize: 12, fontWeight: 700, color: 'white', cursor: 'pointer' }}>
+                        ⚖️ Submit Counter-Proposal
+                      </button>
+                      <button onClick={() => { setPropAmount(String(card.amount)); setPropTenure(String(card.tenure)); setPropMdrRate(String(card.mdrRate)) }}
+                        style={{ padding: '6px 12px', borderRadius: 10, background: 'none', border: '1.5px solid #e2e8f0', fontSize: 12, fontWeight: 600, color: '#64748b', cursor: 'pointer' }}>
+                        Reset
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )
+            })()}
+
+            {/* CONTRACTS (legal stage, legal/super only) */}
+            {cardStage === 'legal' && (currentUser?.adminRole === 'legal' || currentUser?.adminRole === 'super') && (
+              <Section title="Contracts">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {contracts.map(c => {
+                    const statusColor = { Draft: '#94a3b8', Sent: '#f59e0b', Signed: '#10b981' }
+                    return (
+                      <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 10, border: '1px solid #f1f5f9', background: 'white' }}>
+                        <span style={{ fontSize: 16 }}>📋</span>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 12, fontWeight: 600, color: '#334155' }}>{c.name}</div>
+                          <div style={{ fontSize: 10, color: '#94a3b8' }}>Added by {c.addedBy} · {c.addedAt}</div>
+                        </div>
+                        <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 10px', borderRadius: 20, background: statusColor[c.status] + '18', color: statusColor[c.status] }}>{c.status}</span>
+                        {c.status === 'Draft' && (
+                          <button onClick={() => sendContract(c.id)} style={{ padding: '4px 12px', borderRadius: 8, background: 'var(--color-primary)', border: 'none', fontSize: 11, fontWeight: 700, color: 'white', cursor: 'pointer' }}>Send →</button>
+                        )}
+                      </div>
+                    )
+                  })}
+                  {contracts.length === 0 && <div style={{ fontSize: 12, color: '#94a3b8', fontStyle: 'italic' }}>No contracts yet — add one below.</div>}
+                  {/* Add Contract */}
+                  {showContractAdd ? (
+                    <div style={{ padding: '12px 14px', borderRadius: 10, border: '1.5px solid #e2e8f0', background: '#f8fafc', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      <div style={{ display: 'flex', gap: 4 }}>
+                        {['template', 'upload'].map(m => (
+                          <button key={m} onClick={() => setContractMode(m)} style={{ padding: '4px 14px', borderRadius: 8, border: '1.5px solid', borderColor: contractMode === m ? 'var(--color-primary)' : '#e2e8f0', background: contractMode === m ? 'rgba(143,133,255,0.08)' : 'white', fontSize: 11, fontWeight: 600, color: contractMode === m ? 'var(--color-primary)' : '#64748b', cursor: 'pointer' }}>
+                            {m === 'template' ? '📋 From Template' : '📎 Upload'}
+                          </button>
+                        ))}
+                        <button onClick={() => setShowContractAdd(false)} style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: 16 }}>×</button>
+                      </div>
+                      {contractMode === 'template' ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                          {availableTemplates.map(t => (
+                            <button key={t.id} onClick={() => setSelectedTpl(t.id)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 8, border: '1.5px solid', borderColor: selectedTpl === t.id ? 'var(--color-primary)' : '#f1f5f9', background: selectedTpl === t.id ? 'rgba(143,133,255,0.06)' : 'white', cursor: 'pointer', textAlign: 'left' }}>
+                              <div style={{ flex: 1 }}>
+                                <div style={{ fontSize: 12, fontWeight: 600, color: '#334155' }}>{t.label}</div>
+                                <div style={{ fontSize: 10, color: '#94a3b8' }}>{t.desc}</div>
+                              </div>
+                              {selectedTpl === t.id && <span style={{ color: 'var(--color-primary)', fontSize: 13 }}>✓</span>}
+                            </button>
+                          ))}
+                          <button onClick={addContractFromTemplate} disabled={!selectedTpl} style={{ alignSelf: 'flex-start', padding: '6px 16px', borderRadius: 10, background: selectedTpl ? 'var(--color-primary)' : '#e2e8f0', border: 'none', fontSize: 12, fontWeight: 700, color: selectedTpl ? 'white' : '#94a3b8', cursor: selectedTpl ? 'pointer' : 'default' }}>
+                            Add from Template
+                          </button>
+                        </div>
+                      ) : (
+                        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                          <input value={uploadName} onChange={e => setUploadName(e.target.value)} placeholder="Contract name…" style={{ flex: 1, border: '1.5px solid #e2e8f0', borderRadius: 8, padding: '6px 10px', fontSize: 12, outline: 'none', fontFamily: 'inherit' }} />
+                          <button onClick={addContractManual} disabled={!uploadName.trim()} style={{ padding: '6px 14px', borderRadius: 10, background: uploadName.trim() ? 'var(--color-primary)' : '#e2e8f0', border: 'none', fontSize: 12, fontWeight: 700, color: uploadName.trim() ? 'white' : '#94a3b8', cursor: uploadName.trim() ? 'pointer' : 'default' }}>
+                            Add
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <button onClick={() => setShowContractAdd(true)} style={{ alignSelf: 'flex-start', padding: '6px 14px', borderRadius: 10, border: '1.5px dashed #e2e8f0', background: 'white', fontSize: 12, fontWeight: 600, color: '#64748b', cursor: 'pointer' }}>
+                      + Add Contract
+                    </button>
+                  )}
+                </div>
+              </Section>
+            )}
+
+            {/* (Finance Model section removed — merged into Finance Request chunk above) */}
+            {false && (() => {
+              return (
+                <Section title="Finance Model (deprecated)">
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+                    {/* Fee Sharing + EMI Frequency */}
+                    <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+                      {/* Fee sharing */}
+                      <div style={{ flex: 1, minWidth: 200, ...lockStyle }}>
+                        <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-2">Fee Sharing Model</div>
+                        <div className="space-y-1.5">
+                          {[
+                            { id: 'merchant_full', label: 'Merchant Bears Full Cost',       desc: 'MDR deducted from disbursement' },
+                            { id: 'split_50_50',   label: 'Split 50/50 (Merchant & Buyer)', desc: 'Each party pays half the MDR' },
+                            { id: 'buyer_full',    label: 'Buyer Bears Full Cost',          desc: 'Buyer repays principal + full MDR' },
+                          ].map(opt => (
+                            <button key={opt.id} onClick={() => { setMdrPayer(opt.id); setInvoiceGenerated(false) }}
+                              className="w-full text-start p-2.5 rounded-xl border transition-all"
+                              style={{ borderColor: mdrPayer === opt.id ? 'var(--color-primary)' : '#e2e8f0', background: mdrPayer === opt.id ? 'rgba(143,133,255,0.06)' : 'white' }}>
+                              <div className="flex items-center gap-2">
+                                <div className="w-3.5 h-3.5 rounded-full border-2 shrink-0 flex items-center justify-center"
+                                  style={{ borderColor: mdrPayer === opt.id ? 'var(--color-primary)' : '#cbd5e1' }}>
+                                  {mdrPayer === opt.id && <div className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--color-primary)' }} />}
+                                </div>
+                                <span className="text-[11px] font-semibold" style={{ color: mdrPayer === opt.id ? 'var(--color-primary)' : '#334155' }}>{opt.label}</span>
+                              </div>
+                              <p className="text-[10px] text-slate-400 mt-0.5 ml-5">{opt.desc}</p>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      {/* EMI Frequency */}
+                      <div style={{ flex: '0 0 160px', ...lockStyle }}>
+                        <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-2">EMI Frequency</div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                          {Object.entries(EMI_FREQ_LABELS).map(([key, lbl]) => (
+                            <button key={key} onClick={() => { setEmiFreq(key); setInvoiceGenerated(false) }}
+                              className="py-2 rounded-xl text-[11px] font-semibold border transition-all"
+                              style={{ background: emiFreq === key ? 'var(--color-primary)' : 'white', color: emiFreq === key ? 'white' : '#64748b', borderColor: emiFreq === key ? 'transparent' : '#e2e8f0' }}>
+                              {lbl}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Financial Summary — compact 2-col grid */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                      {[
+                        { label: 'Merchant MDR',   value: formatSAR(merchantMDR),          color: merchantMDR > 0 ? '#f59e0b' : '#94a3b8' },
+                        { label: 'Buyer Fee',       value: formatSAR(buyerFee),             color: buyerFee > 0 ? '#e5484d' : '#94a3b8' },
+                        { label: 'Disbursement',    value: formatSAR(merchantDisbursement), color: '#10b981' },
+                        { label: 'Total Repayment', value: formatSAR(totalBuyerRepayment),  color: '#334155' },
+                      ].map(row => (
+                        <div key={row.label} style={{ padding: '10px 12px', borderRadius: 10, background: 'white', border: '1px solid #f1f5f9' }}>
+                          <div style={{ fontSize: 10, color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 3 }}>{row.label}</div>
+                          <div style={{ fontSize: 14, fontWeight: 700, color: row.color, fontVariantNumeric: 'tabular-nums' }}>{row.value}</div>
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{ padding: '8px 12px', borderRadius: 10, background: 'white', border: '1px solid #f1f5f9', fontSize: 12, color: '#64748b' }}>
+                      Per EMI: <strong style={{ color: '#334155' }}>{formatSAR(perEMI)}</strong> × {instalmentCount} instalments
+                    </div>
+
+                    {/* Instalment Schedule */}
+                    <div>
+                      <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-2">Instalment Schedule</div>
+                      <div className="rounded-xl border border-slate-100 overflow-hidden bg-white">
+                        <div className="grid grid-cols-4 border-b border-slate-100">
+                          {[
+                            { label: 'Total',   value: instalmentCount,                                                         danger: false },
+                            { label: 'Paid',    value: paidInstalments,                                                         danger: false },
+                            { label: 'Pending', value: Math.max(0, instalmentCount - paidInstalments - overdueInstalments),     danger: false },
+                            { label: 'Overdue', value: overdueInstalments,                                                      danger: true  },
+                          ].map((stat, i) => (
+                            <div key={stat.label} className={`px-4 py-3 text-center ${i < 3 ? 'border-r border-slate-100' : ''}`}>
+                              <div className={`text-[20px] font-bold ${stat.danger && stat.value > 0 ? 'text-red-500' : 'text-slate-800'}`}>{stat.value}</div>
+                              <div className="text-[10px] text-slate-400">{stat.label}</div>
+                            </div>
+                          ))}
+                        </div>
+                        <table className="w-full">
+                          <thead>
+                            <tr className="border-b border-slate-50" style={{ background: '#f8fafc' }}>
+                              <th className="px-4 py-2 text-start text-[10px] font-semibold text-slate-400 uppercase tracking-wide">No.</th>
+                              <th className="px-4 py-2 text-start text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Due Date</th>
+                              <th className="px-4 py-2 text-end text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Amount</th>
+                              <th className="px-4 py-2 text-end text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Status</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {Array.from({ length: instalmentCount }, (_, i) => {
+                              const dueMs = new Date('2026-06-01').getTime() + (i + 1) * emiDays * 86400000
+                              const dueDate = new Date(dueMs).toISOString().slice(0, 10)
+                              const isPaid    = i < paidInstalments
+                              const isOverdue = !isPaid && i < paidInstalments + overdueInstalments
+                              return (
+                                <tr key={i} className="border-b border-slate-50 last:border-0">
+                                  <td className="px-4 py-2.5 text-[12px] text-slate-400">{i + 1}</td>
+                                  <td className="px-4 py-2.5 text-[12px] text-slate-600">{dueDate}</td>
+                                  <td className="px-4 py-2.5 text-[12px] text-end tabular-nums font-medium text-slate-700">{formatSAR(perEMI)}</td>
+                                  <td className="px-4 py-2.5 text-end">
+                                    {isPaid ? <span className="text-[11px] font-semibold text-emerald-600">✓ Paid</span>
+                                      : isOverdue ? <span className="text-[11px] font-semibold text-red-500">Overdue</span>
+                                      : <span className="text-[11px] text-slate-400">Pending</span>}
+                                  </td>
+                                </tr>
+                              )
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    {!canEditModel && <div style={{ fontSize: 11, color: '#94a3b8', fontStyle: 'italic' }}>Fee structure is finalised by the Account Manager.</div>}
+                  </div>
+                </Section>
+              )
+            })()}
 
           </div>
+          </div>
+          )} {/* end overview tab */}
         </div>
 
         {/* RIGHT — Chatter */}
@@ -1074,8 +1663,21 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
 
         <span style={{ width: 1, height: 18, background: '#e2e8f0', flexShrink: 0 }} />
 
-        {/* Approve (role-gated) */}
-        {canApprove && (
+        {/* Primary action (stage-specific, role-gated) */}
+        {canPrimary && primaryAction && (
+          <button onClick={handlePrimaryAction} style={{
+            display: 'flex', alignItems: 'center', gap: 6,
+            padding: '7px 18px', borderRadius: 20,
+            background: stageInfo?.color || '#6b7280', border: 'none',
+            fontSize: 13, fontWeight: 700, color: 'white', cursor: 'pointer',
+            boxShadow: `0 2px 8px ${stageInfo?.color || '#6b7280'}44`,
+          }}>
+            {primaryAction.label}
+          </button>
+        )}
+
+        {/* Legacy approve (account_mgr approve for disbursement) */}
+        {canApprove && !canPrimary && (
           <button onClick={handleApprove} style={{
             display: 'flex', alignItems: 'center', gap: 6,
             padding: '6px 14px', borderRadius: 20,
@@ -1365,6 +1967,8 @@ export default function Pipeline({ onNavigate }) {
                     const missing = card.documents.filter(d => d.status === 'missing').length
                     const hasYumi = !!card.yumiSuggestion.message
                     const aboveLimit = isAboveLimitCard(card)
+                    const canSeeDetail = adminRole === stage.assignedRole || adminRole === 'super'
+                    const verifiedCount = card.documents.filter(d => d.status === 'verified').length
                     return (
                       <button key={card.id}
                         onClick={() => { setSelectedCard(card); setLaneActionStage(null) }}
@@ -1378,7 +1982,41 @@ export default function Pipeline({ onNavigate }) {
                         </div>
                         <div className="text-[13px] font-semibold text-slate-800 leading-tight mb-0.5 truncate">{card.seller}</div>
                         <div className="text-[11px] text-slate-400 mb-2">→ {card.buyer}</div>
-                        <div className="text-[14px] font-bold tabular-nums text-slate-900 mb-3">{formatSAR(card.amount)}</div>
+                        <div className="text-[14px] font-bold tabular-nums text-slate-900 mb-1">{formatSAR(card.amount)}</div>
+
+                        {/* Stage-specific info block */}
+                        <div className="mb-2" style={{ fontSize: 11, color: '#64748b' }}>
+                          {stage.id === 'submitted' && (
+                            <span>{verifiedCount}/{card.documents.length} docs verified{missing > 0 ? ` · ${missing} missing` : ''}</span>
+                          )}
+                          {stage.id === 'kyc' && (
+                            <span>{verifiedCount}/{card.documents.length} docs · {missing > 0 ? <span style={{ color: '#e5484d' }}>{missing} pending</span> : <span style={{ color: '#10b981' }}>all clear</span>}</span>
+                          )}
+                          {stage.id === 'credit_score' && canSeeDetail && (
+                            <span>{card.riskScore !== null ? <span>SIMAH: <strong style={{ color: card.riskScore >= 600 ? '#059669' : '#dc2626' }}>{card.riskScore}</strong></span> : 'Awaiting SIMAH score'}</span>
+                          )}
+                          {stage.id === 'risk' && canSeeDetail && (
+                            <span>
+                              {card.riskScore !== null ? <span>Risk: <strong style={{ color: card.riskScore > 60 ? '#dc2626' : '#059669' }}>{card.riskScore}</strong></span> : 'Scoring pending'}
+                              {card.proposedAmount && <span style={{ color: '#d97706' }}> · ⚖️ Counter-proposed</span>}
+                            </span>
+                          )}
+                          {stage.id === 'legal' && (
+                            <span>{(card.contracts || []).length} contract{(card.contracts || []).length !== 1 ? 's' : ''} · {(card.contracts || []).filter(c => c.status === 'Signed').length} signed</span>
+                          )}
+                          {stage.id === 'approved' && (
+                            <span style={{ color: '#059669', fontWeight: 600 }}>✓ Approved — ready to disburse</span>
+                          )}
+                          {stage.id === 'disbursed' && (
+                            <span style={{ color: '#059669' }}>Disbursed · instalment 1 due soon</span>
+                          )}
+                          {stage.id === 'repayment' && (
+                            <span>Instalment 1 / {Math.ceil(card.tenure / 15)} paid</span>
+                          )}
+                          {stage.id === 'overdue' && (
+                            <span style={{ color: '#dc2626', fontWeight: 600 }}>⚠️ Overdue · {card.daysInStage}d in stage</span>
+                          )}
+                        </div>
                         <div className="flex items-center gap-1.5 flex-wrap">
                           {/* Process type badge */}
                           {card.type === 'invoice_finance'
