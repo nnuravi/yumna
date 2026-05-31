@@ -279,16 +279,22 @@ export const MOCK_INVOICES_BUYER = [
   {
     id: 'INV-0038',
     frId: 'FR-0038',
+    buyerId: 'buyer-001',
     seller: 'Zahrani Trading Co.',
     amount: 85000,
     dueDate: '2026-07-20',
     status: 'due_soon',
     tenure: 60,
     mdr: 'A',
+    emiFrequency: 'bimonthly',
+    totalInstalments: 4,
+    paidInstalments: 1,
+    nextInstalmentDate: '2026-07-05',
   },
   {
     id: 'INV-0033',
     frId: 'FR-0033',
+    buyerId: 'buyer-001',
     seller: 'Zahrani Trading Co.',
     amount: 65000,
     dueDate: '2026-05-10',
@@ -296,6 +302,10 @@ export const MOCK_INVOICES_BUYER = [
     tenure: 30,
     mdr: 'A',
     daysOverdue: 20,
+    emiFrequency: 'weekly',
+    totalInstalments: 5,
+    paidInstalments: 3,
+    nextInstalmentDate: '2026-05-28',
   },
 ]
 
@@ -667,6 +677,7 @@ export const PIPELINE_CARDS = [
     assignedTo: 'Noura Al-Shehri',
     sector: 'ICT',
     tenure: 60,
+    emiFrequency: 'bimonthly',
     documents: [
       { name: 'Commercial Registration', status: 'verified' },
       { name: 'Nafath Verification', status: 'verified' },
@@ -697,6 +708,7 @@ export const PIPELINE_CARDS = [
     assignedTo: 'Rania Al-Sabban',
     sector: 'Consumer Staples',
     tenure: 30,
+    emiFrequency: 'monthly',
     documents: [
       { name: 'Commercial Registration', status: 'verified' },
       { name: 'Nafath Verification', status: 'verified' },
@@ -726,6 +738,7 @@ export const PIPELINE_CARDS = [
     assignedTo: 'Omar Al-Mutairi',
     sector: 'ICT',
     tenure: 30,
+    emiFrequency: 'weekly',
     documents: [
       { name: 'Commercial Registration', status: 'verified' },
       { name: 'Signed Framework Agreement', status: 'verified' },
@@ -755,6 +768,7 @@ export const PIPELINE_CARDS = [
     assignedTo: 'Sara Al-Ghamdi',
     sector: 'Consumer Staples',
     tenure: 60,
+    emiFrequency: 'bimonthly',
     documents: [
       { name: 'Commercial Registration', status: 'verified' },
       { name: 'Nafath Verification', status: 'pending' },
@@ -782,6 +796,7 @@ export const PIPELINE_CARDS = [
     assignedTo: 'Omar Al-Mutairi',
     sector: 'ICT',
     tenure: 60,
+    emiFrequency: 'bimonthly',
     documents: [
       { name: 'Commercial Registration', status: 'verified' },
       { name: 'Signed Framework Agreement', status: 'verified' },
@@ -812,6 +827,7 @@ export const PIPELINE_CARDS = [
     assignedTo: 'Faisal Al-Dosari',
     sector: 'Manufacturing',
     tenure: 60,
+    emiFrequency: 'bimonthly',
     documents: [
       { name: 'Commercial Registration', status: 'verified' },
       { name: 'Nafath Verification', status: 'verified' },
@@ -840,6 +856,7 @@ export const PIPELINE_CARDS = [
     assignedTo: 'Tariq Al-Ghamdi',
     sector: 'ICT',
     tenure: 90,
+    emiFrequency: 'monthly',
     documents: [
       { name: 'Commercial Registration', status: 'verified' },
       { name: 'Nafath Verification', status: 'verified' },
@@ -867,6 +884,7 @@ export const PIPELINE_CARDS = [
     assignedTo: 'Sara Al-Ghamdi',
     sector: 'Manufacturing',
     tenure: 30,
+    emiFrequency: 'weekly',
     documents: [
       { name: 'Commercial Registration', status: 'pending' },
       { name: 'Nafath Verification', status: 'missing' },
@@ -893,6 +911,7 @@ export const PIPELINE_CARDS = [
     assignedTo: 'Rania Al-Sabban',
     sector: 'Consumer Staples',
     tenure: 60,
+    emiFrequency: 'bimonthly',
     documents: [
       { name: 'Commercial Registration', status: 'verified' },
       { name: 'Signed Framework Agreement', status: 'verified' },

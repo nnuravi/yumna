@@ -67,13 +67,13 @@ function LaneActions({ stage, onClose }) {
 // ── Card Detail Panel ─────────────────────────────────────────────────────────
 
 function CardDetailPanel({ card, onClose, onNavigate, adminRole }) {
-  const [activeTab, setActiveTab] = useState('yumi')
+  const [activeTab, setActiveTab] = useState('Yumi')
   const [sent, setSent] = useState(false)
   const [draftText, setDraftText] = useState(card.yumiSuggestion.draftText)
-  const [mdrPayer, setMdrPayer] = useState('buyer')
+  const [mdrPayer, setMdrPayer] = useState('split_50_50')
+  const [emiFreq, setEmiFreq] = useState(card.emiFrequency || 'bimonthly')
   const [invoiceGenerated, setInvoiceGenerated] = useState(false)
   const [thread, setThread] = useState(card.correspondence)
-  const [laneActionsOpen, setLaneActionsOpen] = useState(false)
 
   const TABS = ['Overview', 'Documents', 'Correspondence', 'Yumi', 'History']
 
@@ -89,8 +89,19 @@ function CardDetailPanel({ card, onClose, onNavigate, adminRole }) {
     setActiveTab('Correspondence')
   }
 
-  const netAmount = card.amount * (1 - card.mdrRate / 100)
   const mdrFee = card.amount * (card.mdrRate / 100)
+
+  const EMI_FREQS = { weekly: 7, bimonthly: 15, monthly: 30 }
+  const EMI_FREQ_LABELS = { weekly: 'Weekly (7d)', bimonthly: 'Bi-Monthly (15d)', monthly: 'Monthly (30d)' }
+
+  const buyerFee = mdrPayer === 'buyer_full' ? mdrFee : mdrPayer === 'split_50_50' ? mdrFee / 2 : 0
+  const merchantMDR = mdrPayer === 'merchant_full' ? mdrFee : mdrPayer === 'split_50_50' ? mdrFee / 2 : 0
+  const totalBuyerRepayment = card.amount + buyerFee
+  const merchantDisbursement = card.amount - merchantMDR
+
+  const emiDays = EMI_FREQS[emiFreq]
+  const instalmentCount = Math.ceil(card.tenure / emiDays)
+  const perEMI = totalBuyerRepayment / instalmentCount
 
   return (
     <div className="fixed inset-y-0 right-0 z-30 w-[460px] bg-white shadow-2xl flex flex-col border-l border-slate-100">
@@ -245,50 +256,114 @@ function CardDetailPanel({ card, onClose, onNavigate, adminRole }) {
             {/* Invoice generation — Account Manager */}
             {card.yumiSuggestion.action === 'generate_invoice' && (
               <div className="space-y-3">
-                <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">MDR Paid By</div>
-                <div className="flex gap-2">
-                  {['buyer', 'seller'].map(payer => (
-                    <button key={payer} onClick={() => { setMdrPayer(payer); setInvoiceGenerated(false) }}
-                      className="flex-1 py-2.5 rounded-xl text-[13px] font-semibold border transition-all capitalize"
+                {/* Fee sharing model */}
+                <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Fee Sharing Model</div>
+                <div className="space-y-1.5">
+                  {[
+                    { id: 'merchant_full', label: 'Merchant Bears Full Cost', desc: 'Buyer repays principal only — MDR deducted from merchant disbursement' },
+                    { id: 'split_50_50',  label: 'Split 50/50 (Merchant & Buyer)', desc: 'Each party pays half the MDR' },
+                    { id: 'buyer_full',   label: 'Buyer Bears Full Cost', desc: 'Buyer repays principal + full MDR — merchant receives full disbursement' },
+                  ].map(opt => (
+                    <button key={opt.id} onClick={() => { setMdrPayer(opt.id); setInvoiceGenerated(false) }}
+                      className="w-full text-start p-3 rounded-xl border transition-all"
                       style={{
-                        background: mdrPayer === payer ? 'var(--color-primary)' : 'transparent',
-                        color: mdrPayer === payer ? 'white' : 'var(--color-muted)',
-                        borderColor: mdrPayer === payer ? 'transparent' : '#e2e8f0',
+                        borderColor: mdrPayer === opt.id ? 'var(--color-primary)' : '#e2e8f0',
+                        background: mdrPayer === opt.id ? 'rgba(143,133,255,0.06)' : 'transparent',
                       }}>
-                      {payer} pays MDR
+                      <div className="flex items-center gap-2">
+                        <div className="w-3.5 h-3.5 rounded-full border-2 shrink-0 flex items-center justify-center"
+                          style={{ borderColor: mdrPayer === opt.id ? 'var(--color-primary)' : '#cbd5e1' }}>
+                          {mdrPayer === opt.id && <div className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--color-primary)' }} />}
+                        </div>
+                        <span className="text-[12px] font-semibold" style={{ color: mdrPayer === opt.id ? 'var(--color-primary)' : '#334155' }}>{opt.label}</span>
+                      </div>
+                      <div className="text-[10px] text-slate-400 mt-0.5 ml-5">{opt.desc}</div>
                     </button>
                   ))}
                 </div>
+
+                {/* EMI Frequency */}
+                <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mt-2">EMI Frequency</div>
+                <div className="flex gap-1.5">
+                  {Object.entries(EMI_FREQ_LABELS).map(([key, lbl]) => (
+                    <button key={key} onClick={() => { setEmiFreq(key); setInvoiceGenerated(false) }}
+                      className="flex-1 py-2 rounded-xl text-[11px] font-semibold border transition-all"
+                      style={{
+                        background: emiFreq === key ? 'var(--color-primary)' : 'transparent',
+                        color: emiFreq === key ? 'white' : '#64748b',
+                        borderColor: emiFreq === key ? 'transparent' : '#e2e8f0',
+                      }}>
+                      {lbl}
+                    </button>
+                  ))}
+                </div>
+
                 <button onClick={() => setInvoiceGenerated(true)}
                   className="w-full py-2.5 rounded-xl font-semibold text-[13px] transition-colors"
                   style={{ background: 'rgba(143,133,255,0.1)', color: 'var(--color-primary)' }}>
                   Generate Invoice Preview
                 </button>
+
                 {invoiceGenerated && (
                   <div className="rounded-xl border border-slate-200 overflow-hidden">
+                    {/* Invoice header */}
                     <div className="px-4 py-3 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
                       <span className="font-bold text-slate-800 text-[13px]">INVOICE · INV-{card.id.replace('FR-', '')}</span>
                       <span className="text-[11px] text-slate-400">2026-05-31</span>
                     </div>
+
+                    {/* Parties + amounts */}
                     <div className="p-4 space-y-2 text-[12px]">
-                      <div className="flex justify-between"><span className="text-slate-500">Seller</span><span className="font-medium">{card.seller}</span></div>
+                      <div className="flex justify-between"><span className="text-slate-500">Merchant (Seller)</span><span className="font-medium">{card.seller}</span></div>
                       <div className="flex justify-between"><span className="text-slate-500">Buyer</span><span className="font-medium">{card.buyer}</span></div>
-                      <div className="flex justify-between"><span className="text-slate-500">Principal Amount</span><span className="font-medium tabular-nums">{formatSAR(card.amount)}</span></div>
-                      {mdrPayer === 'buyer' ? (
-                        <>
-                          <div className="flex justify-between"><span className="text-slate-500">MDR Fee ({card.mdrRate}%)</span><span className="font-medium tabular-nums text-red-500">+{formatSAR(mdrFee)}</span></div>
-                          <div className="flex justify-between border-t border-slate-100 pt-2 mt-2"><span className="font-semibold text-slate-800">Total due from Buyer</span><span className="font-bold tabular-nums text-slate-800">{formatSAR(card.amount + mdrFee)}</span></div>
-                          <div className="text-[10px] text-slate-400">Seller receives: {formatSAR(card.amount)} · Yumna fee: {formatSAR(mdrFee)}</div>
-                        </>
-                      ) : (
-                        <>
-                          <div className="flex justify-between border-t border-slate-100 pt-2 mt-2"><span className="font-semibold text-slate-800">Total due from Buyer</span><span className="font-bold tabular-nums text-slate-800">{formatSAR(card.amount)}</span></div>
-                          <div className="flex justify-between"><span className="text-slate-500">MDR charged to Seller</span><span className="text-red-500 tabular-nums">{formatSAR(mdrFee)}</span></div>
-                          <div className="text-[10px] text-slate-400">Seller receives: {formatSAR(netAmount)} · Yumna fee: {formatSAR(mdrFee)}</div>
-                        </>
+                      <div className="flex justify-between"><span className="text-slate-500">Product Value</span><span className="font-medium tabular-nums">{formatSAR(card.amount)}</span></div>
+                      <div className="flex justify-between"><span className="text-slate-500">MDR Rate</span><span className="font-medium">{card.mdrRate}% ({EMI_FREQ_LABELS[emiFreq]})</span></div>
+                      {buyerFee > 0 && (
+                        <div className="flex justify-between"><span className="text-slate-500">Buyer Fee</span><span className="tabular-nums text-red-500">+{formatSAR(buyerFee)}</span></div>
                       )}
+                      {merchantMDR > 0 && (
+                        <div className="flex justify-between"><span className="text-slate-500">Merchant MDR</span><span className="tabular-nums text-orange-500">-{formatSAR(merchantMDR)}</span></div>
+                      )}
+                      <div className="border-t border-slate-100 pt-2 mt-1 space-y-1.5">
+                        <div className="flex justify-between"><span className="font-semibold text-slate-700">Merchant Disbursement</span><span className="font-bold tabular-nums text-emerald-600">{formatSAR(merchantDisbursement)}</span></div>
+                        <div className="flex justify-between"><span className="font-semibold text-slate-700">Buyer Total Repayment</span><span className="font-bold tabular-nums text-slate-800">{formatSAR(totalBuyerRepayment)}</span></div>
+                        <div className="flex justify-between"><span className="text-slate-500">Per EMI Amount</span><span className="font-semibold tabular-nums text-slate-800">{formatSAR(perEMI)} × {instalmentCount}</span></div>
+                      </div>
                     </div>
-                    <div className="px-4 pb-4 flex gap-2">
+
+                    {/* Instalment preview */}
+                    <div className="border-t border-slate-100">
+                      <div className="px-4 py-2 text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Instalment Schedule (preview)</div>
+                      <table className="w-full text-[11px]">
+                        <thead>
+                          <tr className="border-b border-slate-50">
+                            <th className="px-4 py-1.5 text-start font-semibold text-slate-400">No.</th>
+                            <th className="px-4 py-1.5 text-start font-semibold text-slate-400">Due Date</th>
+                            <th className="px-4 py-1.5 text-end font-semibold text-slate-400">Amount</th>
+                            <th className="px-4 py-1.5 text-end font-semibold text-slate-400">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {Array.from({ length: Math.min(instalmentCount, 4) }, (_, i) => {
+                            const dueMs = new Date('2026-06-01').getTime() + (i + 1) * emiDays * 86400000
+                            const dueDate = new Date(dueMs).toISOString().slice(0, 10)
+                            return (
+                              <tr key={i} className="border-b border-slate-50 last:border-0">
+                                <td className="px-4 py-2 text-slate-500">{i + 1}</td>
+                                <td className="px-4 py-2 text-slate-600">{dueDate}</td>
+                                <td className="px-4 py-2 text-end tabular-nums font-medium text-slate-700">{formatSAR(perEMI)}</td>
+                                <td className="px-4 py-2 text-end"><span className="text-slate-400">Pending</span></td>
+                              </tr>
+                            )
+                          })}
+                          {instalmentCount > 4 && (
+                            <tr><td colSpan={4} className="px-4 py-2 text-[10px] text-slate-400 text-center">+ {instalmentCount - 4} more instalments</td></tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <div className="px-4 pb-4 pt-3 flex gap-2">
                       <button className="flex-1 py-2 rounded-lg text-white font-semibold text-[12px]" style={{ background: '#10b981' }}>Share with Buyer →</button>
                       <button className="px-3 py-2 rounded-lg font-semibold text-[12px] border border-slate-200 text-slate-600">Hold</button>
                     </div>
@@ -388,7 +463,7 @@ export default function Pipeline({ onNavigate }) {
   const myCardCount = PIPELINE_CARDS.filter(c => myStages.includes(c.stage)).length
 
   return (
-    <div className="flex flex-col h-full -mx-6 -mt-6 overflow-hidden">
+    <div className="flex flex-col h-full overflow-hidden">
       {/* Filter bar */}
       <div className="px-6 py-3 border-b border-slate-100 bg-white flex items-center gap-3 shrink-0">
         <span className="text-[12px] font-semibold text-slate-500">View:</span>
@@ -446,7 +521,7 @@ export default function Pipeline({ onNavigate }) {
                     const hasYumi = !!card.yumiSuggestion.message
                     return (
                       <button key={card.id}
-                        onClick={() => setSelectedCard(card)}
+                        onClick={() => { setSelectedCard(card); setLaneActionStage(null) }}
                         className="w-full text-start bg-white rounded-2xl border border-slate-100 p-4 hover:shadow-md hover:border-indigo-100 transition-all">
                         {/* Card header */}
                         <div className="flex items-center justify-between mb-2">

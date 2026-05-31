@@ -161,18 +161,42 @@ export default function BuyersSection() {
 
               {tab === 'Finance Requests' && (
                 <div className="space-y-2">
-                  {(MOCK_INVOICES_BUYER || []).filter(inv => true).map(inv => (
-                    <div key={inv.id} className="flex items-center justify-between p-3 rounded-xl border border-slate-100">
-                      <div>
-                        <div className="font-semibold text-[13px] text-slate-800">{inv.id}</div>
-                        <div className="text-[11px] text-slate-400">Due {inv.dueDate}</div>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-bold tabular-nums text-[13px]">{formatSAR(inv.amount)}</div>
-                        <Badge stage={inv.status} />
-                      </div>
-                    </div>
-                  ))}
+                  {(() => {
+                    const EMI_LABELS = { weekly: 'Weekly', bimonthly: 'Bi-Monthly', monthly: 'Monthly' }
+                    const today = new Date().toISOString().slice(0, 10)
+                    const filtered = (MOCK_INVOICES_BUYER || []).filter(inv => inv.buyerId === selected.id)
+                    if (filtered.length === 0) {
+                      return <div className="text-[13px] text-slate-400 text-center py-8">No finance requests on record.</div>
+                    }
+                    return filtered.map(inv => {
+                      const nextOverdue = inv.nextInstalmentDate && inv.nextInstalmentDate < today
+                      return (
+                        <div key={inv.id} className="p-3 rounded-xl border border-slate-100 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <div className="font-semibold text-[13px] text-slate-800">{inv.id}</div>
+                              <div className="text-[11px] text-slate-400">{inv.frId} · Due {inv.dueDate}</div>
+                            </div>
+                            <div className="text-right">
+                              <div className="font-bold tabular-nums text-[13px]">{formatSAR(inv.amount)}</div>
+                              <Badge stage={inv.status} />
+                            </div>
+                          </div>
+                          {inv.emiFrequency && (
+                            <div className="flex items-center gap-3 pt-1 border-t border-slate-50 text-[11px]">
+                              <span className="px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 font-semibold">{EMI_LABELS[inv.emiFrequency]}</span>
+                              <span className="text-slate-500">{inv.paidInstalments}/{inv.totalInstalments} instalments paid</span>
+                              {inv.nextInstalmentDate && (
+                                <span className="ml-auto font-semibold" style={{ color: nextOverdue ? '#e5484d' : '#94a3b8' }}>
+                                  {nextOverdue ? 'Overdue' : 'Next:'} {inv.nextInstalmentDate}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })
+                  })()}
                 </div>
               )}
 
