@@ -60,6 +60,25 @@ const TEST_USERS = [
     device: 'Mobile',
   },
   {
+    key: 'admin_super',
+    user: USERS.admin_super,
+    label: 'Super Admin',
+    labelAr: 'المدير العام',
+    description: 'Layla Al-Harbi · Head of Operations',
+    descAr: 'ليلى الحربي · رئيسة العمليات',
+    route: '/admin',
+    icon: (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+        <path d="M2 17l10 5 10-5"/>
+        <path d="M2 12l10 5 10-5"/>
+      </svg>
+    ),
+    accent: '#0b0f19',
+    accentLight: 'rgba(11,15,25,0.08)',
+    device: 'Web',
+  },
+  {
     key: 'admin_verifier',
     user: USERS.admin_verifier,
     label: 'Verifier',
