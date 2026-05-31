@@ -651,15 +651,15 @@ export const formatSAR = (amount) =>
 // ── Pipeline ──────────────────────────────────────────────────────────────────
 
 export const PIPELINE_STAGES = [
-  { id: 'submitted',     label: 'Submitted',         assignedRole: 'verifier',     color: '#6b7280' },
-  { id: 'kyc',           label: 'KYC Review',         assignedRole: 'verifier',     color: '#8b5cf6' },
-  { id: 'credit_score',  label: 'Credit Scoring',     assignedRole: 'credit',       color: '#f59e0b' },
-  { id: 'risk',          label: 'Risk Assessment',    assignedRole: 'risk',         color: '#e5484d' },
-  { id: 'legal',         label: 'Legal Review',       assignedRole: 'legal',        color: '#7c3aed' },
-  { id: 'approved',      label: 'Approved',           assignedRole: 'account_mgr',  color: '#0891b2' },
-  { id: 'disbursed',     label: 'Disbursed',          assignedRole: 'account_mgr',  color: '#10b981' },
-  { id: 'repayment',     label: 'Repayment',          assignedRole: 'collections',  color: '#0b0f19' },
-  { id: 'overdue',       label: 'Overdue',            assignedRole: 'collections',  color: '#dc2626' },
+  { id: 'submitted',     label: 'Doc Collection',         assignedRole: 'verifier',     color: '#6b7280' },
+  { id: 'kyc',           label: 'Checking Docs',           assignedRole: 'verifier',     color: '#8b5cf6' },
+  { id: 'credit_score',  label: 'Credit Review',           assignedRole: 'credit',       color: '#f59e0b' },
+  { id: 'risk',          label: 'Risk Assessment',         assignedRole: 'risk',         color: '#e5484d' },
+  { id: 'legal',         label: 'Document Signing',        assignedRole: 'legal',        color: '#7c3aed' },
+  { id: 'approved',      label: 'Contract / Agreement',    assignedRole: 'account_mgr',  color: '#0891b2' },
+  { id: 'disbursed',     label: 'Onboarding',              assignedRole: 'account_mgr',  color: '#10b981' },
+  { id: 'repayment',     label: 'Repayment',               assignedRole: 'collections',  color: '#0b0f19' },
+  { id: 'overdue',       label: 'Rejected by Credit',      assignedRole: 'collections',  color: '#dc2626' },
 ]
 
 export const PIPELINE_CARDS = [

@@ -13,13 +13,16 @@ const ROLE_STAGE_MAP = {
 }
 
 const STAGE_GROUPS = [
-  { label: 'INTAKE',       stages: ['submitted', 'kyc'] },
-  { label: 'CREDIT',       stages: ['credit_score'] },
-  { label: 'RISK',         stages: ['risk'] },
-  { label: 'LEGAL',        stages: ['legal'] },
-  { label: 'OPS',          stages: ['approved', 'disbursed'] },
-  { label: 'COLLECTIONS',  stages: ['repayment', 'overdue'] },
+  { label: 'SALES',   stages: ['submitted'] },
+  { label: 'OPS',     stages: ['kyc'] },
+  { label: 'CREDIT',  stages: ['credit_score', 'risk', 'overdue'] },
+  { label: 'LEGAL',   stages: ['legal'] },
+  { label: 'SALES',   stages: ['approved'] },
+  { label: 'OPS',     stages: ['disbursed', 'repayment'] },
 ]
+
+const stageDept = {}
+STAGE_GROUPS.forEach(g => g.stages.forEach(id => { stageDept[id] = g.label }))
 
 function riskColor(score) {
   if (score === null) return { bg: '#f1f5f9', text: '#94a3b8' }
@@ -1068,10 +1071,16 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
 export default function Pipeline({ onNavigate }) {
   const { state } = useApp()
   const adminRole = state.currentUser?.adminRole
-  const [selectedCard, setSelectedCard] = useState(null)
-  const [filterRole, setFilterRole] = useState('mine')
+  const [selectedCard,    setSelectedCard]    = useState(null)
+  const [filterRole,      setFilterRole]      = useState('mine')
   const [laneActionStage, setLaneActionStage] = useState(null)
-  const [cards, setCards] = useState(PIPELINE_CARDS)
+  const [cards,           setCards]           = useState(PIPELINE_CARDS)
+  const [searchQuery,     setSearchQuery]     = useState('')
+  const [filterAssignee,  setFilterAssignee]  = useState('')
+  const [filterRiskMin,   setFilterRiskMin]   = useState('')
+  const [filterRiskMax,   setFilterRiskMax]   = useState('')
+  const [filterDaysMin,   setFilterDaysMin]   = useState('')
+  const [showFilters,     setShowFilters]     = useState(false)
 
   const handleCardUpdate = (updated) => {
     setCards(prev => prev.map(c => c.id === updated.id ? updated : c))
@@ -1109,14 +1118,73 @@ export default function Pipeline({ onNavigate }) {
     ? PIPELINE_STAGES.filter(s => myStages.includes(s.id))
     : PIPELINE_STAGES
 
-  const cardsForStage = (stageId) => cards.filter(c => c.stage === stageId)
-  const myCardCount = cards.filter(c => myStages.includes(c.stage)).length
+  const allAssignees = [...new Set(cards.map(c => c.assignedTo))].sort()
+  const activeFilterCount = [filterAssignee, filterRiskMin, filterRiskMax, filterDaysMin].filter(Boolean).length
+  const clearFilters = () => { setFilterAssignee(''); setFilterRiskMin(''); setFilterRiskMax(''); setFilterDaysMin('') }
+
+  const filteredCards = cards.filter(card => {
+    const q = searchQuery.trim().toLowerCase()
+    if (q && !card.buyer.toLowerCase().includes(q) &&
+             !card.seller.toLowerCase().includes(q) &&
+             !card.id.toLowerCase().includes(q)) return false
+    if (filterAssignee && card.assignedTo !== filterAssignee) return false
+    if (filterRiskMin !== '' && card.riskScore !== null && card.riskScore < Number(filterRiskMin)) return false
+    if (filterRiskMax !== '' && card.riskScore !== null && card.riskScore > Number(filterRiskMax)) return false
+    if (filterDaysMin !== '' && card.daysInStage < Number(filterDaysMin)) return false
+    return true
+  })
+
+  const cardsForStage = (stageId) => filteredCards.filter(c => c.stage === stageId)
+  const myCardCount   = filteredCards.filter(c => myStages.includes(c.stage)).length
+
+  const inputStyle = { border: '1px solid #e2e8f0', borderRadius: 8, padding: '4px 10px', fontSize: 12, background: 'white', outline: 'none', color: '#334155' }
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      {/* Filter bar */}
-      <div className="px-6 py-3 border-b border-slate-100 bg-white flex items-center gap-3 shrink-0">
-        <span className="text-[12px] font-semibold text-slate-500">View:</span>
+      {/* Search + filter bar — Row 1 */}
+      <div className="px-4 py-2.5 border-b border-slate-100 bg-white flex items-center gap-2.5 shrink-0 flex-wrap">
+        {/* Search */}
+        <div className="flex items-center gap-2 flex-1 min-w-[180px] border border-slate-200 rounded-lg px-3 py-1.5 bg-slate-50 focus-within:bg-white focus-within:border-indigo-200 transition-colors">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2.5" strokeLinecap="round">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            placeholder="Search buyer, seller, or ID…"
+            className="flex-1 bg-transparent outline-none text-[12px] text-slate-700 placeholder-slate-400"
+          />
+          {searchQuery && (
+            <button onClick={() => setSearchQuery('')} className="text-slate-400 hover:text-slate-600">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          )}
+        </div>
+
+        {/* Filters toggle */}
+        <button onClick={() => setShowFilters(v => !v)}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold transition-all border"
+          style={{
+            background: showFilters ? 'rgba(99,102,241,0.08)' : '#f8fafc',
+            borderColor: showFilters ? 'rgba(99,102,241,0.3)' : '#e2e8f0',
+            color: showFilters ? '#4f46e5' : '#64748b',
+          }}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+          </svg>
+          Filters
+          {activeFilterCount > 0 && (
+            <span className="w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold text-white"
+              style={{ background: 'var(--color-primary)' }}>{activeFilterCount}</span>
+          )}
+        </button>
+
+        <div style={{ width: 1, height: 18, background: '#e2e8f0' }} />
+
+        {/* My Lanes / All Stages */}
         {adminRole !== 'super' && (
           <button onClick={() => setFilterRole('mine')}
             className="px-3 py-1.5 rounded-lg text-[12px] font-semibold transition-all"
@@ -1129,9 +1197,52 @@ export default function Pipeline({ onNavigate }) {
           style={{ background: filterRole === 'all' || adminRole === 'super' ? 'var(--color-primary)' : '#f1f5f9', color: filterRole === 'all' || adminRole === 'super' ? 'white' : '#64748b' }}>
           All Stages
         </button>
-        <div className="flex-1" />
-        <span className="text-[11px] text-slate-400">{cards.length} active transactions</span>
+        <span className="text-[11px] text-slate-400 ml-auto">
+          {searchQuery || activeFilterCount > 0
+            ? <><strong style={{ color: '#334155' }}>{filteredCards.length}</strong> of {cards.length}</>
+            : <>{cards.length} transactions</>
+          }
+        </span>
       </div>
+
+      {/* Filter panel — Row 2 (collapsible) */}
+      {showFilters && (
+        <div className="px-4 py-2 border-b border-slate-100 shrink-0 flex items-center gap-4 flex-wrap"
+          style={{ background: '#f8fafc' }}>
+          {/* Assigned to */}
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] font-semibold text-slate-500 whitespace-nowrap">Assigned to</span>
+            <select value={filterAssignee} onChange={e => setFilterAssignee(e.target.value)} style={inputStyle}>
+              <option value="">All</option>
+              {allAssignees.map(a => <option key={a} value={a}>{a}</option>)}
+            </select>
+          </div>
+          {/* Risk score range */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-[11px] font-semibold text-slate-500 whitespace-nowrap">Risk score</span>
+            <input type="number" min="0" max="100" value={filterRiskMin} onChange={e => setFilterRiskMin(e.target.value)}
+              placeholder="Min" style={{ ...inputStyle, width: 52 }} />
+            <span className="text-[11px] text-slate-400">–</span>
+            <input type="number" min="0" max="100" value={filterRiskMax} onChange={e => setFilterRiskMax(e.target.value)}
+              placeholder="Max" style={{ ...inputStyle, width: 52 }} />
+          </div>
+          {/* Stale days */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-[11px] font-semibold text-slate-500 whitespace-nowrap">Stale ≥</span>
+            <input type="number" min="0" value={filterDaysMin} onChange={e => setFilterDaysMin(e.target.value)}
+              placeholder="days" style={{ ...inputStyle, width: 56 }} />
+            <span className="text-[11px] text-slate-400">days</span>
+          </div>
+          {/* Clear all */}
+          {activeFilterCount > 0 && (
+            <button onClick={clearFilters}
+              className="text-[11px] font-semibold px-2.5 py-1 rounded-lg transition-colors"
+              style={{ background: 'rgba(239,68,68,0.08)', color: '#dc2626' }}>
+              Clear all
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Kanban board */}
       <div className="flex-1 overflow-x-auto overflow-y-hidden">
@@ -1144,7 +1255,11 @@ export default function Pipeline({ onNavigate }) {
                 {/* Column header */}
                 <div className="flex items-center gap-2 mb-3 relative">
                   <div className="w-2.5 h-2.5 rounded-full" style={{ background: stage.color }} />
-                  <span className="font-semibold text-[13px] text-slate-700 flex-1">{stage.label}</span>
+                  <span className="font-semibold text-[12px] text-slate-700 flex-1 leading-tight">
+                    {stageDept[stage.id]
+                      ? <><span style={{ color: '#94a3b8', fontWeight: 500 }}>{stageDept[stage.id]} › </span>{stage.label}</>
+                      : stage.label}
+                  </span>
                   <span className="text-[11px] font-semibold px-1.5 py-0.5 rounded-full bg-white border border-slate-100 text-slate-500">{stageCards.length}</span>
                   {isMyLane && (
                     <button onClick={() => setLaneActionStage(laneActionStage === stage.id ? null : stage.id)}
