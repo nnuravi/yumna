@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useApp } from '../../context/AppContext'
-import { PIPELINE_STAGES, PIPELINE_CARDS, USERS, formatSAR } from '../../data/mockData'
+import { PIPELINE_STAGES, PIPELINE_CARDS, USERS, MOCK_BUYERS, formatSAR } from '../../data/mockData'
 
 const ROLE_STAGE_MAP = {
   verifier:    ['submitted', 'kyc'],
@@ -307,7 +307,22 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
   const unreadMsgCount  = card.correspondence.filter(c => !c.autoRead).length
   const adminUsers      = Object.values(USERS).filter(u => u.role === 'admin')
 
+  const buyerInfo       = card.buyerId ? MOCK_BUYERS.find(b => b.id === card.buyerId) || null : null
+  const remainingCredit = buyerInfo ? buyerInfo.creditLimit - buyerInfo.creditUsed : null
+  const isAboveLimit    = remainingCredit !== null && card.amount > remainingCredit
+
   const yumiItems = [
+    // Process-type context item (always first)
+    ...(card.type === 'invoice_finance' && isAboveLimit ? [{
+      icon: '🔴',
+      text: `Amount (${formatSAR(card.amount)}) exceeds buyer's remaining credit limit (${formatSAR(remainingCredit)}) — escalated review required`,
+      urgency: 'red',
+    }] : []),
+    ...(card.type === 'onboarding' ? [{
+      icon: '🚀',
+      text: 'Onboarding request — verify entity, complete KYC, and assign initial credit limit',
+      urgency: 'amber',
+    }] : []),
     ...missingDocNames.length ? [{ icon: '📄', text: `${missingDocNames.length} missing doc${missingDocNames.length > 1 ? 's' : ''}: ${missingDocNames.join(', ')}`, urgency: 'red' }] : [],
     ...pendingDocCount        ? [{ icon: '⏳', text: `${pendingDocCount} document${pendingDocCount > 1 ? 's' : ''} pending verification`, urgency: 'amber' }] : [],
     ...card.daysInStage > 5   ? [{ icon: '🕐', text: `Stale — ${card.daysInStage} days in current stage (threshold: 5d)`, urgency: 'amber' }] : [],
@@ -479,16 +494,18 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
                     const isPast    = sIdx < currentIdx
                     const isCurrent = stageId === cardStage
                     const isFuture  = sIdx > currentIdx
+                    const isNAForType = card.type === 'onboarding' && ['risk', 'repayment', 'overdue'].includes(stageId)
                     return (
-                      <div key={stageId} className="flex items-center">
+                      <div key={stageId} className="flex items-center" style={{ opacity: isNAForType ? 0.3 : 1 }}>
                         {si > 0 && <span style={{ color: '#d1d5db', fontSize: 10, margin: '0 4px' }}>›</span>}
                         <button
-                          onClick={() => !isCurrent && handleMoveStage(stageId)}
+                          onClick={() => !isCurrent && !isNAForType && handleMoveStage(stageId)}
+                          title={isNAForType ? 'N/A for onboarding' : undefined}
                           style={{
                             display: 'flex', alignItems: 'center', gap: 5,
                             padding: '4px 6px', borderRadius: 8, border: 'none',
                             background: isCurrent ? s.color + '14' : 'transparent',
-                            cursor: isCurrent ? 'default' : 'pointer',
+                            cursor: isCurrent || isNAForType ? 'default' : 'pointer',
                           }}>
                           <span style={{
                             width: 14, height: 14, borderRadius: '50%',
@@ -730,6 +747,30 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
                 <Field label="Days in Stage">
                   <span className="text-[13px] text-slate-700">{card.daysInStage} days</span>
                 </Field>
+                <Field label="Process Type">
+                  <span className="inline-flex items-center gap-1 text-[12px] font-semibold px-2 py-0.5 rounded-full"
+                    style={card.type === 'invoice_finance'
+                      ? { background: '#f0f9ff', color: '#0891b2' }
+                      : { background: 'rgba(139,92,246,0.08)', color: '#7c3aed' }}>
+                    {card.type === 'invoice_finance' ? '💼 Invoice Finance' : '🚀 Onboarding'}
+                  </span>
+                </Field>
+                {buyerInfo && (
+                  <Field label="Buyer Credit">
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      <div style={{ display: 'flex', gap: 8, fontSize: 12, color: '#64748b' }}>
+                        <span>Limit: <strong style={{ color: '#334155' }}>{formatSAR(buyerInfo.creditLimit)}</strong></span>
+                        <span>Used: <strong style={{ color: buyerInfo.creditUsed / buyerInfo.creditLimit > 0.8 ? '#dc2626' : '#334155' }}>
+                          {formatSAR(buyerInfo.creditUsed)} ({Math.round(buyerInfo.creditUsed / buyerInfo.creditLimit * 100)}%)
+                        </strong></span>
+                      </div>
+                      <div style={{ fontSize: 12 }}>
+                        Remaining: <strong style={{ color: isAboveLimit ? '#dc2626' : '#059669' }}>{formatSAR(remainingCredit)}</strong>
+                        {isAboveLimit && <span style={{ marginLeft: 6, fontSize: 10, fontWeight: 600, color: '#dc2626' }}>⚠️ Request exceeds limit</span>}
+                      </div>
+                    </div>
+                  </Field>
+                )}
               </div>
             </Section>
 
@@ -1081,6 +1122,7 @@ export default function Pipeline({ onNavigate }) {
   const [filterRiskMax,   setFilterRiskMax]   = useState('')
   const [filterDaysMin,   setFilterDaysMin]   = useState('')
   const [showFilters,     setShowFilters]     = useState(false)
+  const [processFilter,   setProcessFilter]   = useState('all')
 
   const handleCardUpdate = (updated) => {
     setCards(prev => prev.map(c => c.id === updated.id ? updated : c))
@@ -1134,13 +1176,51 @@ export default function Pipeline({ onNavigate }) {
     return true
   })
 
-  const cardsForStage = (stageId) => filteredCards.filter(c => c.stage === stageId)
-  const myCardCount   = filteredCards.filter(c => myStages.includes(c.stage)).length
+  const processFiltered = filteredCards.filter(c => processFilter === 'all' || c.type === processFilter)
+
+  const getBuyerCredit = (buyerId) => buyerId ? MOCK_BUYERS.find(b => b.id === buyerId) || null : null
+  const isAboveLimitCard = (card) => {
+    const b = getBuyerCredit(card.buyerId)
+    return b && card.type === 'invoice_finance' && card.amount > (b.creditLimit - b.creditUsed)
+  }
+
+  const cardsForStage = (stageId) => processFiltered.filter(c => c.stage === stageId)
+  const myCardCount   = processFiltered.filter(c => myStages.includes(c.stage)).length
+
+  const onboardingCount     = cards.filter(c => c.type === 'onboarding').length
+  const invoiceFinanceCount = cards.filter(c => c.type === 'invoice_finance').length
 
   const inputStyle = { border: '1px solid #e2e8f0', borderRadius: 8, padding: '4px 10px', fontSize: 12, background: 'white', outline: 'none', color: '#334155' }
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
+      {/* Process tabs */}
+      <div className="px-4 pt-2.5 pb-0 bg-white shrink-0 flex items-end gap-1 border-b border-slate-100">
+        {[
+          { id: 'all',             label: 'All',             count: cards.length },
+          { id: 'invoice_finance', label: '💼 Invoice Finance', count: invoiceFinanceCount },
+          { id: 'onboarding',      label: '🚀 Onboarding',      count: onboardingCount },
+        ].map(tab => (
+          <button key={tab.id} onClick={() => setProcessFilter(tab.id)} style={{
+            padding: '6px 14px 8px',
+            fontSize: 12, fontWeight: tab.id === processFilter ? 700 : 500,
+            color: tab.id === processFilter ? 'var(--color-primary)' : '#64748b',
+            borderBottom: tab.id === processFilter ? '2.5px solid var(--color-primary)' : '2.5px solid transparent',
+            background: 'none', border: 'none',
+            borderBottom: tab.id === processFilter ? '2.5px solid var(--color-primary)' : '2.5px solid transparent',
+            cursor: 'pointer', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 6,
+          }}>
+            {tab.label}
+            <span style={{
+              fontSize: 10, fontWeight: 600, minWidth: 18, height: 18, borderRadius: 20,
+              padding: '0 5px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              background: tab.id === processFilter ? 'var(--color-primary)' : '#f1f5f9',
+              color: tab.id === processFilter ? 'white' : '#64748b',
+            }}>{tab.count}</span>
+          </button>
+        ))}
+      </div>
+
       {/* Search + filter bar — Row 1 */}
       <div className="px-4 py-2.5 border-b border-slate-100 bg-white flex items-center gap-2.5 shrink-0 flex-wrap">
         {/* Search */}
@@ -1198,8 +1278,8 @@ export default function Pipeline({ onNavigate }) {
           All Stages
         </button>
         <span className="text-[11px] text-slate-400 ml-auto">
-          {searchQuery || activeFilterCount > 0
-            ? <><strong style={{ color: '#334155' }}>{filteredCards.length}</strong> of {cards.length}</>
+          {searchQuery || activeFilterCount > 0 || processFilter !== 'all'
+            ? <><strong style={{ color: '#334155' }}>{processFiltered.length}</strong> of {cards.length}</>
             : <>{cards.length} transactions</>
           }
         </span>
@@ -1284,10 +1364,12 @@ export default function Pipeline({ onNavigate }) {
                     const rc = riskColor(card.riskScore)
                     const missing = card.documents.filter(d => d.status === 'missing').length
                     const hasYumi = !!card.yumiSuggestion.message
+                    const aboveLimit = isAboveLimitCard(card)
                     return (
                       <button key={card.id}
                         onClick={() => { setSelectedCard(card); setLaneActionStage(null) }}
-                        className="w-full text-start bg-white rounded-2xl border border-slate-100 p-4 hover:shadow-md hover:border-indigo-100 transition-all">
+                        className="w-full text-start bg-white rounded-2xl border p-4 hover:shadow-md transition-all"
+                        style={{ borderColor: aboveLimit ? '#fecaca' : '#f1f5f9' }}>
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-[11px] font-mono text-slate-400">{card.id}</span>
                           {card.riskScore !== null
@@ -1298,6 +1380,15 @@ export default function Pipeline({ onNavigate }) {
                         <div className="text-[11px] text-slate-400 mb-2">→ {card.buyer}</div>
                         <div className="text-[14px] font-bold tabular-nums text-slate-900 mb-3">{formatSAR(card.amount)}</div>
                         <div className="flex items-center gap-1.5 flex-wrap">
+                          {/* Process type badge */}
+                          {card.type === 'invoice_finance'
+                            ? <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold" style={{ background: '#f0f9ff', color: '#0891b2' }}>💼 Invoice</span>
+                            : <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold" style={{ background: 'rgba(139,92,246,0.08)', color: '#7c3aed' }}>🚀 Onboarding</span>
+                          }
+                          {/* Above-limit warning */}
+                          {aboveLimit && (
+                            <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-red-50 text-red-600">⚠️ Above limit</span>
+                          )}
                           {card.daysInStage > 0 && (
                             <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-50 text-slate-500 font-medium">{card.daysInStage}d here</span>
                           )}

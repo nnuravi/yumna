@@ -665,10 +665,11 @@ export const PIPELINE_STAGES = [
 export const PIPELINE_CARDS = [
   {
     id: 'FR-0041',
+    type: 'onboarding',
     seller: 'Zahrani Trading Co.',
     sellerId: 'seller-001',
     buyer: 'Khalid Group',
-    buyerId: 'buyer-004',
+    buyerId: null,
     amount: 120000,
     mdrRate: 2.5,
     stage: 'risk',
@@ -696,6 +697,7 @@ export const PIPELINE_CARDS = [
   },
   {
     id: 'FR-0042',
+    type: 'invoice_finance',
     seller: 'Amoudi Distribution',
     sellerId: 'seller-002',
     buyer: 'Ahmed Al-Otaibi',
@@ -726,6 +728,7 @@ export const PIPELINE_CARDS = [
   },
   {
     id: 'FR-0043',
+    type: 'invoice_finance',
     seller: 'Zahrani Trading Co.',
     sellerId: 'seller-001',
     buyer: 'Mohammed Al-Rashid',
@@ -756,6 +759,7 @@ export const PIPELINE_CARDS = [
   },
   {
     id: 'FR-0044',
+    type: 'invoice_finance',
     seller: 'Amoudi Distribution',
     sellerId: 'seller-002',
     buyer: 'Al-Noor Trading',
@@ -784,6 +788,7 @@ export const PIPELINE_CARDS = [
   },
   {
     id: 'FR-0038',
+    type: 'invoice_finance',
     seller: 'Zahrani Trading Co.',
     sellerId: 'seller-001',
     buyer: 'Ahmed Al-Otaibi',
@@ -815,6 +820,7 @@ export const PIPELINE_CARDS = [
   },
   {
     id: 'FR-0045',
+    type: 'invoice_finance',
     seller: 'Zahrani Trading Co.',
     sellerId: 'seller-001',
     buyer: 'Abdullah Al-Qahtani',
@@ -844,10 +850,11 @@ export const PIPELINE_CARDS = [
   },
   {
     id: 'FR-0046',
+    type: 'onboarding',
     seller: 'Amoudi Distribution',
     sellerId: 'seller-002',
     buyer: 'Lava Trading',
-    buyerId: 'buyer-001',
+    buyerId: null,
     amount: 185000,
     mdrRate: 2.0,
     stage: 'legal',
@@ -872,10 +879,11 @@ export const PIPELINE_CARDS = [
   },
   {
     id: 'FR-0047',
+    type: 'onboarding',
     seller: 'Zahrani Trading Co.',
     sellerId: 'seller-001',
     buyer: 'Q Parts Co.',
-    buyerId: 'buyer-003',
+    buyerId: null,
     amount: 98000,
     mdrRate: 2.5,
     stage: 'submitted',
@@ -899,10 +907,11 @@ export const PIPELINE_CARDS = [
   },
   {
     id: 'FR-0048',
+    type: 'onboarding',
     seller: 'Amoudi Distribution',
     sellerId: 'seller-002',
     buyer: 'Rukn AL-Trade',
-    buyerId: 'buyer-003',
+    buyerId: null,
     amount: 220000,
     mdrRate: 2.0,
     stage: 'disbursed',
