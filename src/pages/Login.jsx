@@ -149,6 +149,41 @@ const TEST_USERS = [
     accentLight: 'rgba(99,102,241,0.08)',
     device: 'Web',
   },
+  {
+    key: 'admin_account_mgr',
+    user: USERS.admin_account_mgr,
+    label: 'Account Mgr',
+    labelAr: 'مدير حسابات',
+    description: 'Rania Al-Sabban · Account Manager',
+    descAr: 'رانيا السبان · مدير حسابات',
+    route: '/admin',
+    icon: (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/>
+        <path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/>
+      </svg>
+    ),
+    accent: '#0891b2',
+    accentLight: 'rgba(8,145,178,0.08)',
+    device: 'Web',
+  },
+  {
+    key: 'admin_legal',
+    user: USERS.admin_legal,
+    label: 'Legal',
+    labelAr: 'الشؤون القانونية',
+    description: 'Tariq Al-Ghamdi · Legal Counsel',
+    descAr: 'طارق الغامدي · مستشار قانوني',
+    route: '/admin',
+    icon: (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+      </svg>
+    ),
+    accent: '#7c3aed',
+    accentLight: 'rgba(124,58,237,0.08)',
+    device: 'Web',
+  },
 ]
 
 export default function Login() {

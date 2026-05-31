@@ -55,41 +55,41 @@ export default function SellerApp() {
   }
 
   return (
-    <div className="flex flex-col h-dvh max-w-md mx-auto relative" style={{ background: 'var(--color-page)' }}>
-      {/* Header */}
-      <header className="shrink-0 px-5 pt-safe pt-4 pb-3 flex items-center justify-between bg-white border-b border-black/5 z-40">
-        <div>
-          <div className="eyebrow text-muted">Logged in as</div>
-          <div className="font-semibold text-ink text-[15px]">{user.business}</div>
-        </div>
-        <div className="flex items-center gap-2.5">
-          <LanguageToggle />
-          {/* Bell */}
-          <button
-            onClick={() => setActiveTab('alerts')}
-            className="relative w-10 h-10 rounded-full flex items-center justify-center bg-card border border-black/5"
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-              <path d="M13.73 21a2 2 0 01-3.46 0"/>
-            </svg>
-            {unreadCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 w-4.5 h-4.5 bg-red-500 rounded-full text-white text-[9px] font-bold flex items-center justify-center">
-                {unreadCount}
-              </span>
-            )}
-          </button>
-          {/* Avatar */}
-          <button
-            onClick={() => navigate('/')}
-            className="w-9 h-9 rounded-full flex items-center justify-center text-white text-[12px] font-semibold"
-            style={{ background: '#8f85ff' }}
-            title="Switch user"
-          >
-            {user.initials}
-          </button>
-        </div>
-      </header>
+    <div className="flex flex-col h-dvh max-w-md mx-auto relative" style={{ background: activeTab === 'home' ? 'var(--color-ink)' : 'var(--color-page)' }}>
+      {/* Header — hidden on home tab (hero contains its own nav) */}
+      {activeTab !== 'home' && (
+        <header className="shrink-0 px-5 pt-safe pt-4 pb-3 flex items-center justify-between bg-white border-b border-black/5 z-40">
+          <div>
+            <div className="eyebrow text-muted">Logged in as</div>
+            <div className="font-semibold text-ink text-[15px]">{user.business}</div>
+          </div>
+          <div className="flex items-center gap-2.5">
+            <LanguageToggle />
+            <button
+              onClick={() => setActiveTab('alerts')}
+              className="relative w-10 h-10 rounded-full flex items-center justify-center bg-card border border-black/5"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                <path d="M13.73 21a2 2 0 01-3.46 0"/>
+              </svg>
+              {unreadCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 w-4.5 h-4.5 bg-red-500 rounded-full text-white text-[9px] font-bold flex items-center justify-center">
+                  {unreadCount}
+                </span>
+              )}
+            </button>
+            <button
+              onClick={() => navigate('/')}
+              className="w-9 h-9 rounded-full flex items-center justify-center text-white text-[12px] font-semibold"
+              style={{ background: '#8f85ff' }}
+              title="Switch user"
+            >
+              {user.initials}
+            </button>
+          </div>
+        </header>
+      )}
 
       {/* Content */}
       <main className="flex-1 overflow-y-auto">
