@@ -85,7 +85,7 @@ const ALL_NAV = [
 export default function AdminApp() {
   const [activeSection, setActiveSection] = useState('overview')
   const [sidebarOpen, setSidebarOpen] = useState(true)
-  const [yumiOpen, setYumiOpen] = useState(true)
+  const [yumiOpen, setYumiOpen] = useState(false)
   const { state } = useApp()
   const navigate = useNavigate()
   const user = state.currentUser
@@ -126,9 +126,7 @@ export default function AdminApp() {
         style={{ width: sidebarOpen ? '220px' : '60px' }}>
         {/* Logo */}
         <div className="px-4 py-5 border-b border-black/5 flex items-center gap-3">
-          <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'var(--color-primary)' }}>
-            <span className="text-white font-bold text-[12px]">ي</span>
-          </div>
+          <img src="/logo.png" alt="Yumna" className="h-8 w-auto shrink-0 object-contain" />
           {sidebarOpen && (
             <div>
               <div className="display font-semibold text-ink text-[15px]">Yumna</div>
