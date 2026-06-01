@@ -53,7 +53,7 @@ export default function YumiPanel({ activeSection }) {
   return (
     <div className="flex flex-col h-full bg-white border-l border-slate-100" style={{ width: 300 }}>
       {/* Header */}
-      <div className="px-4 py-4 border-b border-slate-100 shrink-0" style={{ background: 'rgba(143,133,255,0.04)' }}>
+      <div className="px-4 py-4 border-b border-slate-100 shrink-0" style={{ background: '#fafafa' }}>
         <div className="flex items-center gap-2 mb-0.5">
           <span className="text-[16px]">✦</span>
           <span className="font-bold text-[14px]" style={{ color: 'var(--color-primary)' }}>Yumi</span>
@@ -63,7 +63,7 @@ export default function YumiPanel({ activeSection }) {
 
       {/* Greeting */}
       <div className="px-4 py-3 shrink-0">
-        <div className="rounded-xl p-3 border" style={{ background: 'rgba(143,133,255,0.04)', borderColor: 'rgba(143,133,255,0.15)' }}>
+        <div className="rounded-xl p-3 border" style={{ background: '#fafafa', borderColor: '#e5e5e5' }}>
           <p className="text-[12px] text-slate-700 leading-relaxed">{persona.greeting}</p>
         </div>
       </div>
@@ -76,10 +76,10 @@ export default function YumiPanel({ activeSection }) {
             <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-2">Needs Your Action</div>
             <div className="space-y-2">
               {myCardsWithAction.slice(0, 3).map(card => (
-                <div key={card.id} className="rounded-xl border p-3" style={{ background: '#fafafa', borderColor: '#f1f5f9' }}>
+                <div key={card.id} className="rounded-xl border p-3" style={{ background: '#fafafa', borderColor: '#e5e5e5' }}>
                   <div className="flex items-center gap-1.5 mb-1">
                     <span className="text-[10px] font-mono text-slate-400">{card.id}</span>
-                    <span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold" style={{ background: 'rgba(143,133,255,0.1)', color: 'var(--color-primary)' }}>✦</span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold" style={{ background: 'rgba(0,0,0,0.06)', color: 'var(--color-primary)' }}>✦</span>
                   </div>
                   <p className="text-[11px] text-slate-600 leading-snug">{card.yumiSuggestion.message.split('.')[0]}.</p>
                 </div>
@@ -94,8 +94,8 @@ export default function YumiPanel({ activeSection }) {
             <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-2">Urgent Tasks</div>
             <div className="space-y-2">
               {urgentTasks.slice(0, 4).map(task => (
-                <div key={task.id} className="flex items-start gap-2 rounded-xl border p-3" style={{ background: '#fafafa', borderColor: '#f1f5f9' }}>
-                  <div className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" style={{ background: task.priority === 'critical' ? '#e5484d' : '#f59e0b' }} />
+                <div key={task.id} className="flex items-start gap-2 rounded-xl border p-3" style={{ background: '#fafafa', borderColor: '#e5e5e5' }}>
+                  <div className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" style={{ background: task.priority === 'critical' ? '#737373' : '#a3a3a3' }} />
                   <div>
                     <div className="text-[12px] font-medium text-slate-700 leading-snug">{task.title}</div>
                     <div className="text-[10px] text-slate-400">Due {task.dueDate}</div>
@@ -112,7 +112,7 @@ export default function YumiPanel({ activeSection }) {
           <div className="space-y-1.5">
             {Object.keys(CANNED_RESPONSES).map(q => (
               <button key={q} onClick={() => setQuery(q)}
-                className="w-full text-start text-[11px] text-slate-600 px-3 py-2 rounded-xl border border-slate-100 hover:border-indigo-200 hover:bg-indigo-50 transition-colors leading-snug">
+                className="w-full text-start text-[11px] text-slate-600 px-3 py-2 rounded-xl border border-slate-100 hover:border-slate-200 hover:bg-slate-50 transition-colors leading-snug">
                 {q}
               </button>
             ))}
@@ -125,7 +125,7 @@ export default function YumiPanel({ activeSection }) {
             <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Conversation</div>
             {conversation.map((msg, i) => (
               <div key={i} className={`rounded-xl p-3 text-[11px] leading-relaxed ${msg.from === 'user' ? 'bg-slate-100 text-slate-700 ml-4' : 'border text-slate-600'}`}
-                style={msg.from === 'yumi' ? { background: 'rgba(143,133,255,0.04)', borderColor: 'rgba(143,133,255,0.2)' } : {}}>
+                style={msg.from === 'yumi' ? { background: '#fafafa', borderColor: '#e5e5e5' } : {}}>
                 {msg.from === 'yumi' && <span className="font-semibold" style={{ color: 'var(--color-primary)' }}>✦ Yumi · </span>}
                 {msg.text}
               </div>
@@ -143,7 +143,7 @@ export default function YumiPanel({ activeSection }) {
             onKeyDown={e => e.key === 'Enter' && handleSend()}
             placeholder="Ask Yumi anything…"
             className="flex-1 px-3 py-2 rounded-xl border text-[12px] outline-none"
-            style={{ borderColor: '#e2e8f0' }}
+            style={{ borderColor: '#e5e5e5' }}
           />
           <button onClick={handleSend}
             className="w-8 h-8 rounded-xl flex items-center justify-center text-white shrink-0"

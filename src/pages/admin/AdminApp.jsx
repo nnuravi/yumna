@@ -143,11 +143,11 @@ export default function AdminApp() {
             return (
               <button key={item.id} onClick={() => setActiveSection(item.id)}
                 className="w-full flex items-center gap-3 px-3 py-2.5 mb-0.5 rounded-xl transition-all text-start mx-1"
-                style={{ width: 'calc(100% - 8px)', background: active ? 'rgba(143,133,255,0.1)' : 'transparent', color: active ? 'var(--color-primary)' : 'var(--color-muted)' }}>
+                style={{ width: 'calc(100% - 8px)', background: active ? 'rgba(0,0,0,0.06)' : 'transparent', color: active ? 'var(--color-primary)' : 'var(--color-muted)' }}>
                 <div className="relative shrink-0">
                   {item.icon}
                   {badge > 0 && (
-                    <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-red-500 rounded-full border border-white text-[8px] text-white font-bold flex items-center justify-center">
+                    <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full border border-white text-[8px] text-white font-bold flex items-center justify-center" style={{ background: '#404040' }}>
                       {badge}
                     </span>
                   )}

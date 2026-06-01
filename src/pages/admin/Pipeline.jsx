@@ -25,16 +25,16 @@ const stageDept = {}
 STAGE_GROUPS.forEach(g => g.stages.forEach(id => { stageDept[id] = g.label }))
 
 function riskColor(score) {
-  if (score === null) return { bg: '#f1f5f9', text: '#94a3b8' }
-  if (score < 30) return { bg: '#ecfdf5', text: '#059669' }
-  if (score < 60) return { bg: '#fffbeb', text: '#d97706' }
-  return { bg: '#fef2f2', text: '#e5484d' }
+  if (score === null) return { bg: '#f5f5f5', text: '#a3a3a3' }
+  if (score < 30)     return { bg: '#f5f5f5', text: '#262626' }
+  if (score < 60)     return { bg: '#f0f0f0', text: '#525252' }
+  return               { bg: '#e5e5e5', text: '#737373' }
 }
 
 function statusColor(status) {
-  if (status === 'verified') return { color: '#10b981', bg: '#f0fdf4' }
-  if (status === 'missing')  return { color: '#e5484d', bg: '#fef2f2' }
-  return { color: '#f59e0b', bg: '#fffbeb' }
+  if (status === 'verified') return { color: '#262626', bg: '#f5f5f5' }
+  if (status === 'missing')  return { color: '#737373', bg: '#f0f0f0' }
+  return                            { color: '#525252', bg: '#f5f5f5' }
 }
 
 function buildTimeline(card) {
@@ -121,12 +121,12 @@ function LaneActions({ stage, onClose }) {
           <button key={a.id} onClick={() => setApplied(a.id)}
             className="w-full text-start p-3 rounded-xl border transition-colors"
             style={{
-              borderColor: applied === a.id ? '#8f85ff' : '#f1f5f9',
-              background: applied === a.id ? 'rgba(143,133,255,0.06)' : 'transparent',
+              borderColor: applied === a.id ? 'rgba(0,0,0,0.15)' : '#e5e5e5',
+              background: applied === a.id ? 'rgba(0,0,0,0.03)' : 'transparent',
             }}>
             <div className="text-[12px] font-semibold text-slate-800 mb-0.5">{a.label}</div>
             <div className="text-[11px] text-slate-400 leading-snug">{a.desc}</div>
-            {applied === a.id && <div className="mt-2 text-[11px] font-semibold text-indigo-600">✓ Yumi is on it</div>}
+            {applied === a.id && <div className="mt-2 text-[11px] font-semibold" style={{ color: '#525252' }}>✓ Yumi is on it</div>}
           </button>
         ))}
       </div>
@@ -148,9 +148,9 @@ function ChatterPanel({ timeline, chatterMode, setChatterMode, draftText, setDra
           <button key={id} onClick={() => setChatterMode(m => m === id ? null : id)}
             className="px-3 py-1.5 rounded-lg text-[12px] font-semibold border transition-all"
             style={{
-              background: chatterMode === id ? (id === 'note' ? '#fffbeb' : 'rgba(143,133,255,0.08)') : 'white',
-              borderColor: chatterMode === id ? (id === 'note' ? '#fcd34d' : 'rgba(143,133,255,0.4)') : '#e2e8f0',
-              color: chatterMode === id ? (id === 'note' ? '#92400e' : 'var(--color-primary)') : '#64748b',
+              background: chatterMode === id ? '#f5f5f5' : 'white',
+              borderColor: chatterMode === id ? (id === 'note' ? '#e5e5e5' : 'rgba(0,0,0,0.15)') : '#e5e5e5',
+              color: chatterMode === id ? '#262626' : '#525252',
             }}>
             {label}
           </button>
@@ -160,7 +160,7 @@ function ChatterPanel({ timeline, chatterMode, setChatterMode, draftText, setDra
       {/* Composer */}
       {chatterMode && (
         <div className="px-4 py-3 border-b border-slate-100 shrink-0"
-          style={{ background: chatterMode === 'note' ? '#fffdf0' : 'white' }}>
+          style={{ background: '#f5f5f5' }}>
           <textarea
             value={draftText}
             onChange={e => setDraftText(e.target.value)}
@@ -168,12 +168,12 @@ function ChatterPanel({ timeline, chatterMode, setChatterMode, draftText, setDra
             autoFocus
             placeholder={chatterMode === 'note' ? 'Add an internal note…' : 'Write a message…'}
             className="w-full px-3 py-2.5 rounded-xl border text-[12px] outline-none resize-none leading-relaxed"
-            style={{ borderColor: chatterMode === 'note' ? '#fcd34d' : 'rgba(143,133,255,0.3)', fontFamily: 'inherit' }}
+            style={{ borderColor: chatterMode === 'note' ? '#e5e5e5' : 'rgba(0,0,0,0.15)', fontFamily: 'inherit' }}
           />
           <div className="flex gap-2 mt-2">
             <button onClick={onSend}
               className="px-4 py-1.5 rounded-lg text-white font-semibold text-[12px]"
-              style={{ background: chatterMode === 'note' ? '#f59e0b' : 'var(--color-primary)' }}>
+              style={{ background: 'var(--color-primary)' }}>
               {chatterMode === 'note' ? 'Add note' : 'Send'}
             </button>
             <button onClick={() => { setChatterMode(null); setDraftText('') }}
@@ -203,13 +203,13 @@ function ChatterPanel({ timeline, chatterMode, setChatterMode, draftText, setDra
           )
           if (entry.type === 'payment') return (
             <div key={entry.id || i} className="flex gap-3">
-              <div className="w-7 h-7 rounded-full border-2 border-emerald-100 bg-emerald-50 flex items-center justify-center text-[12px] shrink-0 mt-0.5">
+              <div className="w-7 h-7 rounded-full border-2 border-slate-200 bg-slate-50 flex items-center justify-center text-[12px] shrink-0 mt-0.5">
                 💰
               </div>
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-[12px] font-semibold text-emerald-700">Payment received</span>
-                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-100 text-emerald-600 font-semibold tabular-nums">
+                  <span className="text-[12px] font-semibold text-slate-700">Payment received</span>
+                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-slate-600 font-semibold tabular-nums">
                     {formatSAR(entry.amount)}
                   </span>
                 </div>
@@ -218,10 +218,10 @@ function ChatterPanel({ timeline, chatterMode, setChatterMode, draftText, setDra
             </div>
           )
           if (entry.type === 'note') return (
-            <div key={entry.id || i} className="rounded-xl border border-amber-100 p-3" style={{ background: '#fffdf0' }}>
+            <div key={entry.id || i} className="rounded-xl border p-3" style={{ background: '#f5f5f5', borderColor: '#e5e5e5' }}>
               <div className="flex items-center gap-2 mb-1.5">
-                <span className="text-[11px] font-semibold text-amber-700">{entry.from}</span>
-                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-600 font-medium">Note</span>
+                <span className="text-[11px] font-semibold" style={{ color: '#262626' }}>{entry.from}</span>
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium" style={{ background: '#e5e5e5', color: '#525252' }}>Note</span>
                 <span className="ml-auto text-[10px] text-slate-400">{entry.date}</span>
               </div>
               <p className="text-[12px] text-slate-600 leading-relaxed">{entry.message}</p>
@@ -230,14 +230,14 @@ function ChatterPanel({ timeline, chatterMode, setChatterMode, draftText, setDra
           return (
             <div key={entry.id || i} className="rounded-xl border p-3"
               style={{
-                borderColor: entry.autoRead ? 'rgba(143,133,255,0.2)' : '#f1f5f9',
-                background: entry.autoRead ? 'rgba(143,133,255,0.04)' : '#fafafa',
+                borderColor: '#e5e5e5',
+                background: '#fafafa',
               }}>
               <div className="flex items-center gap-2 mb-1.5 flex-wrap">
                 <span className="text-[12px] font-semibold text-slate-700">{entry.from}</span>
                 {entry.autoRead && (
                   <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
-                    style={{ background: 'rgba(143,133,255,0.1)', color: 'var(--color-primary)' }}>
+                    style={{ background: 'rgba(0,0,0,0.06)', color: 'var(--color-primary)' }}>
                     🤖 Yumi
                   </span>
                 )}
@@ -572,11 +572,11 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
         {/* Smart profile buttons */}
         <div className="flex gap-2 ml-2">
           <button onClick={() => onNavigate('sellers')}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-[12px] font-semibold text-slate-600 hover:bg-indigo-50 hover:text-indigo-700 hover:border-indigo-100 transition-colors">
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-[12px] font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-800 hover:border-slate-200 transition-colors">
             🏪 {card.seller}
           </button>
           <button onClick={() => onNavigate('buyers')}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-[12px] font-semibold text-slate-600 hover:bg-indigo-50 hover:text-indigo-700 hover:border-indigo-100 transition-colors">
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-[12px] font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-800 hover:border-slate-200 transition-colors">
             👤 {card.buyer}
           </button>
         </div>
@@ -609,9 +609,9 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
             const currentIdx = stageOrder.indexOf(cardStage)
             return (
               <div key={group.label} className="flex items-center">
-                {gi > 0 && <span style={{ color: '#e2e8f0', margin: '0 8px', fontSize: 18, lineHeight: 1 }}>|</span>}
+                {gi > 0 && <span style={{ color: '#d4d4d4', margin: '0 8px', fontSize: 18, lineHeight: 1 }}>|</span>}
                 <div className="flex items-center gap-0">
-                  <span style={{ fontSize: 9, fontWeight: 700, color: '#94a3b8', letterSpacing: '0.1em', marginRight: 6, textTransform: 'uppercase' }}>
+                  <span style={{ fontSize: 9, fontWeight: 700, color: '#a3a3a3', letterSpacing: '0.1em', marginRight: 6, textTransform: 'uppercase' }}>
                     {group.label}
                   </span>
                   {group.stages.map((stageId, si) => {
@@ -624,22 +624,22 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
                     const isNAForType = card.type === 'onboarding' && ['risk', 'repayment', 'overdue'].includes(stageId)
                     return (
                       <div key={stageId} className="flex items-center" style={{ opacity: isNAForType ? 0.3 : 1 }}>
-                        {si > 0 && <span style={{ color: '#d1d5db', fontSize: 10, margin: '0 4px' }}>›</span>}
+                        {si > 0 && <span style={{ color: '#d4d4d4', fontSize: 10, margin: '0 4px' }}>›</span>}
                         <button
                           onClick={() => !isCurrent && !isNAForType && handleMoveStage(stageId)}
                           title={isNAForType ? 'N/A for onboarding' : undefined}
                           style={{
                             display: 'flex', alignItems: 'center', gap: 5,
                             padding: '4px 6px', borderRadius: 8, border: 'none',
-                            background: isCurrent ? s.color + '14' : 'transparent',
+                            background: isCurrent ? 'rgba(0,0,0,0.05)' : 'transparent',
                             cursor: isCurrent || isNAForType ? 'default' : 'pointer',
                           }}>
                           <span style={{
                             width: 14, height: 14, borderRadius: '50%',
-                            border: `1.5px solid ${isPast ? '#cbd5e1' : isCurrent ? s.color : '#d1d5db'}`,
-                            background: isPast ? '#f1f5f9' : isCurrent ? s.color : 'transparent',
+                            border: `1.5px solid ${isPast ? '#d4d4d4' : isCurrent ? '#171717' : '#e5e5e5'}`,
+                            background: isPast ? '#f0f0f0' : isCurrent ? '#171717' : 'transparent',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            fontSize: 8, color: isPast ? '#94a3b8' : 'white',
+                            fontSize: 8, color: isPast ? '#a3a3a3' : 'white',
                             flexShrink: 0,
                           }}>
                             {isPast ? '✓' : ''}
@@ -647,7 +647,7 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
                           <span style={{
                             fontSize: 11,
                             fontWeight: isCurrent ? 700 : 400,
-                            color: isCurrent ? s.color : isPast ? '#94a3b8' : '#64748b',
+                            color: isCurrent ? '#171717' : isPast ? '#a3a3a3' : '#525252',
                             whiteSpace: 'nowrap',
                           }}>
                             {s.label}
@@ -668,7 +668,7 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
 
         {/* LEFT — scrollable form */}
         <style>{`@keyframes yumi-pulse { 0%,100%{opacity:1} 50%{opacity:0.35} }`}</style>
-        <div className="flex-1 flex flex-col overflow-hidden" style={{ background: '#f8fafc' }}>
+        <div className="flex-1 flex flex-col overflow-hidden" style={{ background: '#f5f5f5' }}>
 
           {/* Tab bar */}
           <div className="flex items-end gap-0 px-6 pt-2 border-b border-slate-200 bg-white shrink-0">
@@ -679,7 +679,7 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
               <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{
                 padding: '7px 16px 8px',
                 fontSize: 12, fontWeight: activeTab === tab.id ? 700 : 500,
-                color: activeTab === tab.id ? 'var(--color-primary)' : '#64748b',
+                color: activeTab === tab.id ? 'var(--color-primary)' : '#525252',
                 borderBottom: activeTab === tab.id ? '2.5px solid var(--color-primary)' : '2.5px solid transparent',
                 background: 'none', border: 'none',
                 borderBottom: activeTab === tab.id ? '2.5px solid var(--color-primary)' : '2.5px solid transparent',
@@ -694,7 +694,7 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
           {activeTab === 'documents' && (
             <div className="flex-1 flex overflow-hidden">
               {/* Document list */}
-              <div className="overflow-y-auto border-r border-slate-100 shrink-0 p-4" style={{ width: 300, background: 'white' }}>
+              <div className="overflow-y-auto border-r border-slate-100 shrink-0 p-4" style={{ width: 300, background: '#fafafa' }}>
                 <div className="flex flex-col gap-2">
                   {card.documents.map((doc, i) => {
                     const st = docStatuses[doc.name] || doc.status
@@ -705,16 +705,16 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
                         style={{
                           display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px',
                           borderRadius: 10, border: '1.5px solid',
-                          borderColor: isSelected ? 'rgba(99,102,241,0.4)' : '#f1f5f9',
-                          background: isSelected ? 'rgba(99,102,241,0.04)' : 'white',
-                          borderLeft: isSelected ? '3px solid var(--color-primary)' : '1.5px solid #f1f5f9',
+                          borderColor: isSelected ? 'rgba(0,0,0,0.15)' : '#e5e5e5',
+                          background: isSelected ? 'rgba(0,0,0,0.03)' : 'white',
+                          borderLeft: isSelected ? '3px solid var(--color-primary)' : '1.5px solid #e5e5e5',
                           cursor: 'pointer', textAlign: 'left',
                         }}>
                         <span style={{ fontSize: 18, color: sc.color }}>
                           {st === 'verified' ? '✓' : st === 'missing' ? '✗' : '○'}
                         </span>
                         <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: 12, fontWeight: 600, color: '#334155' }}>{doc.name}</div>
+                          <div style={{ fontSize: 12, fontWeight: 600, color: '#262626' }}>{doc.name}</div>
                         </div>
                         <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 20, background: sc.bg, color: sc.color, textTransform: 'capitalize' }}>{st}</span>
                       </button>
@@ -724,9 +724,9 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
               </div>
 
               {/* Document preview */}
-              <div className="flex-1 overflow-y-auto p-6" style={{ background: '#f8fafc' }}>
+              <div className="flex-1 overflow-y-auto p-6" style={{ background: '#f5f5f5' }}>
                 {!selectedDoc ? (
-                  <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 8, color: '#94a3b8' }}>
+                  <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 8, color: '#a3a3a3' }}>
                     <span style={{ fontSize: 40 }}>📄</span>
                     <span style={{ fontSize: 13 }}>Select a document to preview</span>
                   </div>
@@ -740,11 +740,11 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
                       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
                         <span style={{ fontSize: 32, marginTop: 2 }}>📄</span>
                         <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: 16, fontWeight: 700, color: '#1e293b', marginBottom: 4 }}>{selectedDoc.name}</div>
+                          <div style={{ fontSize: 16, fontWeight: 700, color: '#171717', marginBottom: 4 }}>{selectedDoc.name}</div>
                           {canEdit ? (
                             <select value={st} onChange={e => setDocStatuses(prev => ({ ...prev, [selectedDoc.name]: e.target.value }))}
-                              style={{ border: '1.5px solid #e2e8f0', borderRadius: 8, padding: '4px 10px', fontSize: 12, outline: 'none', fontFamily: 'inherit', color: sc.color, background: sc.bg, fontWeight: 600, cursor: 'pointer' }}>
-                              {['verified', 'pending', 'missing'].map(s => <option key={s} value={s} style={{ color: '#334155', background: 'white' }}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
+                              style={{ border: '1.5px solid #e5e5e5', borderRadius: 8, padding: '4px 10px', fontSize: 12, outline: 'none', fontFamily: 'inherit', color: sc.color, background: sc.bg, fontWeight: 600, cursor: 'pointer' }}>
+                              {['verified', 'pending', 'missing'].map(s => <option key={s} value={s} style={{ color: '#262626', background: 'white' }}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
                             </select>
                           ) : (
                             <span style={{ fontSize: 12, fontWeight: 600, padding: '3px 10px', borderRadius: 20, background: sc.bg, color: sc.color, textTransform: 'capitalize' }}>{st}</span>
@@ -761,21 +761,21 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
                           ['Days in Stage', `${card.daysInStage}d`],
                         ].map(([label, value]) => (
                           <div key={label}>
-                            <div style={{ fontSize: 10, color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>{label}</div>
-                            <div style={{ fontSize: 12, color: '#334155', fontWeight: 500 }}>{value}</div>
+                            <div style={{ fontSize: 10, color: '#a3a3a3', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>{label}</div>
+                            <div style={{ fontSize: 12, color: '#262626', fontWeight: 500 }}>{value}</div>
                           </div>
                         ))}
                       </div>
 
                       {/* Notes */}
                       <div>
-                        <div style={{ fontSize: 10, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Notes</div>
+                        <div style={{ fontSize: 10, fontWeight: 600, color: '#a3a3a3', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Notes</div>
                         <textarea
                           value={docNotes[selectedDoc.name] || ''}
                           onChange={e => setDocNotes(prev => ({ ...prev, [selectedDoc.name]: e.target.value }))}
                           rows={3}
                           placeholder="Add a note about this document…"
-                          style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1.5px solid #e2e8f0', fontSize: 12, resize: 'none', fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box', color: '#334155' }}
+                          style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1.5px solid #e2e8f0', fontSize: 12, resize: 'none', fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box', color: '#262626' }}
                         />
                       </div>
 
@@ -787,7 +787,7 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
                           </button>
                         )}
                         {canEdit && st !== 'verified' && (
-                          <button onClick={() => setDocStatuses(prev => ({ ...prev, [selectedDoc.name]: 'verified' }))} style={{ padding: '7px 16px', borderRadius: 10, background: '#10b981', border: 'none', fontSize: 12, fontWeight: 700, color: 'white', cursor: 'pointer' }}>
+                          <button onClick={() => setDocStatuses(prev => ({ ...prev, [selectedDoc.name]: 'verified' }))} style={{ padding: '7px 16px', borderRadius: 10, background: '#171717', border: 'none', fontSize: 12, fontWeight: 700, color: 'white', cursor: 'pointer' }}>
                             ✓ Mark as Verified
                           </button>
                         )}
@@ -807,61 +807,60 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
             {/* YUMI BRIEFING */}
             <div style={{
               borderRadius: 16,
-              background: 'linear-gradient(135deg, rgba(139,92,246,0.07) 0%, rgba(59,130,246,0.05) 100%)',
-              border: '1.5px solid rgba(139,92,246,0.22)',
+              background: '#fafafa',
+              border: '1.5px solid #e5e5e5',
               overflow: 'hidden',
             }}>
               <div style={{
                 padding: '10px 16px',
-                background: 'linear-gradient(90deg, rgba(139,92,246,0.11) 0%, rgba(59,130,246,0.07) 100%)',
-                borderBottom: '1px solid rgba(139,92,246,0.14)',
+                background: '#f5f5f5',
+                borderBottom: '1px solid #e5e5e5',
                 display: 'flex', alignItems: 'center', gap: 8,
               }}>
-                <span style={{ fontSize: 12, color: '#7c3aed' }}>✦</span>
-                <span style={{ fontSize: 12, fontWeight: 700, color: '#6d28d9', letterSpacing: '0.02em' }}>Yumi Briefing</span>
+                <span style={{ fontSize: 12, color: '#525252' }}>✦</span>
+                <span style={{ fontSize: 12, fontWeight: 700, color: '#171717', letterSpacing: '0.02em' }}>Yumi Briefing</span>
                 <span style={{
                   width: 7, height: 7, borderRadius: '50%', display: 'inline-block',
-                  background: yumiItems.some(i => i.urgency === 'red') ? '#e5484d' : '#f59e0b',
+                  background: '#525252',
                   animation: 'yumi-pulse 2s infinite',
-                  boxShadow: yumiItems.some(i => i.urgency === 'red') ? '0 0 0 3px rgba(229,72,77,0.18)' : '0 0 0 3px rgba(245,158,11,0.18)',
                 }} />
-                <span style={{ marginLeft: 'auto', fontSize: 10, color: '#94a3b8', fontWeight: 500 }}>
+                <span style={{ marginLeft: 'auto', fontSize: 10, color: '#a3a3a3', fontWeight: 500 }}>
                   {yumiItems.length} item{yumiItems.length !== 1 ? 's' : ''} need attention
                 </span>
               </div>
               <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {yumiItems.length === 0 && (
-                  <div style={{ fontSize: 12, color: '#64748b', fontStyle: 'italic' }}>No action items — this ticket looks healthy.</div>
+                  <div style={{ fontSize: 12, color: '#525252', fontStyle: 'italic' }}>No action items — this ticket looks healthy.</div>
                 )}
                 {yumiItems.map((item, idx) => (
                   <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
                     <span style={{ fontSize: 13, marginTop: 1, flexShrink: 0 }}>{item.icon}</span>
-                    <span style={{ fontSize: 12, color: '#374151', lineHeight: 1.5, flex: 1 }}>{item.text}</span>
+                    <span style={{ fontSize: 12, color: '#404040', lineHeight: 1.5, flex: 1 }}>{item.text}</span>
                     <span style={{
                       width: 7, height: 7, borderRadius: '50%', flexShrink: 0, marginTop: 5,
-                      background: item.urgency === 'red' ? '#e5484d' : '#f59e0b',
+                      background: '#737373',
                     }} />
                   </div>
                 ))}
               </div>
               <div style={{
                 padding: '12px 16px 14px',
-                borderTop: '1px solid rgba(139,92,246,0.11)',
-                background: 'rgba(139,92,246,0.03)',
+                borderTop: '1px solid #e5e5e5',
+                background: 'rgba(0,0,0,0.03)',
                 display: 'flex', flexDirection: 'column', gap: 10,
               }}>
-                <p style={{ fontSize: 12, color: '#374151', lineHeight: 1.5, margin: 0 }}>
+                <p style={{ fontSize: 12, color: '#404040', lineHeight: 1.5, margin: 0 }}>
                   {card.yumiSuggestion.message}
                 </p>
 
                 {(card.yumiSuggestion.action === 'request_document' || card.yumiSuggestion.action === 'escalate') && (
                   sent
-                    ? <div style={{ padding: '8px 12px', borderRadius: 10, background: '#f0fdf4', border: '1px solid #bbf7d0' }}>
-                        <span style={{ fontSize: 12, fontWeight: 600, color: '#059669' }}>✓ Message sent — Yumi is monitoring the reply</span>
+                    ? <div style={{ padding: '8px 12px', borderRadius: 10, background: '#f5f5f5', border: '1px solid #e5e5e5' }}>
+                        <span style={{ fontSize: 12, fontWeight: 600, color: '#262626' }}>✓ Message sent — Yumi is monitoring the reply</span>
                       </div>
                     : <button onClick={handleYumiAction} style={{
                         alignSelf: 'flex-start', padding: '7px 16px', borderRadius: 20, border: 'none',
-                        background: card.yumiSuggestion.action === 'escalate' ? '#e5484d' : 'var(--color-primary)',
+                        background: 'var(--color-primary)',
                         color: 'white', fontSize: 12, fontWeight: 700, cursor: 'pointer',
                       }}>
                         {card.yumiSuggestion.action === 'escalate' ? 'Send Formal Notice →' : 'Send Request →'}
@@ -870,15 +869,15 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
 
                 {card.yumiSuggestion.action === 'suggest_template' && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    <div style={{ padding: '10px 12px', borderRadius: 10, border: '1px solid rgba(139,92,246,0.2)', background: 'white' }}>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: '#334155', marginBottom: 2 }}>Standard ICT Credit Framework v2.1</div>
-                      <div style={{ fontSize: 11, color: '#94a3b8' }}>ICT · Full Credit · SAR 50K–500K · ≤ 90 days</div>
+                    <div style={{ padding: '10px 12px', borderRadius: 10, border: '1px solid #e5e5e5', background: 'white' }}>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: '#262626', marginBottom: 2 }}>Standard ICT Credit Framework v2.1</div>
+                      <div style={{ fontSize: 11, color: '#a3a3a3' }}>ICT · Full Credit · SAR 50K–500K · ≤ 90 days</div>
                     </div>
                     <div style={{ display: 'flex', gap: 8 }}>
                       <button style={{ padding: '7px 16px', borderRadius: 20, border: 'none', background: 'var(--color-primary)', color: 'white', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
                         Apply Template ✓
                       </button>
-                      <button style={{ padding: '7px 14px', borderRadius: 20, border: '1.5px solid #e2e8f0', background: 'none', color: '#64748b', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                      <button style={{ padding: '7px 14px', borderRadius: 20, border: '1.5px solid #e5e5e5', background: 'none', color: '#525252', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
                         Dismiss
                       </button>
                     </div>
@@ -888,8 +887,8 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
                 {card.yumiSuggestion.action === 'generate_invoice' && (
                   invoiceGenerated
                     ? <div style={{ display: 'flex', gap: 8 }}>
-                        <button style={{ flex: 1, padding: '7px 0', borderRadius: 20, border: 'none', background: '#10b981', color: 'white', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Share with Buyer →</button>
-                        <button style={{ padding: '7px 14px', borderRadius: 20, border: '1.5px solid #e2e8f0', background: 'none', color: '#64748b', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Hold</button>
+                        <button style={{ flex: 1, padding: '7px 0', borderRadius: 20, border: 'none', background: '#171717', color: 'white', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Share with Buyer →</button>
+                        <button style={{ padding: '7px 14px', borderRadius: 20, border: '1.5px solid #e5e5e5', background: 'none', color: '#525252', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Hold</button>
                       </div>
                     : <button onClick={() => setInvoiceGenerated(true)} style={{ alignSelf: 'flex-start', padding: '7px 16px', borderRadius: 20, border: 'none', background: 'var(--color-primary)', color: 'white', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
                         Generate Invoice Preview →
@@ -897,8 +896,8 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
                 )}
 
                 {(card.yumiSuggestion.action === 'monitor' || card.yumiSuggestion.action === 'score') && (
-                  <div style={{ padding: '8px 12px', borderRadius: 10, background: '#f0fdf4', border: '1px solid #bbf7d0' }}>
-                    <span style={{ fontSize: 12, fontWeight: 600, color: '#059669' }}>✓ Yumi is on it</span>
+                  <div style={{ padding: '8px 12px', borderRadius: 10, background: '#f5f5f5', border: '1px solid #e5e5e5' }}>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: '#262626' }}>✓ Yumi is on it</span>
                   </div>
                 )}
               </div>
@@ -906,12 +905,12 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
 
             {/* STAGE BRIEF — editable, role-gated */}
             {(currentUser?.adminRole === stageInfo?.assignedRole || currentUser?.adminRole === 'super') && (() => {
-              const fieldStyle = { border: '1px solid #e2e8f0', borderRadius: 8, padding: '5px 10px', fontSize: 12, outline: 'none', fontFamily: 'inherit', color: '#334155', background: 'white' }
+              const fieldStyle = { border: '1px solid #e5e5e5', borderRadius: 8, padding: '5px 10px', fontSize: 12, outline: 'none', fontFamily: 'inherit', color: '#262626', background: 'white' }
               const toggleDoc = (name) => setDocStatuses(prev => {
                 const next = { missing: 'pending', pending: 'verified', verified: 'missing' }
                 return { ...prev, [name]: next[prev[name]] || 'pending' }
               })
-              const docStatusColor = { verified: '#10b981', pending: '#f59e0b', missing: '#e5484d' }
+              const docStatusColor = { verified: '#262626', pending: '#525252', missing: '#737373' }
               return (
                 <Section title={`${stageInfo?.label || ''} — Stage Actions`} badge="Your Stage" badgeColor={stageInfo?.color || '#6b7280'}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -919,13 +918,13 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
                     {/* VERIFIER — submitted / kyc */}
                     {['submitted', 'kyc'].includes(cardStage) && (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                        <div style={{ fontSize: 11, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Document Status — click to toggle</div>
+                        <div style={{ fontSize: 11, fontWeight: 600, color: '#525252', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Document Status — click to toggle</div>
                         {card.documents.map(doc => (
                           <button key={doc.name} onClick={() => toggleDoc(doc.name)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 10, border: '1.5px solid #f1f5f9', background: 'white', cursor: 'pointer', textAlign: 'left' }}>
                             <span style={{ fontSize: 16, color: docStatusColor[docStatuses[doc.name] || doc.status] }}>
                               {docStatuses[doc.name] === 'verified' ? '✓' : docStatuses[doc.name] === 'missing' ? '✗' : '○'}
                             </span>
-                            <span style={{ fontSize: 12, flex: 1, color: '#334155' }}>{doc.name}</span>
+                            <span style={{ fontSize: 12, flex: 1, color: '#262626' }}>{doc.name}</span>
                             <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 20, background: docStatusColor[docStatuses[doc.name] || doc.status] + '18', color: docStatusColor[docStatuses[doc.name] || doc.status] }}>
                               {docStatuses[doc.name] || doc.status}
                             </span>
@@ -934,7 +933,7 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
                         {cardStage === 'kyc' && (
                           <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
                             {[['Nafath Verified', nafathVerified, setNafathVerified], ['CR Verified', crVerified, setCrVerified]].map(([label, val, setter]) => (
-                              <button key={label} onClick={() => setter(!val)} style={{ flex: 1, padding: '7px 10px', borderRadius: 10, border: '1.5px solid', borderColor: val ? '#10b981' : '#e2e8f0', background: val ? '#f0fdf4' : 'white', fontSize: 12, fontWeight: 600, color: val ? '#059669' : '#64748b', cursor: 'pointer' }}>
+                              <button key={label} onClick={() => setter(!val)} style={{ flex: 1, padding: '7px 10px', borderRadius: 10, border: '1.5px solid', borderColor: val ? '#262626' : '#e5e5e5', background: val ? '#f0f0f0' : 'white', fontSize: 12, fontWeight: 600, color: val ? '#262626' : '#525252', cursor: 'pointer' }}>
                                 {val ? '✓ ' : '○ '}{label}
                               </button>
                             ))}
@@ -947,22 +946,22 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
                     {cardStage === 'credit_score' && (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                          <label style={{ fontSize: 11, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>SIMAH Score</label>
+                          <label style={{ fontSize: 11, fontWeight: 600, color: '#525252', textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>SIMAH Score</label>
                           <input type="number" min="0" max="999" value={simahInput} onChange={e => setSimahInput(e.target.value)}
                             placeholder="Enter score…" style={{ ...fieldStyle, width: 100 }} />
                           {simahInput && (
                             <span style={{ fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 20,
-                              background: Number(simahInput) >= 700 ? '#f0fdf4' : Number(simahInput) >= 600 ? '#fffbeb' : '#fef2f2',
-                              color:      Number(simahInput) >= 700 ? '#059669' : Number(simahInput) >= 600 ? '#d97706' : '#dc2626' }}>
+                              background: Number(simahInput) >= 700 ? '#f0f0f0' : Number(simahInput) >= 600 ? '#f5f5f5' : '#e5e5e5',
+                              color:      Number(simahInput) >= 700 ? '#262626' : Number(simahInput) >= 600 ? '#525252' : '#737373' }}>
                               {Number(simahInput) >= 700 ? 'Excellent' : Number(simahInput) >= 600 ? 'Good' : Number(simahInput) >= 500 ? 'Fair' : 'Poor'}
                             </span>
                           )}
                         </div>
                         {buyerInfo && (
-                          <div style={{ padding: '10px 12px', borderRadius: 10, background: '#f8fafc', border: '1px solid #e2e8f0', fontSize: 12, color: '#334155' }}>
+                          <div style={{ padding: '10px 12px', borderRadius: 10, background: '#f5f5f5', border: '1px solid #e5e5e5', fontSize: 12, color: '#262626' }}>
                             Credit utilisation: <strong>{formatSAR(buyerInfo.creditUsed)}</strong> used of <strong>{formatSAR(buyerInfo.creditLimit)}</strong>
                             {' '}({Math.round(buyerInfo.creditUsed / buyerInfo.creditLimit * 100)}% utilised)
-                            {isAboveLimit && <span style={{ color: '#dc2626', fontWeight: 700, marginLeft: 8 }}>⚠️ This request exceeds remaining limit</span>}
+                            {isAboveLimit && <span style={{ color: '#737373', fontWeight: 700, marginLeft: 8 }}>⚠️ This request exceeds remaining limit</span>}
                           </div>
                         )}
                       </div>
@@ -972,15 +971,15 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
                     {cardStage === 'risk' && (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                          <label style={{ fontSize: 11, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Risk Decision</label>
+                          <label style={{ fontSize: 11, fontWeight: 600, color: '#525252', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Risk Decision</label>
                           {['approve', 'counter_propose', 'reject'].map(d => (
-                            <button key={d} onClick={() => setRiskDecision(d)} style={{ padding: '5px 12px', borderRadius: 20, border: '1.5px solid', borderColor: riskDecision === d ? (d === 'reject' ? '#dc2626' : d === 'counter_propose' ? '#f59e0b' : '#10b981') : '#e2e8f0', background: riskDecision === d ? (d === 'reject' ? '#fef2f2' : d === 'counter_propose' ? '#fffbeb' : '#f0fdf4') : 'white', fontSize: 11, fontWeight: 600, color: riskDecision === d ? (d === 'reject' ? '#dc2626' : d === 'counter_propose' ? '#d97706' : '#059669') : '#64748b', cursor: 'pointer' }}>
+                            <button key={d} onClick={() => setRiskDecision(d)} style={{ padding: '5px 12px', borderRadius: 20, border: '1.5px solid', borderColor: riskDecision === d ? '#262626' : '#e5e5e5', background: riskDecision === d ? '#f0f0f0' : 'white', fontSize: 11, fontWeight: 600, color: riskDecision === d ? '#262626' : '#525252', cursor: 'pointer' }}>
                               {d === 'approve' ? '✓ Approve' : d === 'counter_propose' ? '⚖️ Counter-propose' : '✗ Reject'}
                             </button>
                           ))}
                         </div>
                         {isAboveLimit && (
-                          <div style={{ padding: '8px 12px', borderRadius: 10, background: '#fef2f2', border: '1px solid #fecaca', fontSize: 12, color: '#dc2626', fontWeight: 600 }}>
+                          <div style={{ padding: '8px 12px', borderRadius: 10, background: '#f0f0f0', border: '1px solid #d4d4d4', fontSize: 12, color: '#737373', fontWeight: 600 }}>
                             ⚠️ Amount exceeds buyer's remaining limit by {formatSAR(card.amount - remainingCredit)}
                           </div>
                         )}
@@ -990,9 +989,9 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
                     {/* ACCOUNT MGR — approved */}
                     {cardStage === 'approved' && (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                        <div style={{ fontSize: 11, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Confirm disbursement details</div>
-                        <div style={{ padding: '10px 12px', borderRadius: 10, background: '#f0fdf4', border: '1px solid #bbf7d0', fontSize: 12 }}>
-                          Merchant receives <strong style={{ color: '#059669' }}>{formatSAR(merchantDisbursement)}</strong> after MDR deduction
+                        <div style={{ fontSize: 11, fontWeight: 600, color: '#525252', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Confirm disbursement details</div>
+                        <div style={{ padding: '10px 12px', borderRadius: 10, background: '#f5f5f5', border: '1px solid #e5e5e5', fontSize: 12 }}>
+                          Merchant receives <strong style={{ color: '#262626' }}>{formatSAR(merchantDisbursement)}</strong> after MDR deduction
                         </div>
                       </div>
                     )}
@@ -1000,7 +999,7 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
                     {/* COLLECTIONS — repayment */}
                     {cardStage === 'repayment' && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <label style={{ fontSize: 11, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>Log Payment</label>
+                        <label style={{ fontSize: 11, fontWeight: 600, color: '#525252', textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>Log Payment</label>
                         <input type="number" placeholder="Amount (SAR)…" style={{ ...fieldStyle, flex: 1 }}
                           onKeyDown={e => {
                             if (e.key === 'Enter' && e.target.value) {
@@ -1008,7 +1007,7 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
                               e.target.value = ''
                             }
                           }} />
-                        <span style={{ fontSize: 11, color: '#94a3b8' }}>Press Enter to log</span>
+                        <span style={{ fontSize: 11, color: '#a3a3a3' }}>Press Enter to log</span>
                       </div>
                     )}
 
@@ -1043,23 +1042,23 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
                 <Field label="Process Type">
                   <span className="inline-flex items-center gap-1 text-[12px] font-semibold px-2 py-0.5 rounded-full"
                     style={card.type === 'invoice_finance'
-                      ? { background: '#f0f9ff', color: '#0891b2' }
-                      : { background: 'rgba(139,92,246,0.08)', color: '#7c3aed' }}>
+                      ? { background: '#f5f5f5', color: '#525252' }
+                      : { background: 'rgba(0,0,0,0.03)', color: '#525252' }}>
                     {card.type === 'invoice_finance' ? '💼 Invoice Finance' : '🚀 Onboarding'}
                   </span>
                 </Field>
                 {buyerInfo && (
                   <Field label="Buyer Credit">
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                      <div style={{ display: 'flex', gap: 8, fontSize: 12, color: '#64748b' }}>
-                        <span>Limit: <strong style={{ color: '#334155' }}>{formatSAR(buyerInfo.creditLimit)}</strong></span>
-                        <span>Used: <strong style={{ color: buyerInfo.creditUsed / buyerInfo.creditLimit > 0.8 ? '#dc2626' : '#334155' }}>
+                      <div style={{ display: 'flex', gap: 8, fontSize: 12, color: '#525252' }}>
+                        <span>Limit: <strong style={{ color: '#262626' }}>{formatSAR(buyerInfo.creditLimit)}</strong></span>
+                        <span>Used: <strong style={{ color: buyerInfo.creditUsed / buyerInfo.creditLimit > 0.8 ? '#737373' : '#334155' }}>
                           {formatSAR(buyerInfo.creditUsed)} ({Math.round(buyerInfo.creditUsed / buyerInfo.creditLimit * 100)}%)
                         </strong></span>
                       </div>
                       <div style={{ fontSize: 12 }}>
-                        Remaining: <strong style={{ color: isAboveLimit ? '#dc2626' : '#059669' }}>{formatSAR(remainingCredit)}</strong>
-                        {isAboveLimit && <span style={{ marginLeft: 6, fontSize: 10, fontWeight: 600, color: '#dc2626' }}>⚠️ Request exceeds limit</span>}
+                        Remaining: <strong style={{ color: isAboveLimit ? '#737373' : '#262626' }}>{formatSAR(remainingCredit)}</strong>
+                        {isAboveLimit && <span style={{ marginLeft: 6, fontSize: 10, fontWeight: 600, color: '#737373' }}>⚠️ Request exceeds limit</span>}
                       </div>
                     </div>
                   </Field>
@@ -1092,37 +1091,37 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
                     onChange={e => setter(e.target.value)}
                     onBlur={() => setEditingField(null)}
                     onKeyDown={e => e.key === 'Enter' && setEditingField(null)}
-                    style={{ width: '100%', border: 'none', borderBottom: '2px solid #f59e0b', background: 'transparent', fontSize: 20, fontWeight: 700, color: '#334155', outline: 'none', fontFamily: 'inherit', padding: '2px 0' }}
+                    style={{ width: '100%', border: 'none', borderBottom: '2px solid #525252', background: 'transparent', fontSize: 20, fontWeight: 700, color: '#262626', outline: 'none', fontFamily: 'inherit', padding: '2px 0' }}
                   />
                 ) : (
                   <div
                     onClick={() => canEditCore && setEditingField(id)}
-                    style={{ display: 'flex', alignItems: 'baseline', gap: 4, cursor: canEditCore ? 'pointer' : 'default', borderBottom: changed ? '2px solid #f59e0b' : '2px solid transparent', paddingBottom: 1 }}>
-                    <span style={{ fontSize: 20, fontWeight: 700, color: changed ? '#d97706' : '#1e293b', fontVariantNumeric: 'tabular-nums' }}>{value}</span>
-                    <span style={{ fontSize: 11, color: '#64748b' }}>{unit}</span>
-                    {canEditCore && <span style={{ fontSize: 11, color: '#cbd5e1', marginLeft: 4 }}>✎</span>}
+                    style={{ display: 'flex', alignItems: 'baseline', gap: 4, cursor: canEditCore ? 'pointer' : 'default', borderBottom: changed ? '2px solid #525252' : '2px solid transparent', paddingBottom: 1 }}>
+                    <span style={{ fontSize: 20, fontWeight: 700, color: changed ? '#525252' : '#171717', fontVariantNumeric: 'tabular-nums' }}>{value}</span>
+                    <span style={{ fontSize: 11, color: '#525252' }}>{unit}</span>
+                    {canEditCore && <span style={{ fontSize: 11, color: '#d4d4d4', marginLeft: 4 }}>✎</span>}
                   </div>
                 )
               }
 
               return (
-                <div style={{ borderRadius: 14, background: 'white', border: '1px solid #e2e8f0', borderLeft: `4px solid ${stageInfo?.color || '#6b7280'}`, overflow: 'hidden' }}>
+                <div style={{ borderRadius: 14, background: 'white', border: '1px solid #e5e5e5', borderLeft: `4px solid ${stageInfo?.color || '#525252'}`, overflow: 'hidden' }}>
 
                   {/* Counter-proposal banner */}
                   {counterProposal && (
-                    <div style={{ padding: '10px 16px', background: '#fffbeb', borderBottom: '1px solid #fcd34d', display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ padding: '10px 16px', background: '#f5f5f5', borderBottom: '1px solid #e5e5e5', display: 'flex', alignItems: 'center', gap: 8 }}>
                       <span style={{ fontSize: 14 }}>⚖️</span>
-                      <span style={{ fontSize: 12, color: '#92400e', flex: 1 }}>Counter-proposal by <strong>{counterProposal.by}</strong> — pending buyer acceptance</span>
+                      <span style={{ fontSize: 12, color: '#404040', flex: 1 }}>Counter-proposal by <strong>{counterProposal.by}</strong> — pending buyer acceptance</span>
                       {(currentUser?.adminRole === 'risk' || currentUser?.adminRole === 'super') && (
-                        <button onClick={withdrawCounterProposal} style={{ fontSize: 11, fontWeight: 600, color: '#dc2626', background: 'none', border: '1px solid #fca5a5', borderRadius: 8, padding: '3px 10px', cursor: 'pointer' }}>Withdraw</button>
+                        <button onClick={withdrawCounterProposal} style={{ fontSize: 11, fontWeight: 600, color: '#737373', background: 'none', border: '1px solid #d4d4d4', borderRadius: 8, padding: '3px 10px', cursor: 'pointer' }}>Withdraw</button>
                       )}
                     </div>
                   )}
 
                   {/* Header: Finance Request + sector/risk badges */}
                   <div style={{ padding: '12px 16px 0', display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em', flex: 1 }}>Finance Request</span>
-                    <span style={{ fontSize: 11, color: '#64748b' }}>{card.sector}</span>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: '#525252', textTransform: 'uppercase', letterSpacing: '0.08em', flex: 1 }}>Finance Request</span>
+                    <span style={{ fontSize: 11, color: '#525252' }}>{card.sector}</span>
                     {card.riskScore !== null && (
                       <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 20, background: riskColor(card.riskScore).bg, color: riskColor(card.riskScore).text }}>
                         Risk {card.riskScore}
@@ -1133,22 +1132,22 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
                   {/* Headline: Amount / Tenure / MDR */}
                   <div style={{ padding: '10px 16px 14px', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, borderBottom: '1px solid #f1f5f9' }}>
                     <div>
-                      <div style={{ fontSize: 10, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Amount</div>
+                      <div style={{ fontSize: 10, fontWeight: 600, color: '#a3a3a3', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Amount</div>
                       <EditableField id="amount" value={propAmount || card.amount} original={card.amount} unit="SAR" setter={v => setPropAmount(v)} />
                     </div>
                     <div>
-                      <div style={{ fontSize: 10, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Tenure</div>
+                      <div style={{ fontSize: 10, fontWeight: 600, color: '#a3a3a3', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Tenure</div>
                       <EditableField id="tenure" value={propTenure || card.tenure} original={card.tenure} unit="days" setter={v => setPropTenure(v)} />
                     </div>
                     <div>
-                      <div style={{ fontSize: 10, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>MDR Rate</div>
+                      <div style={{ fontSize: 10, fontWeight: 600, color: '#a3a3a3', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>MDR Rate</div>
                       <EditableField id="mdr" value={propMdrRate || card.mdrRate} original={card.mdrRate} unit="% / mo" setter={v => setPropMdrRate(v)} />
                     </div>
                   </div>
 
                   {/* Fee Structure */}
                   <div style={{ padding: '12px 16px', borderBottom: '1px solid #f1f5f9' }}>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>Fee Structure</div>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: '#a3a3a3', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>Fee Structure</div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 10, ...(!canEditFee ? { pointerEvents: 'none', opacity: 0.65 } : {}) }}>
                       {[
                         { id: 'merchant_full', label: 'Merchant Bears Full Cost',       desc: 'MDR deducted from merchant disbursement' },
@@ -1156,13 +1155,13 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
                         { id: 'buyer_full',    label: 'Buyer Bears Full Cost',          desc: 'Buyer repays principal + full MDR' },
                       ].map(opt => (
                         <button key={opt.id} onClick={() => { setMdrPayer(opt.id); setInvoiceGenerated(false) }}
-                          style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 10, border: '1.5px solid', borderColor: mdrPayer === opt.id ? 'var(--color-primary)' : '#f1f5f9', background: mdrPayer === opt.id ? 'rgba(143,133,255,0.06)' : 'transparent', cursor: 'pointer', textAlign: 'left' }}>
-                          <div style={{ width: 14, height: 14, borderRadius: '50%', border: '2px solid', borderColor: mdrPayer === opt.id ? 'var(--color-primary)' : '#cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 10, border: '1.5px solid', borderColor: mdrPayer === opt.id ? 'var(--color-primary)' : '#e5e5e5', background: mdrPayer === opt.id ? 'rgba(0,0,0,0.03)' : 'transparent', cursor: 'pointer', textAlign: 'left' }}>
+                          <div style={{ width: 14, height: 14, borderRadius: '50%', border: '2px solid', borderColor: mdrPayer === opt.id ? 'var(--color-primary)' : '#d4d4d4', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                             {mdrPayer === opt.id && <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--color-primary)' }} />}
                           </div>
                           <div>
-                            <div style={{ fontSize: 12, fontWeight: 600, color: mdrPayer === opt.id ? 'var(--color-primary)' : '#334155' }}>{opt.label}</div>
-                            <div style={{ fontSize: 10, color: '#94a3b8' }}>{opt.desc}</div>
+                            <div style={{ fontSize: 12, fontWeight: 600, color: mdrPayer === opt.id ? 'var(--color-primary)' : '#262626' }}>{opt.label}</div>
+                            <div style={{ fontSize: 10, color: '#a3a3a3' }}>{opt.desc}</div>
                           </div>
                         </button>
                       ))}
@@ -1170,38 +1169,38 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
                     <div style={{ display: 'flex', gap: 6, ...(!canEditFee ? { pointerEvents: 'none', opacity: 0.65 } : {}) }}>
                       {Object.entries(EMI_FREQ_LABELS).map(([key, lbl]) => (
                         <button key={key} onClick={() => { setEmiFreq(key); setInvoiceGenerated(false) }}
-                          style={{ flex: 1, padding: '6px 0', borderRadius: 10, fontSize: 11, fontWeight: 600, border: '1.5px solid', background: emiFreq === key ? 'var(--color-primary)' : 'white', color: emiFreq === key ? 'white' : '#64748b', borderColor: emiFreq === key ? 'transparent' : '#e2e8f0', cursor: 'pointer' }}>
+                          style={{ flex: 1, padding: '6px 0', borderRadius: 10, fontSize: 11, fontWeight: 600, border: '1.5px solid', background: emiFreq === key ? 'var(--color-primary)' : 'white', color: emiFreq === key ? 'white' : '#525252', borderColor: emiFreq === key ? 'transparent' : '#e5e5e5', cursor: 'pointer' }}>
                           {lbl}
                         </button>
                       ))}
                     </div>
-                    {!canEditFee && <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 6, fontStyle: 'italic' }}>Fee structure finalised by Account Manager at approval stage.</div>}
+                    {!canEditFee && <div style={{ fontSize: 10, color: '#a3a3a3', marginTop: 6, fontStyle: 'italic' }}>Fee structure finalised by Account Manager at approval stage.</div>}
                   </div>
 
                   {/* Deal Outcomes */}
                   <div style={{ padding: '12px 16px', borderBottom: '1px solid #f1f5f9' }}>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>Deal Outcomes</div>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: '#a3a3a3', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>Deal Outcomes</div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                       {[
-                        { label: 'Merchant MDR',   value: formatSAR(merchantMDRCalc),   color: merchantMDRCalc > 0 ? '#f59e0b' : '#94a3b8' },
-                        { label: 'Buyer Fee',       value: formatSAR(buyerFeeCalc),      color: buyerFeeCalc > 0 ? '#e5484d' : '#94a3b8' },
-                        { label: 'Disbursement',    value: formatSAR(disbursementCalc),  color: '#10b981' },
-                        { label: 'Total Repayment', value: formatSAR(totalRepayCalc),    color: '#334155' },
+                        { label: 'Merchant MDR',   value: formatSAR(merchantMDRCalc),   color: merchantMDRCalc > 0 ? '#525252' : '#a3a3a3' },
+                        { label: 'Buyer Fee',       value: formatSAR(buyerFeeCalc),      color: buyerFeeCalc > 0 ? '#737373' : '#a3a3a3' },
+                        { label: 'Disbursement',    value: formatSAR(disbursementCalc),  color: '#262626' },
+                        { label: 'Total Repayment', value: formatSAR(totalRepayCalc),    color: '#171717' },
                       ].map(row => (
-                        <div key={row.label} style={{ padding: '8px 10px', borderRadius: 10, background: '#f8fafc', border: '1px solid #f1f5f9' }}>
-                          <div style={{ fontSize: 10, color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>{row.label}</div>
+                        <div key={row.label} style={{ padding: '8px 10px', borderRadius: 10, background: '#f5f5f5', border: '1px solid #f1f5f9' }}>
+                          <div style={{ fontSize: 10, color: '#a3a3a3', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>{row.label}</div>
                           <div style={{ fontSize: 13, fontWeight: 700, color: row.color, fontVariantNumeric: 'tabular-nums' }}>{row.value}</div>
                         </div>
                       ))}
                     </div>
-                    <div style={{ marginTop: 8, padding: '6px 10px', borderRadius: 8, background: '#f8fafc', fontSize: 12, color: '#64748b' }}>
-                      Per instalment: <strong style={{ color: '#334155' }}>{formatSAR(perEMICalc)}</strong> × {instCountCalc}
+                    <div style={{ marginTop: 8, padding: '6px 10px', borderRadius: 8, background: '#f5f5f5', fontSize: 12, color: '#525252' }}>
+                      Per instalment: <strong style={{ color: '#262626' }}>{formatSAR(perEMICalc)}</strong> × {instCountCalc}
                     </div>
                   </div>
 
                   {/* Repayment Schedule */}
                   <div>
-                    <div style={{ padding: '10px 16px 6px', fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Repayment Schedule</div>
+                    <div style={{ padding: '10px 16px 6px', fontSize: 10, fontWeight: 700, color: '#a3a3a3', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Repayment Schedule</div>
                     <div className="grid grid-cols-4 border-b border-slate-100">
                       {[
                         { label: 'Total',   value: instCountCalc,                                                        danger: false },
@@ -1210,14 +1209,14 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
                         { label: 'Overdue', value: overdueInstalments,                                                   danger: true  },
                       ].map((stat, i) => (
                         <div key={stat.label} className={`px-4 py-2.5 text-center ${i < 3 ? 'border-r border-slate-100' : ''}`}>
-                          <div className={`text-[18px] font-bold ${stat.danger && stat.value > 0 ? 'text-red-500' : 'text-slate-800'}`}>{stat.value}</div>
+                          <div className={`text-[18px] font-bold ${stat.danger && stat.value > 0 ? 'text-slate-500' : 'text-slate-800'}`}>{stat.value}</div>
                           <div className="text-[10px] text-slate-400">{stat.label}</div>
                         </div>
                       ))}
                     </div>
                     <table className="w-full">
                       <thead>
-                        <tr className="border-b border-slate-50" style={{ background: '#f8fafc' }}>
+                        <tr className="border-b border-slate-50" style={{ background: '#f5f5f5' }}>
                           {['No.','Due Date','Amount','Status'].map((h, i) => (
                             <th key={h} className={`px-4 py-2 text-[10px] font-semibold text-slate-400 uppercase tracking-wide ${i >= 2 ? 'text-end' : 'text-start'}`}>{h}</th>
                           ))}
@@ -1235,8 +1234,8 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
                               <td className="px-4 py-2.5 text-[12px] text-slate-600">{dueDate}</td>
                               <td className="px-4 py-2.5 text-[12px] text-end tabular-nums font-medium text-slate-700">{formatSAR(perEMICalc)}</td>
                               <td className="px-4 py-2.5 text-end">
-                                {isPaid ? <span className="text-[11px] font-semibold text-emerald-600">✓ Paid</span>
-                                  : isOverdue ? <span className="text-[11px] font-semibold text-red-500">Overdue</span>
+                                {isPaid ? <span className="text-[11px] font-semibold text-slate-600">✓ Paid</span>
+                                  : isOverdue ? <span className="text-[11px] font-semibold text-slate-500">Overdue</span>
                                   : <span className="text-[11px] text-slate-400">Pending</span>}
                               </td>
                             </tr>
@@ -1248,13 +1247,13 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
 
                   {/* Submit counter-proposal (only when values changed, risk stage) */}
                   {canEditCore && hasChanges && !counterProposal && (
-                    <div style={{ padding: '12px 16px', borderTop: '1px solid #fcd34d', background: '#fffbeb', display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontSize: 12, color: '#92400e', flex: 1 }}>Changes detected — submit as counter-proposal?</span>
-                      <button onClick={submitCounterProposal} style={{ padding: '6px 14px', borderRadius: 10, background: '#f59e0b', border: 'none', fontSize: 12, fontWeight: 700, color: 'white', cursor: 'pointer' }}>
+                    <div style={{ padding: '12px 16px', borderTop: '1px solid #e5e5e5', background: '#f5f5f5', display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 12, color: '#404040', flex: 1 }}>Changes detected — submit as counter-proposal?</span>
+                      <button onClick={submitCounterProposal} style={{ padding: '6px 14px', borderRadius: 10, background: '#525252', border: 'none', fontSize: 12, fontWeight: 700, color: 'white', cursor: 'pointer' }}>
                         ⚖️ Submit Counter-Proposal
                       </button>
                       <button onClick={() => { setPropAmount(String(card.amount)); setPropTenure(String(card.tenure)); setPropMdrRate(String(card.mdrRate)) }}
-                        style={{ padding: '6px 12px', borderRadius: 10, background: 'none', border: '1.5px solid #e2e8f0', fontSize: 12, fontWeight: 600, color: '#64748b', cursor: 'pointer' }}>
+                        style={{ padding: '6px 12px', borderRadius: 10, background: 'none', border: '1.5px solid #e5e5e5', fontSize: 12, fontWeight: 600, color: '#525252', cursor: 'pointer' }}>
                         Reset
                       </button>
                     </div>
@@ -1268,13 +1267,13 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
               <Section title="Contracts">
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {contracts.map(c => {
-                    const statusColor = { Draft: '#94a3b8', Sent: '#f59e0b', Signed: '#10b981' }
+                    const statusColor = { Draft: '#a3a3a3', Sent: '#525252', Signed: '#262626' }
                     return (
                       <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 10, border: '1px solid #f1f5f9', background: 'white' }}>
                         <span style={{ fontSize: 16 }}>📋</span>
                         <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: 12, fontWeight: 600, color: '#334155' }}>{c.name}</div>
-                          <div style={{ fontSize: 10, color: '#94a3b8' }}>Added by {c.addedBy} · {c.addedAt}</div>
+                          <div style={{ fontSize: 12, fontWeight: 600, color: '#262626' }}>{c.name}</div>
+                          <div style={{ fontSize: 10, color: '#a3a3a3' }}>Added by {c.addedBy} · {c.addedAt}</div>
                         </div>
                         <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 10px', borderRadius: 20, background: statusColor[c.status] + '18', color: statusColor[c.status] }}>{c.status}</span>
                         {c.status === 'Draft' && (
@@ -1283,44 +1282,44 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
                       </div>
                     )
                   })}
-                  {contracts.length === 0 && <div style={{ fontSize: 12, color: '#94a3b8', fontStyle: 'italic' }}>No contracts yet — add one below.</div>}
+                  {contracts.length === 0 && <div style={{ fontSize: 12, color: '#a3a3a3', fontStyle: 'italic' }}>No contracts yet — add one below.</div>}
                   {/* Add Contract */}
                   {showContractAdd ? (
-                    <div style={{ padding: '12px 14px', borderRadius: 10, border: '1.5px solid #e2e8f0', background: '#f8fafc', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    <div style={{ padding: '12px 14px', borderRadius: 10, border: '1.5px solid #e2e8f0', background: '#f5f5f5', display: 'flex', flexDirection: 'column', gap: 10 }}>
                       <div style={{ display: 'flex', gap: 4 }}>
                         {['template', 'upload'].map(m => (
-                          <button key={m} onClick={() => setContractMode(m)} style={{ padding: '4px 14px', borderRadius: 8, border: '1.5px solid', borderColor: contractMode === m ? 'var(--color-primary)' : '#e2e8f0', background: contractMode === m ? 'rgba(143,133,255,0.08)' : 'white', fontSize: 11, fontWeight: 600, color: contractMode === m ? 'var(--color-primary)' : '#64748b', cursor: 'pointer' }}>
+                          <button key={m} onClick={() => setContractMode(m)} style={{ padding: '4px 14px', borderRadius: 8, border: '1.5px solid', borderColor: contractMode === m ? 'var(--color-primary)' : '#e5e5e5', background: contractMode === m ? 'rgba(0,0,0,0.03)' : 'white', fontSize: 11, fontWeight: 600, color: contractMode === m ? 'var(--color-primary)' : '#64748b', cursor: 'pointer' }}>
                             {m === 'template' ? '📋 From Template' : '📎 Upload'}
                           </button>
                         ))}
-                        <button onClick={() => setShowContractAdd(false)} style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: 16 }}>×</button>
+                        <button onClick={() => setShowContractAdd(false)} style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: '#a3a3a3', fontSize: 16 }}>×</button>
                       </div>
                       {contractMode === 'template' ? (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                           {availableTemplates.map(t => (
-                            <button key={t.id} onClick={() => setSelectedTpl(t.id)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 8, border: '1.5px solid', borderColor: selectedTpl === t.id ? 'var(--color-primary)' : '#f1f5f9', background: selectedTpl === t.id ? 'rgba(143,133,255,0.06)' : 'white', cursor: 'pointer', textAlign: 'left' }}>
+                            <button key={t.id} onClick={() => setSelectedTpl(t.id)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 8, border: '1.5px solid', borderColor: selectedTpl === t.id ? 'var(--color-primary)' : '#e5e5e5', background: selectedTpl === t.id ? 'rgba(0,0,0,0.03)' : 'white', cursor: 'pointer', textAlign: 'left' }}>
                               <div style={{ flex: 1 }}>
-                                <div style={{ fontSize: 12, fontWeight: 600, color: '#334155' }}>{t.label}</div>
-                                <div style={{ fontSize: 10, color: '#94a3b8' }}>{t.desc}</div>
+                                <div style={{ fontSize: 12, fontWeight: 600, color: '#262626' }}>{t.label}</div>
+                                <div style={{ fontSize: 10, color: '#a3a3a3' }}>{t.desc}</div>
                               </div>
                               {selectedTpl === t.id && <span style={{ color: 'var(--color-primary)', fontSize: 13 }}>✓</span>}
                             </button>
                           ))}
-                          <button onClick={addContractFromTemplate} disabled={!selectedTpl} style={{ alignSelf: 'flex-start', padding: '6px 16px', borderRadius: 10, background: selectedTpl ? 'var(--color-primary)' : '#e2e8f0', border: 'none', fontSize: 12, fontWeight: 700, color: selectedTpl ? 'white' : '#94a3b8', cursor: selectedTpl ? 'pointer' : 'default' }}>
+                          <button onClick={addContractFromTemplate} disabled={!selectedTpl} style={{ alignSelf: 'flex-start', padding: '6px 16px', borderRadius: 10, background: selectedTpl ? 'var(--color-primary)' : '#e5e5e5', border: 'none', fontSize: 12, fontWeight: 700, color: selectedTpl ? 'white' : '#94a3b8', cursor: selectedTpl ? 'pointer' : 'default' }}>
                             Add from Template
                           </button>
                         </div>
                       ) : (
                         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                           <input value={uploadName} onChange={e => setUploadName(e.target.value)} placeholder="Contract name…" style={{ flex: 1, border: '1.5px solid #e2e8f0', borderRadius: 8, padding: '6px 10px', fontSize: 12, outline: 'none', fontFamily: 'inherit' }} />
-                          <button onClick={addContractManual} disabled={!uploadName.trim()} style={{ padding: '6px 14px', borderRadius: 10, background: uploadName.trim() ? 'var(--color-primary)' : '#e2e8f0', border: 'none', fontSize: 12, fontWeight: 700, color: uploadName.trim() ? 'white' : '#94a3b8', cursor: uploadName.trim() ? 'pointer' : 'default' }}>
+                          <button onClick={addContractManual} disabled={!uploadName.trim()} style={{ padding: '6px 14px', borderRadius: 10, background: uploadName.trim() ? 'var(--color-primary)' : '#e5e5e5', border: 'none', fontSize: 12, fontWeight: 700, color: uploadName.trim() ? 'white' : '#94a3b8', cursor: uploadName.trim() ? 'pointer' : 'default' }}>
                             Add
                           </button>
                         </div>
                       )}
                     </div>
                   ) : (
-                    <button onClick={() => setShowContractAdd(true)} style={{ alignSelf: 'flex-start', padding: '6px 14px', borderRadius: 10, border: '1.5px dashed #e2e8f0', background: 'white', fontSize: 12, fontWeight: 600, color: '#64748b', cursor: 'pointer' }}>
+                    <button onClick={() => setShowContractAdd(true)} style={{ alignSelf: 'flex-start', padding: '6px 14px', borderRadius: 10, border: '1.5px dashed #e2e8f0', background: 'white', fontSize: 12, fontWeight: 600, color: '#525252', cursor: 'pointer' }}>
                       + Add Contract
                     </button>
                   )}
@@ -1347,10 +1346,10 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
                           ].map(opt => (
                             <button key={opt.id} onClick={() => { setMdrPayer(opt.id); setInvoiceGenerated(false) }}
                               className="w-full text-start p-2.5 rounded-xl border transition-all"
-                              style={{ borderColor: mdrPayer === opt.id ? 'var(--color-primary)' : '#e2e8f0', background: mdrPayer === opt.id ? 'rgba(143,133,255,0.06)' : 'white' }}>
+                              style={{ borderColor: mdrPayer === opt.id ? 'var(--color-primary)' : '#e5e5e5', background: mdrPayer === opt.id ? 'rgba(0,0,0,0.03)' : 'white' }}>
                               <div className="flex items-center gap-2">
                                 <div className="w-3.5 h-3.5 rounded-full border-2 shrink-0 flex items-center justify-center"
-                                  style={{ borderColor: mdrPayer === opt.id ? 'var(--color-primary)' : '#cbd5e1' }}>
+                                  style={{ borderColor: mdrPayer === opt.id ? 'var(--color-primary)' : '#d4d4d4' }}>
                                   {mdrPayer === opt.id && <div className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--color-primary)' }} />}
                                 </div>
                                 <span className="text-[11px] font-semibold" style={{ color: mdrPayer === opt.id ? 'var(--color-primary)' : '#334155' }}>{opt.label}</span>
@@ -1367,7 +1366,7 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
                           {Object.entries(EMI_FREQ_LABELS).map(([key, lbl]) => (
                             <button key={key} onClick={() => { setEmiFreq(key); setInvoiceGenerated(false) }}
                               className="py-2 rounded-xl text-[11px] font-semibold border transition-all"
-                              style={{ background: emiFreq === key ? 'var(--color-primary)' : 'white', color: emiFreq === key ? 'white' : '#64748b', borderColor: emiFreq === key ? 'transparent' : '#e2e8f0' }}>
+                              style={{ background: emiFreq === key ? 'var(--color-primary)' : 'white', color: emiFreq === key ? 'white' : '#64748b', borderColor: emiFreq === key ? 'transparent' : '#e5e5e5' }}>
                               {lbl}
                             </button>
                           ))}
@@ -1378,19 +1377,19 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
                     {/* Financial Summary — compact 2-col grid */}
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                       {[
-                        { label: 'Merchant MDR',   value: formatSAR(merchantMDR),          color: merchantMDR > 0 ? '#f59e0b' : '#94a3b8' },
-                        { label: 'Buyer Fee',       value: formatSAR(buyerFee),             color: buyerFee > 0 ? '#e5484d' : '#94a3b8' },
-                        { label: 'Disbursement',    value: formatSAR(merchantDisbursement), color: '#10b981' },
-                        { label: 'Total Repayment', value: formatSAR(totalBuyerRepayment),  color: '#334155' },
+                        { label: 'Merchant MDR',   value: formatSAR(merchantMDR),          color: merchantMDR > 0 ? '#525252' : '#a3a3a3' },
+                        { label: 'Buyer Fee',       value: formatSAR(buyerFee),             color: buyerFee > 0 ? '#737373' : '#a3a3a3' },
+                        { label: 'Disbursement',    value: formatSAR(merchantDisbursement), color: '#262626' },
+                        { label: 'Total Repayment', value: formatSAR(totalBuyerRepayment),  color: '#262626' },
                       ].map(row => (
                         <div key={row.label} style={{ padding: '10px 12px', borderRadius: 10, background: 'white', border: '1px solid #f1f5f9' }}>
-                          <div style={{ fontSize: 10, color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 3 }}>{row.label}</div>
+                          <div style={{ fontSize: 10, color: '#a3a3a3', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 3 }}>{row.label}</div>
                           <div style={{ fontSize: 14, fontWeight: 700, color: row.color, fontVariantNumeric: 'tabular-nums' }}>{row.value}</div>
                         </div>
                       ))}
                     </div>
-                    <div style={{ padding: '8px 12px', borderRadius: 10, background: 'white', border: '1px solid #f1f5f9', fontSize: 12, color: '#64748b' }}>
-                      Per EMI: <strong style={{ color: '#334155' }}>{formatSAR(perEMI)}</strong> × {instalmentCount} instalments
+                    <div style={{ padding: '8px 12px', borderRadius: 10, background: 'white', border: '1px solid #f1f5f9', fontSize: 12, color: '#525252' }}>
+                      Per EMI: <strong style={{ color: '#262626' }}>{formatSAR(perEMI)}</strong> × {instalmentCount} instalments
                     </div>
 
                     {/* Instalment Schedule */}
@@ -1405,14 +1404,14 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
                             { label: 'Overdue', value: overdueInstalments,                                                      danger: true  },
                           ].map((stat, i) => (
                             <div key={stat.label} className={`px-4 py-3 text-center ${i < 3 ? 'border-r border-slate-100' : ''}`}>
-                              <div className={`text-[20px] font-bold ${stat.danger && stat.value > 0 ? 'text-red-500' : 'text-slate-800'}`}>{stat.value}</div>
+                              <div className={`text-[20px] font-bold ${stat.danger && stat.value > 0 ? 'text-slate-500' : 'text-slate-800'}`}>{stat.value}</div>
                               <div className="text-[10px] text-slate-400">{stat.label}</div>
                             </div>
                           ))}
                         </div>
                         <table className="w-full">
                           <thead>
-                            <tr className="border-b border-slate-50" style={{ background: '#f8fafc' }}>
+                            <tr className="border-b border-slate-50" style={{ background: '#f5f5f5' }}>
                               <th className="px-4 py-2 text-start text-[10px] font-semibold text-slate-400 uppercase tracking-wide">No.</th>
                               <th className="px-4 py-2 text-start text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Due Date</th>
                               <th className="px-4 py-2 text-end text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Amount</th>
@@ -1431,8 +1430,8 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
                                   <td className="px-4 py-2.5 text-[12px] text-slate-600">{dueDate}</td>
                                   <td className="px-4 py-2.5 text-[12px] text-end tabular-nums font-medium text-slate-700">{formatSAR(perEMI)}</td>
                                   <td className="px-4 py-2.5 text-end">
-                                    {isPaid ? <span className="text-[11px] font-semibold text-emerald-600">✓ Paid</span>
-                                      : isOverdue ? <span className="text-[11px] font-semibold text-red-500">Overdue</span>
+                                    {isPaid ? <span className="text-[11px] font-semibold text-slate-600">✓ Paid</span>
+                                      : isOverdue ? <span className="text-[11px] font-semibold text-slate-500">Overdue</span>
                                       : <span className="text-[11px] text-slate-400">Pending</span>}
                                   </td>
                                 </tr>
@@ -1443,7 +1442,7 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
                       </div>
                     </div>
 
-                    {!canEditModel && <div style={{ fontSize: 11, color: '#94a3b8', fontStyle: 'italic' }}>Fee structure is finalised by the Account Manager.</div>}
+                    {!canEditModel && <div style={{ fontSize: 11, color: '#a3a3a3', fontStyle: 'italic' }}>Fee structure is finalised by the Account Manager.</div>}
                   </div>
                 </Section>
               )
@@ -1475,10 +1474,10 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
           maxHeight: 340, overflowY: 'auto', flexShrink: 0,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-            <span style={{ fontSize: 12, fontWeight: 700, color: '#334155' }}>Reassign ticket</span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: '#262626' }}>Reassign ticket</span>
             <button
               onClick={() => { setShowAssignPanel(false); setAssignTarget(null); setAssignNote('') }}
-              style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: 4 }}>
+              style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: '#a3a3a3', padding: 4 }}>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                 <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
               </svg>
@@ -1491,8 +1490,8 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
                 style={{
                   display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px',
                   borderRadius: 10, border: '1.5px solid',
-                  borderColor: assignTarget && USERS[assignTarget]?.id === user.id ? 'rgba(139,92,246,0.4)' : '#f1f5f9',
-                  background: assignTarget && USERS[assignTarget]?.id === user.id ? 'rgba(139,92,246,0.05)' : 'transparent',
+                  borderColor: assignTarget && USERS[assignTarget]?.id === user.id ? 'rgba(0,0,0,0.15)' : '#e5e5e5',
+                  background: assignTarget && USERS[assignTarget]?.id === user.id ? 'rgba(0,0,0,0.03)' : 'transparent',
                   cursor: 'pointer', textAlign: 'left',
                 }}>
                 <div style={{
@@ -1503,18 +1502,18 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
                   {user.initials}
                 </div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: '#334155' }}>{user.name}</div>
-                  <div style={{ fontSize: 10, color: '#94a3b8' }}>{user.title} · {user.adminRole}</div>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: '#262626' }}>{user.name}</div>
+                  <div style={{ fontSize: 10, color: '#a3a3a3' }}>{user.title} · {user.adminRole}</div>
                 </div>
                 {user.name === assignedTo && (
-                  <span style={{ fontSize: 10, fontWeight: 600, color: '#10b981' }}>current</span>
+                  <span style={{ fontSize: 10, fontWeight: 600, color: '#262626' }}>current</span>
                 )}
               </button>
             ))}
           </div>
           {assignTarget && (
             <div style={{ marginBottom: 10 }}>
-              <div style={{ fontSize: 10, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
+              <div style={{ fontSize: 10, fontWeight: 600, color: '#a3a3a3', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
                 Note to assignee (optional)
               </div>
               <textarea
@@ -1526,7 +1525,7 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
                   width: '100%', padding: '8px 12px', borderRadius: 8,
                   border: '1.5px solid #e2e8f0', fontSize: 12, resize: 'none',
                   fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box',
-                  color: '#334155',
+                  color: '#262626',
                 }}
               />
             </div>
@@ -1534,7 +1533,7 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
           <div style={{ display: 'flex', gap: 8 }}>
             <button onClick={handleAssignConfirm} disabled={!assignTarget} style={{
               flex: 1, padding: '8px 0', borderRadius: 10,
-              background: assignTarget ? '#8b5cf6' : '#e2e8f0',
+              background: assignTarget ? '#171717' : '#e5e5e5',
               border: 'none', fontSize: 12, fontWeight: 700,
               color: assignTarget ? 'white' : '#94a3b8', cursor: assignTarget ? 'pointer' : 'default',
             }}>
@@ -1543,7 +1542,7 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
             <button onClick={() => { setShowAssignPanel(false); setAssignTarget(null); setAssignNote('') }} style={{
               padding: '8px 16px', borderRadius: 10, background: 'none',
               border: '1.5px solid #e2e8f0', fontSize: 12, fontWeight: 600,
-              color: '#64748b', cursor: 'pointer',
+              color: '#525252', cursor: 'pointer',
             }}>
               Cancel
             </button>
@@ -1567,10 +1566,10 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
               <polyline points="15 18 9 12 15 6"/>
             </svg>
           </button>
-          <span style={{ fontSize: 11, color: '#64748b', whiteSpace: 'nowrap' }}>
+          <span style={{ fontSize: 11, color: '#525252', whiteSpace: 'nowrap' }}>
             {laneTotal === 1
-              ? <span>Only ticket in <strong style={{ color: '#334155' }}>{laneLabel}</strong></span>
-              : <><strong style={{ color: '#334155' }}>{(laneIdx ?? 0) + 1}</strong> / {laneTotal} in <strong style={{ color: '#334155' }}>{laneLabel}</strong></>
+              ? <span>Only ticket in <strong style={{ color: '#262626' }}>{laneLabel}</strong></span>
+              : <><strong style={{ color: '#262626' }}>{(laneIdx ?? 0) + 1}</strong> / {laneTotal} in <strong style={{ color: '#262626' }}>{laneLabel}</strong></>
             }
           </span>
           <button onClick={onNextInLane} disabled={laneIdx >= laneTotal - 1}
@@ -1581,7 +1580,7 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
           </button>
         </div>
 
-        <span style={{ width: 1, height: 18, background: '#e2e8f0', flexShrink: 0 }} />
+        <span style={{ width: 1, height: 18, background: '#e5e5e5', flexShrink: 0 }} />
 
         {/* Primary action (stage-specific, role-gated) */}
         {canPrimary && primaryAction && (
@@ -1601,7 +1600,7 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
           <button onClick={handleApprove} style={{
             display: 'flex', alignItems: 'center', gap: 6,
             padding: '6px 14px', borderRadius: 20,
-            background: '#10b981', border: 'none',
+            background: '#262626', border: 'none',
             fontSize: 12, fontWeight: 700, color: 'white', cursor: 'pointer',
           }}>
             ✓ {cardStage === 'legal' ? 'Approve Finance Request' : 'Confirm Disbursement'}
@@ -1612,17 +1611,17 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
         <button onClick={() => setShowAssignPanel(v => !v)} style={{
           display: 'flex', alignItems: 'center', gap: 6,
           padding: '6px 12px', borderRadius: 20,
-          background: showAssignPanel ? 'rgba(139,92,246,0.08)' : 'white',
+          background: showAssignPanel ? 'rgba(0,0,0,0.03)' : 'white',
           border: '1.5px solid',
-          borderColor: showAssignPanel ? 'rgba(139,92,246,0.35)' : '#e2e8f0',
+          borderColor: showAssignPanel ? 'rgba(0,0,0,0.15)' : '#e5e5e5',
           fontSize: 12, fontWeight: 600,
-          color: showAssignPanel ? '#7c3aed' : '#374151', cursor: 'pointer',
+          color: showAssignPanel ? '#171717' : '#404040', cursor: 'pointer',
         }}>
           <span>👤</span> Assign
         </button>
 
-        <span style={{ fontSize: 11, color: '#94a3b8', marginLeft: 'auto' }}>
-          Assigned: <strong style={{ color: '#374151' }}>{assignedTo}</strong>
+        <span style={{ fontSize: 11, color: '#a3a3a3', marginLeft: 'auto' }}>
+          Assigned: <strong style={{ color: '#404040' }}>{assignedTo}</strong>
         </span>
       </div>
     </div>
@@ -1712,7 +1711,7 @@ export default function Pipeline({ onNavigate }) {
   const onboardingCount     = cards.filter(c => c.type === 'onboarding').length
   const invoiceFinanceCount = cards.filter(c => c.type === 'invoice_finance').length
 
-  const inputStyle = { border: '1px solid #e2e8f0', borderRadius: 8, padding: '4px 10px', fontSize: 12, background: 'white', outline: 'none', color: '#334155' }
+  const inputStyle = { border: '1px solid #e2e8f0', borderRadius: 8, padding: '4px 10px', fontSize: 12, background: 'white', outline: 'none', color: '#262626' }
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -1736,7 +1735,7 @@ export default function Pipeline({ onNavigate }) {
             <span style={{
               fontSize: 10, fontWeight: 600, minWidth: 18, height: 18, borderRadius: 20,
               padding: '0 5px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-              background: tab.id === processFilter ? 'var(--color-primary)' : '#f1f5f9',
+              background: tab.id === processFilter ? 'var(--color-primary)' : '#e5e5e5',
               color: tab.id === processFilter ? 'white' : '#64748b',
             }}>{tab.count}</span>
           </button>
@@ -1746,8 +1745,8 @@ export default function Pipeline({ onNavigate }) {
       {/* Search + filter bar — Row 1 */}
       <div className="px-4 py-2.5 border-b border-slate-100 bg-white flex items-center gap-2.5 shrink-0 flex-wrap">
         {/* Search */}
-        <div className="flex items-center gap-2 flex-1 min-w-[180px] border border-slate-200 rounded-lg px-3 py-1.5 bg-slate-50 focus-within:bg-white focus-within:border-indigo-200 transition-colors">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2.5" strokeLinecap="round">
+        <div className="flex items-center gap-2 flex-1 min-w-[180px] border border-slate-200 rounded-lg px-3 py-1.5 bg-slate-50 focus-within:bg-white focus-within:border-slate-300 transition-colors">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke='#a3a3a3' strokeWidth="2.5" strokeLinecap="round">
             <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
           </svg>
           <input
@@ -1770,8 +1769,8 @@ export default function Pipeline({ onNavigate }) {
         <button onClick={() => setShowFilters(v => !v)}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold transition-all border"
           style={{
-            background: showFilters ? 'rgba(99,102,241,0.08)' : '#f8fafc',
-            borderColor: showFilters ? 'rgba(99,102,241,0.3)' : '#e2e8f0',
+            background: showFilters ? 'rgba(0,0,0,0.03)' : '#f5f5f5',
+            borderColor: showFilters ? 'rgba(0,0,0,0.1)' : '#e5e5e5',
             color: showFilters ? '#4f46e5' : '#64748b',
           }}>
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
@@ -1784,24 +1783,24 @@ export default function Pipeline({ onNavigate }) {
           )}
         </button>
 
-        <div style={{ width: 1, height: 18, background: '#e2e8f0' }} />
+        <div style={{ width: 1, height: 18, background: '#e5e5e5' }} />
 
         {/* My Lanes / All Stages */}
         {adminRole !== 'super' && (
           <button onClick={() => setFilterRole('mine')}
             className="px-3 py-1.5 rounded-lg text-[12px] font-semibold transition-all"
-            style={{ background: filterRole === 'mine' ? 'var(--color-primary)' : '#f1f5f9', color: filterRole === 'mine' ? 'white' : '#64748b' }}>
+            style={{ background: filterRole === 'mine' ? 'var(--color-primary)' : '#e5e5e5', color: filterRole === 'mine' ? 'white' : '#64748b' }}>
             My Lanes ({myCardCount})
           </button>
         )}
         <button onClick={() => setFilterRole('all')}
           className="px-3 py-1.5 rounded-lg text-[12px] font-semibold transition-all"
-          style={{ background: filterRole === 'all' || adminRole === 'super' ? 'var(--color-primary)' : '#f1f5f9', color: filterRole === 'all' || adminRole === 'super' ? 'white' : '#64748b' }}>
+          style={{ background: filterRole === 'all' || adminRole === 'super' ? 'var(--color-primary)' : '#e5e5e5', color: filterRole === 'all' || adminRole === 'super' ? 'white' : '#64748b' }}>
           All Stages
         </button>
         <span className="text-[11px] text-slate-400 ml-auto">
           {searchQuery || activeFilterCount > 0 || processFilter !== 'all'
-            ? <><strong style={{ color: '#334155' }}>{processFiltered.length}</strong> of {cards.length}</>
+            ? <><strong style={{ color: '#262626' }}>{processFiltered.length}</strong> of {cards.length}</>
             : <>{cards.length} transactions</>
           }
         </span>
@@ -1810,7 +1809,7 @@ export default function Pipeline({ onNavigate }) {
       {/* Filter panel — Row 2 (collapsible) */}
       {showFilters && (
         <div className="px-4 py-2 border-b border-slate-100 shrink-0 flex items-center gap-4 flex-wrap"
-          style={{ background: '#f8fafc' }}>
+          style={{ background: '#f5f5f5' }}>
           {/* Assigned to */}
           <div className="flex items-center gap-2">
             <span className="text-[11px] font-semibold text-slate-500 whitespace-nowrap">Assigned to</span>
@@ -1839,7 +1838,7 @@ export default function Pipeline({ onNavigate }) {
           {activeFilterCount > 0 && (
             <button onClick={clearFilters}
               className="text-[11px] font-semibold px-2.5 py-1 rounded-lg transition-colors"
-              style={{ background: 'rgba(239,68,68,0.08)', color: '#dc2626' }}>
+              style={{ background: 'rgba(0,0,0,0.04)', color: '#737373' }}>
               Clear all
             </button>
           )}
@@ -1859,13 +1858,13 @@ export default function Pipeline({ onNavigate }) {
                   <div className="w-2.5 h-2.5 rounded-full" style={{ background: stage.color }} />
                   <span className="font-semibold text-[12px] text-slate-700 flex-1 leading-tight">
                     {stageDept[stage.id]
-                      ? <><span style={{ color: '#94a3b8', fontWeight: 500 }}>{stageDept[stage.id]} › </span>{stage.label}</>
+                      ? <><span style={{ color: '#a3a3a3', fontWeight: 500 }}>{stageDept[stage.id]} › </span>{stage.label}</>
                       : stage.label}
                   </span>
                   <span className="text-[11px] font-semibold px-1.5 py-0.5 rounded-full bg-white border border-slate-100 text-slate-500">{stageCards.length}</span>
                   {isMyLane && (
                     <button onClick={() => setLaneActionStage(laneActionStage === stage.id ? null : stage.id)}
-                      className="w-6 h-6 rounded-lg flex items-center justify-center text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
+                      className="w-6 h-6 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
                       title="AI Lane Actions">
                       ⚡
                     </button>
@@ -1893,7 +1892,7 @@ export default function Pipeline({ onNavigate }) {
                       <button key={card.id}
                         onClick={() => { setSelectedCard(card); setLaneActionStage(null) }}
                         className="w-full text-start bg-white rounded-2xl border p-4 hover:shadow-md transition-all"
-                        style={{ borderColor: aboveLimit ? '#fecaca' : '#f1f5f9' }}>
+                        style={{ borderColor: aboveLimit ? '#d4d4d4' : '#e5e5e5' }}>
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-[11px] font-mono text-slate-400">{card.id}</span>
                           {card.riskScore !== null
@@ -1905,57 +1904,57 @@ export default function Pipeline({ onNavigate }) {
                         <div className="text-[14px] font-bold tabular-nums text-slate-900 mb-1">{formatSAR(card.amount)}</div>
 
                         {/* Stage-specific info block */}
-                        <div className="mb-2" style={{ fontSize: 11, color: '#64748b' }}>
+                        <div className="mb-2" style={{ fontSize: 11, color: '#525252' }}>
                           {stage.id === 'submitted' && (
                             <span>{verifiedCount}/{card.documents.length} docs verified{missing > 0 ? ` · ${missing} missing` : ''}</span>
                           )}
                           {stage.id === 'kyc' && (
-                            <span>{verifiedCount}/{card.documents.length} docs · {missing > 0 ? <span style={{ color: '#e5484d' }}>{missing} pending</span> : <span style={{ color: '#10b981' }}>all clear</span>}</span>
+                            <span>{verifiedCount}/{card.documents.length} docs · {missing > 0 ? <span style={{ color: '#737373' }}>{missing} pending</span> : <span style={{ color: '#262626' }}>all clear</span>}</span>
                           )}
                           {stage.id === 'credit_score' && canSeeDetail && (
-                            <span>{card.riskScore !== null ? <span>SIMAH: <strong style={{ color: card.riskScore >= 600 ? '#059669' : '#dc2626' }}>{card.riskScore}</strong></span> : 'Awaiting SIMAH score'}</span>
+                            <span>{card.riskScore !== null ? <span>SIMAH: <strong style={{ color: card.riskScore >= 600 ? '#262626' : '#737373' }}>{card.riskScore}</strong></span> : 'Awaiting SIMAH score'}</span>
                           )}
                           {stage.id === 'risk' && canSeeDetail && (
                             <span>
-                              {card.riskScore !== null ? <span>Risk: <strong style={{ color: card.riskScore > 60 ? '#dc2626' : '#059669' }}>{card.riskScore}</strong></span> : 'Scoring pending'}
-                              {card.proposedAmount && <span style={{ color: '#d97706' }}> · ⚖️ Counter-proposed</span>}
+                              {card.riskScore !== null ? <span>Risk: <strong style={{ color: card.riskScore > 60 ? '#737373' : '#262626' }}>{card.riskScore}</strong></span> : 'Scoring pending'}
+                              {card.proposedAmount && <span style={{ color: '#525252' }}> · ⚖️ Counter-proposed</span>}
                             </span>
                           )}
                           {stage.id === 'legal' && (
                             <span>{(card.contracts || []).length} contract{(card.contracts || []).length !== 1 ? 's' : ''} · {(card.contracts || []).filter(c => c.status === 'Signed').length} signed</span>
                           )}
                           {stage.id === 'approved' && (
-                            <span style={{ color: '#059669', fontWeight: 600 }}>✓ Approved — ready to disburse</span>
+                            <span style={{ color: '#262626', fontWeight: 600 }}>✓ Approved — ready to disburse</span>
                           )}
                           {stage.id === 'disbursed' && (
-                            <span style={{ color: '#059669' }}>Disbursed · instalment 1 due soon</span>
+                            <span style={{ color: '#262626' }}>Disbursed · instalment 1 due soon</span>
                           )}
                           {stage.id === 'repayment' && (
                             <span>Instalment 1 / {Math.ceil(card.tenure / 15)} paid</span>
                           )}
                           {stage.id === 'overdue' && (
-                            <span style={{ color: '#dc2626', fontWeight: 600 }}>⚠️ Overdue · {card.daysInStage}d in stage</span>
+                            <span style={{ color: '#737373', fontWeight: 600 }}>⚠️ Overdue · {card.daysInStage}d in stage</span>
                           )}
                         </div>
                         <div className="flex items-center gap-1.5 flex-wrap">
                           {/* Process type badge */}
                           {card.type === 'invoice_finance'
-                            ? <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold" style={{ background: '#f0f9ff', color: '#0891b2' }}>💼 Invoice</span>
-                            : <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold" style={{ background: 'rgba(139,92,246,0.08)', color: '#7c3aed' }}>🚀 Onboarding</span>
+                            ? <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold" style={{ background: '#f5f5f5', color: '#525252' }}>💼 Invoice</span>
+                            : <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold" style={{ background: 'rgba(0,0,0,0.03)', color: '#525252' }}>🚀 Onboarding</span>
                           }
                           {/* Above-limit warning */}
                           {aboveLimit && (
-                            <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-red-50 text-red-600">⚠️ Above limit</span>
+                            <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-slate-100 text-slate-600">⚠️ Above limit</span>
                           )}
                           {card.daysInStage > 0 && (
                             <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-50 text-slate-500 font-medium">{card.daysInStage}d here</span>
                           )}
                           {missing > 0 && (
-                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-red-50 text-red-500 font-semibold">{missing} doc{missing > 1 ? 's' : ''} missing</span>
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-semibold">{missing} doc{missing > 1 ? 's' : ''} missing</span>
                           )}
                           {hasYumi && (
                             <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold flex items-center gap-1"
-                              style={{ background: 'rgba(143,133,255,0.1)', color: 'var(--color-primary)' }}>
+                              style={{ background: 'rgba(0,0,0,0.06)', color: 'var(--color-primary)' }}>
                               ✦ Yumi
                             </span>
                           )}

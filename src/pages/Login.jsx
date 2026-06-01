@@ -19,7 +19,7 @@ const TEST_USERS = [
       </svg>
     ),
     accent: '#8f85ff',
-    accentLight: 'rgba(143,133,255,0.08)',
+    accentLight: '#f5f5f5',
     device: 'Mobile',
   },
   {
@@ -38,7 +38,7 @@ const TEST_USERS = [
       </svg>
     ),
     accent: '#6366f1',
-    accentLight: 'rgba(99,102,241,0.08)',
+    accentLight: '#f5f5f5',
     device: 'Mobile',
   },
   {
@@ -56,7 +56,7 @@ const TEST_USERS = [
       </svg>
     ),
     accent: '#0b0f19',
-    accentLight: 'rgba(11,15,25,0.06)',
+    accentLight: '#f5f5f5',
     device: 'Mobile',
   },
   {
@@ -75,7 +75,7 @@ const TEST_USERS = [
       </svg>
     ),
     accent: '#0b0f19',
-    accentLight: 'rgba(11,15,25,0.08)',
+    accentLight: '#f5f5f5',
     device: 'Web',
   },
   {
@@ -93,7 +93,7 @@ const TEST_USERS = [
       </svg>
     ),
     accent: '#10b981',
-    accentLight: 'rgba(16,185,129,0.08)',
+    accentLight: '#f5f5f5',
     device: 'Web',
   },
   {
@@ -111,7 +111,7 @@ const TEST_USERS = [
       </svg>
     ),
     accent: '#f59e0b',
-    accentLight: 'rgba(245,158,11,0.08)',
+    accentLight: '#f5f5f5',
     device: 'Web',
   },
   {
@@ -129,7 +129,7 @@ const TEST_USERS = [
       </svg>
     ),
     accent: '#e5484d',
-    accentLight: 'rgba(229,72,77,0.08)',
+    accentLight: '#f5f5f5',
     device: 'Web',
   },
   {
@@ -146,7 +146,7 @@ const TEST_USERS = [
       </svg>
     ),
     accent: '#6366f1',
-    accentLight: 'rgba(99,102,241,0.08)',
+    accentLight: '#f5f5f5',
     device: 'Web',
   },
   {
@@ -164,7 +164,7 @@ const TEST_USERS = [
       </svg>
     ),
     accent: '#0891b2',
-    accentLight: 'rgba(8,145,178,0.08)',
+    accentLight: '#f5f5f5',
     device: 'Web',
   },
   {
@@ -181,7 +181,7 @@ const TEST_USERS = [
       </svg>
     ),
     accent: '#7c3aed',
-    accentLight: 'rgba(124,58,237,0.08)',
+    accentLight: '#f5f5f5',
     device: 'Web',
   },
 ]
@@ -197,28 +197,28 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: '#0b0f19' }}>
+    <div className="min-h-screen flex flex-col" style={{ background: '#ffffff' }}>
       {/* Header */}
       <header className="px-6 pt-10 pb-6 flex items-center justify-between">
         <div>
-          <div className="text-white/40 text-[11px] font-semibold tracking-widest uppercase mb-1">يُمنى</div>
-          <div className="display text-white text-2xl">Yumna</div>
+          <div style={{ color: '#a3a3a3' }} className="text-[11px] font-semibold tracking-widest uppercase mb-1">يُمنى</div>
+          <div className="display text-[#111111] text-2xl">Yumna</div>
         </div>
         <div className="flex items-center gap-2.5">
-          <LanguageToggle className="border-white/15 bg-white/8 text-white/70 hover:text-white" />
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 border border-white/10">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 live-dot"/>
-            <span className="text-white/70 text-[11px] font-medium">UX Testing Mode</span>
+          <LanguageToggle />
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border" style={{ background: 'rgba(0,0,0,0.04)', borderColor: 'rgba(0,0,0,0.08)' }}>
+            <span className="w-1.5 h-1.5 rounded-full live-dot" style={{ background: '#404040' }}/>
+            <span style={{ color: '#737373' }} className="text-[11px] font-medium">UX Testing Mode</span>
           </div>
         </div>
       </header>
 
       {/* Hero */}
       <div className="px-6 pb-8">
-        <h1 className="display text-white text-3xl leading-tight mb-2">
+        <h1 className="display text-[#111111] text-3xl leading-tight mb-2">
           Select a persona<br/>to begin testing
         </h1>
-        <p className="text-white/50 text-[14px]">
+        <p style={{ color: '#737373' }} className="text-[14px]">
           Switch between connected experiences to explore the full transaction flow.
         </p>
       </div>
@@ -226,7 +226,7 @@ export default function Login() {
       {/* User Cards */}
       <div className="flex-1 px-5 pb-8">
         {/* Mobile personas */}
-        <div className="eyebrow text-white/30 mb-3">Mobile Experiences</div>
+        <div className="eyebrow mb-3" style={{ color: '#a3a3a3' }}>Mobile Experiences</div>
         <div className="grid grid-cols-2 gap-3 mb-6">
           {TEST_USERS.filter(u => u.device === 'Mobile').map(entry => (
             <UserCard key={entry.key} entry={entry} onSelect={handleLogin} />
@@ -234,7 +234,7 @@ export default function Login() {
         </div>
 
         {/* Admin personas */}
-        <div className="eyebrow text-white/30 mb-3">Admin Dashboard</div>
+        <div className="eyebrow mb-3" style={{ color: '#a3a3a3' }}>Admin Dashboard</div>
         <div className="grid grid-cols-2 gap-3">
           {TEST_USERS.filter(u => u.device === 'Web').map(entry => (
             <UserCard key={entry.key} entry={entry} onSelect={handleLogin} />
@@ -244,7 +244,7 @@ export default function Login() {
 
       {/* Footer note */}
       <div className="px-6 pb-8 text-center">
-        <p className="text-white/25 text-[11px]">
+        <p style={{ color: '#d4d4d4' }} className="text-[11px]">
           Trade Credit Platform · KSA · SAMA Regulated · v0.1 Prototype
         </p>
       </div>
@@ -256,39 +256,39 @@ function UserCard({ entry, onSelect }) {
   return (
     <button
       onClick={() => onSelect(entry)}
-      className="w-full text-start p-4 rounded-2xl border border-white/8 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
+      className="w-full text-start p-4 rounded-2xl border transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
       style={{
-        background: 'rgba(255,255,255,0.04)',
-        backdropFilter: 'blur(12px)',
+        background: 'rgba(0,0,0,0.04)',
+        borderColor: '#e5e5e5',
       }}
     >
       {/* Icon */}
       <div
         className="w-10 h-10 rounded-xl flex items-center justify-center mb-3"
-        style={{ background: entry.accentLight, color: entry.accent }}
+        style={{ background: '#f5f5f5', color: '#404040' }}
       >
         {entry.icon}
       </div>
 
       {/* Labels */}
-      <div className="text-white font-semibold text-[14px] leading-tight mb-0.5">
+      <div style={{ color: '#171717' }} className="font-semibold text-[14px] leading-tight mb-0.5">
         {entry.label}
       </div>
-      <div className="text-white/40 text-[10px] leading-tight mb-2">
+      <div style={{ color: '#a3a3a3' }} className="text-[10px] leading-tight mb-2">
         {entry.labelAr}
       </div>
-      <div className="text-white/55 text-[11px] leading-snug">
+      <div style={{ color: '#737373' }} className="text-[11px] leading-snug">
         {entry.description}
       </div>
 
       {/* Device pill */}
       <div className="mt-3 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full"
-        style={{ background: 'rgba(255,255,255,0.07)' }}>
+        style={{ background: 'rgba(0,0,0,0.04)' }}>
         {entry.device === 'Mobile'
-          ? <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="2"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
-          : <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2"/><polyline points="8 21 12 17 16 21"/></svg>
+          ? <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#a3a3a3" strokeWidth="2"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+          : <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#a3a3a3" strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2"/><polyline points="8 21 12 17 16 21"/></svg>
         }
-        <span className="text-white/35 text-[9px] font-medium uppercase tracking-wide">{entry.device}</span>
+        <span style={{ color: '#a3a3a3' }} className="text-[9px] font-medium uppercase tracking-wide">{entry.device}</span>
       </div>
     </button>
   )

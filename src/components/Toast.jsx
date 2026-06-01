@@ -14,10 +14,10 @@ export default function ToastStack() {
           style={{ boxShadow: '0 12px 30px -10px rgba(11,15,25,0.35)' }}
         >
           <span className="shrink-0 w-6 h-6 rounded-full flex items-center justify-center"
-            style={{ background: toast.type === 'error' ? '#fef2f2' : '#ecfdf5' }}>
+            style={{ background: '#f0f0f0' }}>
             {toast.type === 'error'
-              ? <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#e5484d" strokeWidth="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
-              : <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2.5"><path d="M20 6L9 17l-5-5"/></svg>
+              ? <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#737373" strokeWidth="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+              : <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#404040" strokeWidth="2.5"><path d="M20 6L9 17l-5-5"/></svg>
             }
           </span>
           <p className="text-[13px] font-medium text-ink flex-1">{toast.message}</p>

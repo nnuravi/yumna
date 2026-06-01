@@ -1,16 +1,16 @@
 @import "tailwindcss";
 
 @theme {
-  --color-primary: #8f85ff;
-  --color-primary-hover: #7d72f5;
-  --color-ink: #0b0f19;
-  --color-ink-soft: #374151;
-  --color-muted: #6b7280;
-  --color-line: #e5e7eb;
-  --color-page: #edeef1;
-  --color-card: #f6f6f8;
-  --color-success: #10b981;
-  --color-danger: #e5484d;
+  --color-primary: #171717;
+  --color-primary-hover: #404040;
+  --color-ink: #111111;
+  --color-ink-soft: #404040;
+  --color-muted: #737373;
+  --color-line: #e5e5e5;
+  --color-page: #f5f5f5;
+  --color-card: #ffffff;
+  --color-success: #262626;
+  --color-danger: #737373;
 
   --font-display: 'Sora', 'Tajawal', ui-sans-serif, system-ui, sans-serif;
   --font-sans: 'Inter', 'Noto Sans Arabic', ui-sans-serif, system-ui, sans-serif;
@@ -148,6 +148,11 @@ body {
 ::-webkit-scrollbar-thumb {
   background: var(--color-line);
   border-radius: 100px;
+}
+
+/* Wireframe overrides */
+.progress-fill {
+  background: #404040 !important;
 }
 
 /* Custom progress bar */

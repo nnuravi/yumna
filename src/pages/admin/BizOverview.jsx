@@ -204,10 +204,10 @@ function generateAISummary(item, type) {
 // ── Detail Modal ──────────────────────────────────────────────────────────────
 
 const TONE_STYLES = {
-  positive: { border: '#10b981', bg: '#f0fdf4', text: '#065f46' },
-  warning:  { border: '#f59e0b', bg: '#fffbeb', text: '#92400e' },
-  critical: { border: '#e5484d', bg: '#fef2f2', text: '#991b1b' },
-  neutral:  { border: '#94a3b8', bg: '#f8fafc', text: '#475569' },
+  positive: { border: '#e5e5e5', bg: '#f5f5f5', text: '#262626' },
+  warning:  { border: '#d4d4d4', bg: '#f0f0f0', text: '#525252' },
+  critical: { border: '#d4d4d4', bg: '#f0f0f0', text: '#525252' },
+  neutral:  { border: '#e5e5e5', bg: '#fafafa', text: '#404040' },
 }
 
 function keyFactsForType(item, type) {
@@ -345,10 +345,10 @@ function DetailModal({ item, type, onClose }) {
   const statusVal = item.Status || item.status || ''
   const statusColor = (v) => {
     const s = String(v).toLowerCase()
-    if (['approve', 'paid', 'clear', 'on-track'].includes(s)) return { bg: '#10b981', text: 'white' }
-    if (['reject', 'escalated', 'over'].includes(s)) return { bg: '#e5484d', text: 'white' }
-    if (['pending', 'overdue', 'alert sent', 'monitoring', 'at-risk', 'due soon'].includes(s)) return { bg: '#f59e0b', text: 'white' }
-    return { bg: '#94a3b8', text: 'white' }
+    if (['approve', 'paid', 'clear', 'on-track'].includes(s)) return { bg: '#262626', text: 'white' }
+    if (['reject', 'escalated', 'over'].includes(s)) return { bg: '#737373', text: 'white' }
+    if (['pending', 'overdue', 'alert sent', 'monitoring', 'at-risk', 'due soon'].includes(s)) return { bg: '#525252', text: 'white' }
+    return { bg: '#a3a3a3', text: 'white' }
   }
   const sc = statusColor(statusVal)
 
@@ -524,13 +524,13 @@ function GaugeChart({ value, max, size = 160 }) {
         <circle cx={cx} cy={cy} r={r} fill="none" stroke="#e2e8f0" strokeWidth="16"
           strokeDasharray={`${circ} ${circ}`}
           style={{ transform: `rotate(180deg)`, transformOrigin: `${cx}px ${cy}px` }} strokeLinecap="round" />
-        <circle cx={cx} cy={cy} r={r} fill="none" stroke="#1d4ed8" strokeWidth="16"
+        <circle cx={cx} cy={cy} r={r} fill="none" stroke='#404040' strokeWidth="16"
           strokeDasharray={`${filled} ${circ}`}
           style={{ transform: `rotate(180deg)`, transformOrigin: `${cx}px ${cy}px` }} strokeLinecap="round" />
         <text x={cx} y={cy + 4} textAnchor="middle" dominantBaseline="middle"
-          style={{ fontSize: 18, fontWeight: 700, fill: '#0b0f19' }}>{fmtNum(value)}</text>
-        <text x={8} y={cy + 20} style={{ fontSize: 9, fill: '#94a3b8' }}>0</text>
-        <text x={size - 8} y={cy + 20} textAnchor="end" style={{ fontSize: 9, fill: '#94a3b8' }}>{fmtNum(max)}</text>
+          style={{ fontSize: 18, fontWeight: 700, fill: '#171717' }}>{fmtNum(value)}</text>
+        <text x={8} y={cy + 20} style={{ fontSize: 9, fill: '#a3a3a3' }}>0</text>
+        <text x={size - 8} y={cy + 20} textAnchor="end" style={{ fontSize: 9, fill: '#a3a3a3' }}>{fmtNum(max)}</text>
       </svg>
     </div>
   )
@@ -583,9 +583,9 @@ function DrillDownDrawer({ target, onClose, onRowDetail }) {
   const headers = rows.length > 0 ? Object.keys(rows[0]).filter(k => typeof rows[0][k] !== 'object' && !['reviewNote', 'manualReview', 'creditUtilisation', 'sector', 'reviewedBy', 'installmentNumber', 'totalInstallments', 'lastContactDate', 'collectionNote', 'lastReviewedBy', 'escalationNote', 'nextReviewDate'].includes(k)) : []
 
   const statusColor = v => {
-    if (v === 'Overdue' || v === 'Reject' || v === 'Escalated') return '#e5484d'
-    if (v === 'Pending' || v === 'Alert Sent' || v === 'Monitoring' || v === 'Due Soon') return '#f59e0b'
-    if (v === 'Approve' || v === 'Paid' || v === 'Clear') return '#10b981'
+    if (v === 'Overdue' || v === 'Reject' || v === 'Escalated') return '#737373'
+    if (v === 'Pending' || v === 'Alert Sent' || v === 'Monitoring' || v === 'Due Soon') return '#525252'
+    if (v === 'Approve' || v === 'Paid' || v === 'Clear') return '#262626'
     return null
   }
 
@@ -624,7 +624,7 @@ function DrillDownDrawer({ target, onClose, onRowDetail }) {
             <tbody>
               {rows.map((row, i) => (
                 <tr key={i}
-                  className="border-t border-slate-50 hover:bg-indigo-50 cursor-pointer transition-colors group"
+                  className="border-t border-slate-50 hover:bg-slate-50 cursor-pointer transition-colors group"
                   onClick={() => onRowDetail && onRowDetail(row, rowType)}>
                   {headers.map(h => {
                     const val = row[h]
@@ -663,7 +663,7 @@ function KpiCard({ label, value, sub, subColor, drillData, onDrill }) {
       onClick={drillData ? () => onDrill(drillData) : undefined}>
       <div className="text-[11px] font-medium text-slate-400 uppercase tracking-wide mb-2">{label}</div>
       <div className="text-2xl font-bold tabular-nums text-slate-900 leading-tight">{value}</div>
-      {sub && <div className="text-[11px] mt-1" style={{ color: subColor || '#94a3b8' }}>{sub}</div>}
+      {sub && <div className="text-[11px] mt-1" style={{ color: subColor || '#a3a3a3' }}>{sub}</div>}
       {drillData && (
         <div className="absolute top-4 right-4 w-7 h-7 rounded-lg bg-slate-100 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -700,9 +700,9 @@ function ReportWrapper({ title, rows, filename, children }) {
 function TeamPerformanceSection({ onDetail }) {
   const teams = DASHBOARD_STATS.teamPerformance
   const statusMeta = {
-    'on-track': { label: 'On Track', color: '#10b981', bg: '#f0fdf4', border: '#bbf7d0' },
-    'at-risk':  { label: 'At Risk',  color: '#f59e0b', bg: '#fffbeb', border: '#fde68a' },
-    'over':     { label: 'Over TAT', color: '#e5484d', bg: '#fef2f2', border: '#fca5a5' },
+    'on-track': { label: 'On Track', color: '#262626', bg: '#f5f5f5', border: '#e5e5e5' },
+    'at-risk':  { label: 'At Risk',  color: '#525252', bg: '#f0f0f0', border: '#d4d4d4' },
+    'over':     { label: 'Over TAT', color: '#737373', bg: '#e5e5e5', border: '#c4c4c4' },
   }
   return (
     <div className="bg-white rounded-2xl border border-black/5 overflow-hidden">
@@ -724,7 +724,7 @@ function TeamPerformanceSection({ onDetail }) {
               const meta = statusMeta[t.status]
               return (
                 <tr key={i}
-                  className="border-b border-slate-50 last:border-0 hover:bg-indigo-50 cursor-pointer transition-colors"
+                  className="border-b border-slate-50 last:border-0 hover:bg-slate-50 cursor-pointer transition-colors"
                   onClick={() => onDetail && onDetail(t, 'team')}>
                   <td className="px-5 py-4 text-[13px] font-semibold text-slate-800 whitespace-nowrap">{t.team}</td>
                   <td className="px-5 py-4 text-[12px] text-slate-500">{t.member}</td>
@@ -733,7 +733,7 @@ function TeamPerformanceSection({ onDetail }) {
                   <td className="px-5 py-4">
                     <div className="flex items-center gap-2">
                       <div className="w-24 h-1.5 rounded-full bg-slate-100 overflow-hidden">
-                        <div className="h-full rounded-full" style={{ width: `${Math.min(100, t.tatPct)}%`, background: t.tatPct > 100 ? '#e5484d' : t.tatPct > 85 ? '#f59e0b' : '#10b981' }} />
+                        <div className="h-full rounded-full" style={{ width: `${Math.min(100, t.tatPct)}%`, background: t.tatPct > 100 ? '#737373' : t.tatPct > 85 ? '#525252' : '#404040' }} />
                       </div>
                       <span className="text-[11px] tabular-nums text-slate-500">{t.tatPct}%</span>
                     </div>
@@ -770,9 +770,9 @@ function SuperAdminOverview({ onDrill, onSwitchReport, onDetail }) {
   const approvalRate = c.statusByClient.find(x => x.label === 'Approve')?.pct || 0
 
   const reportHealth = [
-    { id: 'credit', title: 'Credit Health', score: `${approvalRate}%`, sub: `${c.totalClients} applications · ${c.totalCreditLimit.toLocaleString('en-SA')} SAR total limit`, color: '#10b981', status: 'Healthy' },
-    { id: 'collections', title: 'Collections Health', score: `${collectionRate}%`, sub: `SAR ${fmtNum(inst.amountToCollect)} outstanding · ${inst.totalInstallments} installments`, color: '#f59e0b', status: 'Monitor' },
-    { id: 'risk', title: 'Risk Health', score: `${r.avgRiskScore}`, sub: `${r.highRiskCount} high-risk accounts · ${r.flaggedToday} flagged today`, color: '#e5484d', status: 'Attention' },
+    { id: 'credit', title: 'Credit Health', score: `${approvalRate}%`, sub: `${c.totalClients} applications · ${c.totalCreditLimit.toLocaleString('en-SA')} SAR total limit`, color: '#262626', status: 'Healthy' },
+    { id: 'collections', title: 'Collections Health', score: `${collectionRate}%`, sub: `SAR ${fmtNum(inst.amountToCollect)} outstanding · ${inst.totalInstallments} installments`, color: '#525252', status: 'Monitor' },
+    { id: 'risk', title: 'Risk Health', score: `${r.avgRiskScore}`, sub: `${r.highRiskCount} high-risk accounts · ${r.flaggedToday} flagged today`, color: '#737373', status: 'Attention' },
   ]
 
   return (
@@ -784,7 +784,7 @@ function SuperAdminOverview({ onDrill, onSwitchReport, onDetail }) {
           drillData={{ title: 'Sales — All Orders', filename: 'sales_report', rows: DASHBOARD_STATS.salesRows, rowType: 'sales' }} onDrill={onDrill} />
         <KpiCard label="Total Collected" value={`SAR ${fmtNum(s.totalCollected)}`} sub="Repaid by buyers"
           drillData={{ title: 'Collections — All Installments', filename: 'collections_report', rows: DASHBOARD_STATS.collectionRows, rowType: 'collection' }} onDrill={onDrill} />
-        <KpiCard label="Total Outstanding" value={`SAR ${fmtNum(s.totalOutstanding)}`} sub="Pending collection" subColor="#e5484d"
+        <KpiCard label="Total Outstanding" value={`SAR ${fmtNum(s.totalOutstanding)}`} sub="Pending collection" subColor='#737373'
           drillData={{ title: 'Collections — All Installments', filename: 'collections_report', rows: DASHBOARD_STATS.collectionRows, rowType: 'collection' }} onDrill={onDrill} />
       </div>
       <div className="grid grid-cols-4 gap-4">
@@ -792,7 +792,7 @@ function SuperAdminOverview({ onDrill, onSwitchReport, onDetail }) {
           drillData={{ title: 'Credit — All Applications', filename: 'credit_report', rows: DASHBOARD_STATS.creditRows, rowType: 'credit' }} onDrill={onDrill} />
         <KpiCard label="Collection Rate" value={`${collectionRate}%`} sub="Repaid vs total portfolio"
           drillData={{ title: 'Collections — All Installments', filename: 'collections_report', rows: DASHBOARD_STATS.collectionRows, rowType: 'collection' }} onDrill={onDrill} />
-        <KpiCard label="Avg Portfolio Risk Score" value={r.avgRiskScore} sub={`${r.highRiskCount} high-risk accounts`} subColor="#e5484d"
+        <KpiCard label="Avg Portfolio Risk Score" value={r.avgRiskScore} sub={`${r.highRiskCount} high-risk accounts`} subColor='#737373'
           drillData={{ title: 'Risk — All Accounts', filename: 'risk_report', rows: DASHBOARD_STATS.riskRows, rowType: 'risk' }} onDrill={onDrill} />
         <KpiCard label="Monthly MDR" value={`${s.monthlyMDR}%`} sub={`Annualized: ${s.annualizedMDR.toFixed(2)}`}
           drillData={{ title: 'Sales — All Orders', filename: 'sales_report', rows: DASHBOARD_STATS.salesRows, rowType: 'sales' }} onDrill={onDrill} />
@@ -825,7 +825,7 @@ function StatCard({ label, value, sub, subColor }) {
     <div className="bg-white rounded-2xl border border-black/5 p-5">
       <div className="text-[11px] font-medium text-slate-400 uppercase tracking-wide mb-2">{label}</div>
       <div className="text-2xl font-bold tabular-nums text-slate-900 leading-tight">{value}</div>
-      {sub && <div className="text-[11px] mt-1" style={{ color: subColor || '#94a3b8' }}>{sub}</div>}
+      {sub && <div className="text-[11px] mt-1" style={{ color: subColor || '#a3a3a3' }}>{sub}</div>}
     </div>
   )
 }
@@ -836,7 +836,7 @@ function CreditView({ showSalesSummary, onDetail }) {
 
   const c = DASHBOARD_STATS.credit
   const s = DASHBOARD_STATS.sales
-  const statusColor = { Approve: '#10b981', Reject: '#e5484d', Pending: '#f59e0b' }
+  const statusColor = { Approve: '#525252', Reject: '#525252', Pending: '#525252' }
   return (
     <div className="space-y-6 max-w-6xl">
       {!onDetail && localDetail && (
@@ -892,7 +892,7 @@ function CreditView({ showSalesSummary, onDetail }) {
           <tbody>
             {DASHBOARD_STATS.creditRows.map((app, i) => (
               <tr key={i}
-                className="border-b border-slate-50 last:border-0 hover:bg-indigo-50 cursor-pointer transition-colors"
+                className="border-b border-slate-50 last:border-0 hover:bg-slate-50 cursor-pointer transition-colors"
                 onClick={() => handleDetail(app, 'credit')}>
                 <td className="px-5 py-3.5 text-[12px] font-mono text-slate-500">{app.ID}</td>
                 <td className="px-5 py-3.5 text-[13px] font-medium text-slate-800">{app.Client}</td>
@@ -924,10 +924,10 @@ function RiskView({ onDetail }) {
         <DetailModal item={localDetail.item} type={localDetail.type} onClose={() => setLocalDetail(null)} />
       )}
       <div className="grid grid-cols-4 gap-4">
-        <StatCard label="High-Risk Accounts" value={r.highRiskCount} subColor="#e5484d" sub="Requires attention" />
-        <StatCard label="Flagged Today" value={r.flaggedToday} subColor="#f59e0b" sub="New flags" />
+        <StatCard label="High-Risk Accounts" value={r.highRiskCount} subColor='#737373' sub="Requires attention" />
+        <StatCard label="Flagged Today" value={r.flaggedToday} subColor='#525252' sub="New flags" />
         <StatCard label="Avg Risk Score" value={r.avgRiskScore} sub="Portfolio average" />
-        <StatCard label="Overdue Ratio" value={`${r.overdueRatio}%`} subColor="#e5484d" sub="Of total installments" />
+        <StatCard label="Overdue Ratio" value={`${r.overdueRatio}%`} subColor='#737373' sub="Of total installments" />
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div className="bg-white rounded-2xl border border-black/5 p-5">
@@ -956,7 +956,7 @@ function RiskView({ onDetail }) {
             {r.riskTrend.map((pt, i) => (
               <div key={i} className="flex flex-col items-center flex-1">
                 <div className="text-[10px] text-slate-500 mb-1">{pt.score}</div>
-                <div className="w-full rounded-t" style={{ height: (pt.score / 60) * 80, background: pt.score > 40 ? '#fbbf24' : '#10b981' }} />
+                <div className="w-full rounded-t" style={{ height: (pt.score / 60) * 80, background: pt.score > 40 ? '#737373' : '#404040' }} />
                 <div className="text-[10px] text-slate-400 mt-1">{pt.month}</div>
               </div>
             ))}
@@ -979,12 +979,12 @@ function RiskView({ onDetail }) {
           <tbody>
             {DASHBOARD_STATS.riskRows.map((b, i) => (
               <tr key={i}
-                className="border-b border-slate-50 last:border-0 hover:bg-indigo-50 cursor-pointer transition-colors"
+                className="border-b border-slate-50 last:border-0 hover:bg-slate-50 cursor-pointer transition-colors"
                 onClick={() => handleDetail(b, 'risk')}>
                 <td className="px-5 py-3.5 text-[13px] font-medium text-slate-800">{b.Buyer}</td>
                 <td className="px-5 py-3.5">
                   <span className="inline-flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full" style={{ background: b['Risk Score'] > 70 ? '#e5484d' : b['Risk Score'] > 40 ? '#f59e0b' : '#10b981' }} />
+                    <span className="w-2 h-2 rounded-full" style={{ background: b['Risk Score'] > 70 ? '#737373' : b['Risk Score'] > 40 ? '#525252' : '#404040' }} />
                     <span className="text-[13px] font-semibold tabular-nums">{b['Risk Score']}</span>
                   </span>
                 </td>
@@ -994,9 +994,9 @@ function RiskView({ onDetail }) {
                 <td className="px-5 py-3.5 text-[12px] text-slate-500">{b.nextReviewDate}</td>
                 <td className="px-5 py-3.5">
                   <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold border" style={{
-                    color: b.Status === 'Escalated' ? '#e5484d' : b.Status === 'Alert Sent' ? '#f59e0b' : b.Status === 'Monitoring' ? '#6b7280' : '#10b981',
-                    borderColor: b.Status === 'Escalated' ? '#fca5a5' : b.Status === 'Alert Sent' ? '#fde68a' : b.Status === 'Monitoring' ? '#e5e7eb' : '#bbf7d0',
-                    background: b.Status === 'Escalated' ? '#fef2f2' : b.Status === 'Alert Sent' ? '#fffbeb' : b.Status === 'Monitoring' ? '#f9fafb' : '#f0fdf4',
+                    color: b.Status === 'Escalated' ? '#737373' : b.Status === 'Alert Sent' ? '#525252' : b.Status === 'Monitoring' ? '#a3a3a3' : '#262626',
+                    borderColor: '#d4d4d4',
+                    background: '#f5f5f5',
                   }}>{b.Status}</span>
                 </td>
               </tr>
@@ -1013,7 +1013,7 @@ function CollectionsView({ onDetail }) {
   const handleDetail = onDetail || ((item, type) => setLocalDetail({ item, type }))
 
   const inst = DASHBOARD_STATS.installments
-  const statusColor = { Paid: '#10b981', Overdue: '#e5484d', 'Due Soon': '#f59e0b' }
+  const statusColor = { Paid: '#262626', Overdue: '#737373', 'Due Soon': '#525252' }
   return (
     <div className="space-y-6 max-w-6xl">
       {!onDetail && localDetail && (
@@ -1022,7 +1022,7 @@ function CollectionsView({ onDetail }) {
       <div className="grid grid-cols-4 gap-4">
         <StatCard label="Orders" value={inst.orders} />
         <StatCard label="Merchant Disbursement" value={`SAR ${fmtNum(inst.merchantDisbursement)}`} />
-        <StatCard label="Amount to Collect" value={`SAR ${fmtNum(inst.amountToCollect)}`} subColor="#e5484d" sub="Outstanding" />
+        <StatCard label="Amount to Collect" value={`SAR ${fmtNum(inst.amountToCollect)}`} subColor='#737373' sub="Outstanding" />
         <StatCard label="Record Count" value={inst.totalInstallments} />
       </div>
       <div className="grid grid-cols-3 gap-4">
@@ -1079,7 +1079,7 @@ function CollectionsView({ onDetail }) {
           <tbody>
             {DASHBOARD_STATS.collectionRows.map((row, i) => (
               <tr key={i}
-                className="border-b border-slate-50 last:border-0 hover:bg-indigo-50 cursor-pointer transition-colors"
+                className="border-b border-slate-50 last:border-0 hover:bg-slate-50 cursor-pointer transition-colors"
                 onClick={() => handleDetail(row, 'collection')}>
                 <td className="px-5 py-3.5 text-[12px] font-mono text-slate-500">{row.ID}</td>
                 <td className="px-5 py-3.5 text-[13px] font-medium text-slate-800">{row.Buyer}</td>

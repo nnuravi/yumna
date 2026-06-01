@@ -14,7 +14,7 @@ export const USERS = {
     email: 'khalid@zahranitrading.sa',
     iban: 'SA29 1000 0000 0001 2345 6789',
     mdrRate: 2.5,
-    avatar: '#8f85ff',
+    avatar: '#404040',
   },
   new_seller: {
     id: 'seller-new',
@@ -29,7 +29,7 @@ export const USERS = {
     cr: '',
     phone: '',
     email: '',
-    avatar: '#6366f1',
+    avatar: '#525252',
   },
   buyer: {
     id: 'buyer-001',
@@ -47,7 +47,7 @@ export const USERS = {
     creditUsed: 185000,
     tier: 2,
     simahScore: 742,
-    avatar: '#0b0f19',
+    avatar: '#737373',
   },
   admin_verifier: {
     id: 'admin-sara',
@@ -57,7 +57,7 @@ export const USERS = {
     nameAr: 'سارة الغامدي',
     initials: 'SG',
     title: 'Loan Verification Officer',
-    avatar: '#10b981',
+    avatar: '#262626',
   },
   admin_credit: {
     id: 'admin-faisal',
@@ -67,7 +67,7 @@ export const USERS = {
     nameAr: 'فيصل الدوسري',
     initials: 'FD',
     title: 'Credit Score Manager',
-    avatar: '#f59e0b',
+    avatar: '#404040',
   },
   admin_risk: {
     id: 'admin-noura',
@@ -77,7 +77,7 @@ export const USERS = {
     nameAr: 'نورة الشهري',
     initials: 'NS',
     title: 'Risk Analyst',
-    avatar: '#e5484d',
+    avatar: '#525252',
   },
   admin_collections: {
     id: 'admin-omar',
@@ -87,7 +87,7 @@ export const USERS = {
     nameAr: 'عمر المطيري',
     initials: 'OM',
     title: 'Collections Manager',
-    avatar: '#6366f1',
+    avatar: '#737373',
   },
   admin_super: {
     id: 'admin-layla',
@@ -97,7 +97,7 @@ export const USERS = {
     nameAr: 'ليلى الحربي',
     initials: 'LH',
     title: 'Head of Operations',
-    avatar: '#0b0f19',
+    avatar: '#262626',
   },
   admin_account_mgr: {
     id: 'admin-rania',
@@ -107,7 +107,7 @@ export const USERS = {
     nameAr: 'رانيا السبان',
     initials: 'RS',
     title: 'Account Manager',
-    avatar: '#0891b2',
+    avatar: '#404040',
   },
   admin_legal: {
     id: 'admin-tariq',
@@ -117,7 +117,7 @@ export const USERS = {
     nameAr: 'طارق الغامدي',
     initials: 'TG',
     title: 'Legal Counsel',
-    avatar: '#7c3aed',
+    avatar: '#525252',
   },
 }
 
@@ -407,20 +407,20 @@ export const DASHBOARD_STATS = {
       { month: 'Jan 26', amount: 110000 },
     ],
     sectorsByAmount: [
-      { name: 'ICT', pct: 69.1, color: '#0891b2' },
-      { name: 'Consumer Staples', pct: 18.9, color: '#e5484d' },
-      { name: 'Manufacturing', pct: 4.8, color: '#10b981' },
-      { name: 'Consumer Discretionary', pct: 3.1, color: '#6366f1' },
-      { name: 'HealthCare', pct: 2.4, color: '#f59e0b' },
-      { name: 'FMCG', pct: 1.7, color: '#8b5cf6' },
+      { name: 'ICT', pct: 69.1, color: '#c4c4c4' },
+      { name: 'Consumer Staples', pct: 18.9, color: '#a3a3a3' },
+      { name: 'Manufacturing', pct: 4.8, color: '#737373' },
+      { name: 'Consumer Discretionary', pct: 3.1, color: '#525252' },
+      { name: 'HealthCare', pct: 2.4, color: '#404040' },
+      { name: 'FMCG', pct: 1.7, color: '#262626' },
     ],
     sectorsByOrders: [
-      { name: 'Consumer Staples', pct: 63.2, color: '#e5484d' },
-      { name: 'HealthCare', pct: 23.2, color: '#f59e0b' },
-      { name: 'ICT', pct: 6.9, color: '#0891b2' },
-      { name: 'Manufacturing', pct: 3.5, color: '#10b981' },
-      { name: 'Consumer Discretionary', pct: 2.2, color: '#6366f1' },
-      { name: 'FMCG', pct: 1.0, color: '#8b5cf6' },
+      { name: 'Consumer Staples', pct: 63.2, color: '#c4c4c4' },
+      { name: 'HealthCare', pct: 23.2, color: '#a3a3a3' },
+      { name: 'ICT', pct: 6.9, color: '#737373' },
+      { name: 'Manufacturing', pct: 3.5, color: '#525252' },
+      { name: 'Consumer Discretionary', pct: 2.2, color: '#404040' },
+      { name: 'FMCG', pct: 1.0, color: '#262626' },
     ],
     topCustomers: [
       { name: 'Lava', amount: 1850000 },
@@ -443,14 +443,14 @@ export const DASHBOARD_STATS = {
     amountToCollect: 594280,
     merchantDisbursement: 10400000,
     statusByBuyer: [
-      { label: 'Paid', pct: 92.7, color: '#1d4ed8' },
-      { label: 'Overdue', pct: 4.8, color: '#e5484d' },
-      { label: 'Pending', pct: 2.5, color: '#f59e0b' },
+      { label: 'Paid', pct: 92.7, color: '#404040' },
+      { label: 'Overdue', pct: 4.8, color: '#a3a3a3' },
+      { label: 'Pending', pct: 2.5, color: '#737373' },
     ],
     statusByAmount: [
-      { label: 'Paid', pct: 92.7, color: '#1d4ed8' },
-      { label: 'Overdue', pct: 4.8, color: '#e5484d' },
-      { label: 'Pending', pct: 2.5, color: '#f59e0b' },
+      { label: 'Paid', pct: 92.7, color: '#404040' },
+      { label: 'Overdue', pct: 4.8, color: '#a3a3a3' },
+      { label: 'Pending', pct: 2.5, color: '#737373' },
     ],
     byInstallmentCount: [
       { count: 3, records: 36 },
@@ -462,8 +462,8 @@ export const DASHBOARD_STATS = {
       { count: 13, records: 1 },
     ],
     collectionStatusByAmount: [
-      { label: 'Overdue', pct: 74.3, color: '#e5484d' },
-      { label: 'Pending', pct: 25.7, color: '#f59e0b' },
+      { label: 'Overdue', pct: 74.3, color: '#a3a3a3' },
+      { label: 'Pending', pct: 25.7, color: '#737373' },
     ],
     amountByCustomer: [
       { name: 'Lava', amount: 185000 },
@@ -482,13 +482,13 @@ export const DASHBOARD_STATS = {
     totalClients: 101,
     totalCreditLimit: 7780000,
     statusByClient: [
-      { label: 'Approve', pct: 73.3, color: '#d4e55a' },
-      { label: 'Reject', pct: 23.8, color: '#4ade80' },
-      { label: 'Pending', pct: 2.9, color: '#f97316' },
+      { label: 'Approve', pct: 73.3, color: '#404040' },
+      { label: 'Reject', pct: 23.8, color: '#a3a3a3' },
+      { label: 'Pending', pct: 2.9, color: '#737373' },
     ],
     classificationByCount: [
-      { label: 'Full Credit', count: 74, color: '#1d4ed8' },
-      { label: 'Sales Ledger', count: 27, color: '#38bdf8' },
+      { label: 'Full Credit', count: 74, color: '#404040' },
+      { label: 'Sales Ledger', count: 27, color: '#737373' },
     ],
     recentApplications: [
       { id: 'CR-0041', client: 'Lava Trading', type: 'Full Credit', limit: 200000, status: 'Approve', score: 742 },
@@ -504,9 +504,9 @@ export const DASHBOARD_STATS = {
     avgRiskScore: 38,
     overdueRatio: 7.3,
     riskDistribution: [
-      { label: 'Low (0–30)', count: 62, color: '#10b981' },
-      { label: 'Medium (31–60)', count: 25, color: '#f59e0b' },
-      { label: 'High (61–100)', count: 14, color: '#e5484d' },
+      { label: 'Low (0–30)', count: 62, color: '#404040' },
+      { label: 'Medium (31–60)', count: 25, color: '#737373' },
+      { label: 'High (61–100)', count: 14, color: '#a3a3a3' },
     ],
     flaggedBuyers: [
       { name: 'Mohammed Al-Rashid', score: 67, issue: '90%+ credit utilisation', status: 'Monitoring' },
@@ -615,10 +615,10 @@ export const DASHBOARD_STATS = {
 }
 
 export const CREDIT_TIERS = [
-  { level: 1, label: 'Bronze', color: '#CD7F32', req: 'New account' },
-  { level: 2, label: 'Silver', color: '#A8A9AD', req: '3+ tx · 6+ months' },
-  { level: 3, label: 'Gold', color: '#D4AF37', req: '6+ tx · 12+ months' },
-  { level: 4, label: 'Platinum', color: '#5B5B8B', req: '10+ tx · 24+ months' },
+  { level: 1, label: 'Bronze', color: '#a3a3a3', req: 'New account' },
+  { level: 2, label: 'Silver', color: '#737373', req: '3+ tx · 6+ months' },
+  { level: 3, label: 'Gold', color: '#525252', req: '6+ tx · 12+ months' },
+  { level: 4, label: 'Platinum', color: '#262626', req: '10+ tx · 24+ months' },
 ]
 
 export const MOCK_SELLER_ALERTS = [
@@ -651,15 +651,15 @@ export const formatSAR = (amount) =>
 // ── Pipeline ──────────────────────────────────────────────────────────────────
 
 export const PIPELINE_STAGES = [
-  { id: 'submitted',     label: 'Doc Collection',         assignedRole: 'verifier',     color: '#6b7280' },
-  { id: 'kyc',           label: 'Checking Docs',           assignedRole: 'verifier',     color: '#8b5cf6' },
-  { id: 'credit_score',  label: 'Credit Review',           assignedRole: 'credit',       color: '#f59e0b' },
-  { id: 'risk',          label: 'Risk Assessment',         assignedRole: 'risk',         color: '#e5484d' },
-  { id: 'legal',         label: 'Document Signing',        assignedRole: 'legal',        color: '#7c3aed' },
-  { id: 'approved',      label: 'Contract / Agreement',    assignedRole: 'account_mgr',  color: '#0891b2' },
-  { id: 'disbursed',     label: 'Onboarding',              assignedRole: 'account_mgr',  color: '#10b981' },
-  { id: 'repayment',     label: 'Repayment',               assignedRole: 'collections',  color: '#0b0f19' },
-  { id: 'overdue',       label: 'Rejected by Credit',      assignedRole: 'collections',  color: '#dc2626' },
+  { id: 'submitted',     label: 'Doc Collection',         assignedRole: 'verifier',     color: '#525252' },
+  { id: 'kyc',           label: 'Checking Docs',           assignedRole: 'verifier',     color: '#525252' },
+  { id: 'credit_score',  label: 'Credit Review',           assignedRole: 'credit',       color: '#525252' },
+  { id: 'risk',          label: 'Risk Assessment',         assignedRole: 'risk',         color: '#525252' },
+  { id: 'legal',         label: 'Document Signing',        assignedRole: 'legal',        color: '#525252' },
+  { id: 'approved',      label: 'Contract / Agreement',    assignedRole: 'account_mgr',  color: '#525252' },
+  { id: 'disbursed',     label: 'Onboarding',              assignedRole: 'account_mgr',  color: '#525252' },
+  { id: 'repayment',     label: 'Repayment',               assignedRole: 'collections',  color: '#525252' },
+  { id: 'overdue',       label: 'Rejected by Credit',      assignedRole: 'collections',  color: '#525252' },
 ]
 
 export const PIPELINE_CARDS = [

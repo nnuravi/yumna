@@ -20,7 +20,7 @@ const SELLER_EXTRA = {
 
 function HealthScore({ seller }) {
   const score = seller.id === 'seller-001' ? 82 : 74
-  const color = score >= 80 ? '#10b981' : score >= 60 ? '#f59e0b' : '#e5484d'
+  const color = score >= 80 ? '#262626' : score >= 60 ? '#525252' : '#737373'
   return (
     <div className="flex items-center gap-2">
       <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-[11px] font-bold" style={{ background: color }}>{score}</div>
@@ -57,7 +57,7 @@ export default function SellersSection() {
             <tbody>
               {MOCK_SELLERS.map(s => (
                 <tr key={s.id}
-                  className="border-b border-slate-50 last:border-0 cursor-pointer hover:bg-indigo-50 transition-colors"
+                  className="border-b border-slate-50 last:border-0 cursor-pointer hover:bg-slate-50 transition-colors"
                   style={{ borderLeft: selected?.id === s.id ? '3px solid var(--color-primary)' : undefined }}
                   onClick={() => { setSelected(s); setTab('Overview') }}>
                   <td className="px-5 py-3.5">
@@ -161,15 +161,15 @@ export default function SellersSection() {
                     const pct = Math.round((buyer.creditUsed / buyer.creditLimit) * 100)
                     return (
                       <div key={bId} className="flex items-center gap-3 p-3 rounded-xl border border-slate-100">
-                        <Avatar initials={buyer.initials} bg={buyer.risk === 'High' ? '#e5484d' : 'var(--color-primary)'} size="sm" />
+                        <Avatar initials={buyer.initials} bg={buyer.risk === 'High' ? '#737373' : 'var(--color-primary)'} size="sm" />
                         <div className="flex-1">
                           <div className="text-[13px] font-semibold text-slate-800">{buyer.name}</div>
                           <div className="text-[11px] text-slate-400">SIMAH {buyer.simahScore} · {buyer.city}</div>
                         </div>
                         <div className="text-right">
-                          <div className="text-[11px] font-semibold mb-1" style={{ color: pct > 80 ? '#e5484d' : '#10b981' }}>{pct}% used</div>
+                          <div className="text-[11px] font-semibold mb-1" style={{ color: pct > 80 ? '#737373' : '#262626' }}>{pct}% used</div>
                           <div className="w-20 h-1.5 rounded-full bg-slate-100 overflow-hidden">
-                            <div className="h-full rounded-full" style={{ width: `${pct}%`, background: pct > 80 ? '#e5484d' : 'var(--color-primary)' }} />
+                            <div className="h-full rounded-full" style={{ width: `${pct}%`, background: pct > 80 ? '#737373' : 'var(--color-primary)' }} />
                           </div>
                         </div>
                       </div>
@@ -180,7 +180,7 @@ export default function SellersSection() {
 
               {tab === 'Credit Health' && (
                 <div className="space-y-4">
-                  <div className="p-4 rounded-xl border" style={{ background: 'rgba(143,133,255,0.04)', borderColor: 'rgba(143,133,255,0.2)' }}>
+                  <div className="p-4 rounded-xl border" style={{ background: '#fafafa', borderColor: '#e5e5e5' }}>
                     <div className="flex items-center gap-2 mb-2">
                       <span className="text-[13px]">✦</span>
                       <span className="text-[12px] font-bold" style={{ color: 'var(--color-primary)' }}>Yumi Credit Narrative</span>
@@ -208,7 +208,7 @@ export default function SellersSection() {
               {tab === 'Documents' && (
                 <div className="space-y-2">
                   {(SELLER_EXTRA[selected.id]?.docs || []).map((doc, i) => {
-                    const color = doc.status === 'verified' ? '#10b981' : doc.status === 'missing' ? '#e5484d' : '#f59e0b'
+                    const color = doc.status === 'verified' ? '#262626' : doc.status === 'missing' ? '#737373' : '#525252'
                     return (
                       <div key={i} className="flex items-center gap-3 p-3 rounded-xl border border-slate-100">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
