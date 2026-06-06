@@ -151,12 +151,16 @@ body {
   50% { opacity: 0.4; }
 }
 
-/* Yumnai composer — animated hint text + gradient-stroke nudge */
+/* Yumnai composer — animated nudging hint text (fade-in, settle, horizontal nudge, fade-out) */
 @keyframes hintFade {
-  0%   { opacity: 0; transform: translateY(5px); }
-  14%  { opacity: 1; transform: translateY(0); }
-  86%  { opacity: 1; transform: translateY(0); }
-  100% { opacity: 0; transform: translateY(-5px); }
+  0%   { opacity: 0; transform: translateY(7px); }
+  10%  { opacity: 1; transform: translateY(0) translateX(0); }
+  20%  { transform: translateX(5px); }
+  28%  { transform: translateX(0); }
+  36%  { transform: translateX(3px); }
+  44%  { transform: translateX(0); }
+  88%  { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-7px); }
 }
 .hint-fade { animation: hintFade 3.4s ease-in-out both; }
 
