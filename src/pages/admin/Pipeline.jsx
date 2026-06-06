@@ -147,51 +147,6 @@ function LaneActions({ stage, onClose }) {
 function ChatterPanel({ timeline, chatterMode, setChatterMode, draftText, setDraftText, onSend }) {
   return (
     <div className="flex flex-col border-l border-slate-100 bg-white shrink-0" style={{ width: 360 }}>
-      {/* Action buttons */}
-      <div className="px-4 py-3 border-b border-slate-100 flex gap-2 shrink-0">
-        {[
-          { id: 'message', label: 'Send message' },
-          { id: 'note',    label: 'Log note' },
-        ].map(({ id, label }) => (
-          <button key={id} onClick={() => setChatterMode(m => m === id ? null : id)}
-            className="px-3 py-1.5 rounded-lg text-[12px] font-semibold border transition-all"
-            style={{
-              background: chatterMode === id ? '#f5f5f5' : 'white',
-              borderColor: chatterMode === id ? (id === 'note' ? '#e5e5e5' : 'rgba(0,0,0,0.15)') : '#e5e5e5',
-              color: chatterMode === id ? '#262626' : '#525252',
-            }}>
-            {label}
-          </button>
-        ))}
-      </div>
-
-      {/* Composer */}
-      {chatterMode && (
-        <div className="px-4 py-3 border-b border-slate-100 shrink-0"
-          style={{ background: '#f5f5f5' }}>
-          <textarea
-            value={draftText}
-            onChange={e => setDraftText(e.target.value)}
-            rows={4}
-            autoFocus
-            placeholder={chatterMode === 'note' ? 'Add an internal note…' : 'Write a message…'}
-            className="w-full px-3 py-2.5 rounded-xl border text-[12px] outline-none resize-none leading-relaxed"
-            style={{ borderColor: chatterMode === 'note' ? '#e5e5e5' : 'rgba(0,0,0,0.15)', fontFamily: 'inherit' }}
-          />
-          <div className="flex gap-2 mt-2">
-            <button onClick={onSend}
-              className="px-4 py-1.5 rounded-lg text-white font-semibold text-[12px]"
-              style={{ background: 'var(--color-primary)' }}>
-              {chatterMode === 'note' ? 'Add note' : 'Send'}
-            </button>
-            <button onClick={() => { setChatterMode(null); setDraftText('') }}
-              className="px-4 py-1.5 rounded-lg font-semibold text-[12px] border border-slate-200 text-slate-500">
-              Discard
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* Timeline */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
         {timeline.length === 0 && (
@@ -235,26 +190,73 @@ function ChatterPanel({ timeline, chatterMode, setChatterMode, draftText, setDra
               <p className="text-[12px] text-slate-600 leading-relaxed">{entry.message}</p>
             </div>
           )
+          const isYumnai = entry.from === 'Yumnai AI'
           return (
             <div key={entry.id || i} className="rounded-xl border p-3"
-              style={{
-                borderColor: '#e5e5e5',
-                background: '#fafafa',
-              }}>
+              style={isYumnai
+                ? { borderColor: 'rgba(144,132,253,0.30)', background: 'linear-gradient(135deg, #efedff 0%, #e9edff 50%, #e6f4ff 100%)' }
+                : { borderColor: '#e5e5e5', background: '#fafafa' }}>
               <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                <span className="text-[12px] font-semibold text-slate-700">{entry.from}</span>
-                {entry.autoRead && (
-                  <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
-                    style={{ background: 'rgba(0,0,0,0.06)', color: 'var(--color-primary)' }}>
-                    🤖 Yumnai
+                {isYumnai ? (
+                  <span className="inline-flex items-center gap-1 text-[12px] font-bold" style={{ color: 'var(--color-primary)' }}>
+                    <img src="/yumnai.svg" alt="" className="h-3.5 w-auto" /> Yumnai
                   </span>
+                ) : (
+                  <span className="text-[12px] font-semibold text-slate-700">{entry.from}</span>
                 )}
                 <span className="ml-auto text-[10px] text-slate-400 shrink-0">{entry.date}</span>
               </div>
-              <p className="text-[12px] text-slate-600 leading-relaxed">{entry.message}</p>
+              <p className="text-[12px] leading-relaxed" style={{ color: isYumnai ? '#262626' : '#475569' }}>{entry.message}</p>
             </div>
           )
         })}
+      </div>
+
+      {/* Bottom composer dock — chat-window style */}
+      <div className="border-t border-slate-100 shrink-0">
+        {/* Action buttons */}
+        <div className="px-4 py-3 flex gap-2">
+          {[
+            { id: 'message', label: 'Send message' },
+            { id: 'note',    label: 'Log note' },
+          ].map(({ id, label }) => (
+            <button key={id} onClick={() => setChatterMode(m => m === id ? null : id)}
+              className="px-3 py-1.5 rounded-lg text-[12px] font-semibold border transition-all"
+              style={{
+                background: chatterMode === id ? '#f5f5f5' : 'white',
+                borderColor: chatterMode === id ? (id === 'note' ? '#e5e5e5' : 'rgba(0,0,0,0.15)') : '#e5e5e5',
+                color: chatterMode === id ? '#262626' : '#525252',
+              }}>
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* Composer */}
+        {chatterMode && (
+          <div className="px-4 pb-3" style={{ background: '#f5f5f5' }}>
+            <textarea
+              value={draftText}
+              onChange={e => setDraftText(e.target.value)}
+              rows={4}
+              autoFocus
+              placeholder={chatterMode === 'note' ? 'Add an internal note…' : 'Write a message…'}
+              className="w-full px-3 py-2.5 rounded-xl border text-[12px] outline-none resize-none leading-relaxed"
+              style={{ borderColor: chatterMode === 'note' ? '#e5e5e5' : 'rgba(0,0,0,0.15)', fontFamily: 'inherit' }}
+            />
+            <div className="flex gap-2 mt-2">
+              <button onClick={onSend}
+                className="px-4 py-1.5 rounded-lg text-white font-semibold text-[12px]"
+                style={{ background: 'var(--color-primary)' }}>
+                {chatterMode === 'note' ? 'Add note' : 'Send'}
+              </button>
+              <button onClick={() => { setChatterMode(null); setDraftText('') }}
+                className="px-4 py-1.5 rounded-lg font-semibold text-[12px] border border-slate-200 text-slate-500">
+                Discard
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

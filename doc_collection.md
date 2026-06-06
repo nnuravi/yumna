@@ -134,9 +134,16 @@ on `#f0f0f0`.
 
 ## 6. Activity panel (Chatter / Timeline)
 
-`ChatterPanel` ([Pipeline.jsx:147-261](src/pages/admin/Pipeline.jsx#L147-L261)) — the right
-column. **Send message** / **Log note** buttons open a composer; below is the timeline of
-history, correspondence, payments, and notes (Yumnai entries get a 🤖 badge + `--color-primary`).
+`ChatterPanel` ([Pipeline.jsx:147](src/pages/admin/Pipeline.jsx#L147)) — the right column, laid
+out like a **chat window**: the timeline (history, correspondence, payments, notes) fills the
+top and scrolls; **Send message** / **Log note** and the composer are docked at the **bottom**
+(tapping a button reveals the textarea + Send/Discard).
+
+**Yumnai AI bubbles** (`entry.from === 'Yumnai AI'`) are branded and differentiated: a pastel
+theme-gradient background (`linear-gradient(135deg,#efedff,#e9edff,#e6f4ff)` + soft purple
+border), the gradient `/yumnai.svg` mark, and a "Yumnai" label in `--color-primary`, with dark
+text for contrast. Human/System entries stay neutral (`#fafafa`). To restyle the AI bubble,
+edit the `isYumnai` branch in the correspondence block.
 
 ---
 
