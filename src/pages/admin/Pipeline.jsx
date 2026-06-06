@@ -787,7 +787,7 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
 
           {/* Documents tab */}
           {activeTab === 'documents' && (
-            <div className="flex" style={{ minHeight: 'calc(100vh - 360px)' }}>
+            <div className="flex" style={{ minHeight: 'calc(100vh - 200px)' }}>
               {/* Document list */}
               <div className="overflow-y-auto border-r border-slate-100 shrink-0 p-4" style={{ width: 300, background: '#fafafa' }}>
                 <div className="flex flex-col gap-2">
