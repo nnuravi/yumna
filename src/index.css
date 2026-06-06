@@ -201,6 +201,13 @@ body {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }
+  /* Keep the composer hint statically visible — its keyframe ends on opacity:0,
+     which would otherwise snap to invisible under the rule above. */
+  .hint-fade {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
 }
 
 /* Scrollbar styling */
