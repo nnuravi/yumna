@@ -269,7 +269,8 @@ export default function YumnaiPanel({ activeSection, width = 400, onWidth, onClo
             />
             {!query && (
               <span key={hintIdx} aria-hidden
-                className="hint-fade pointer-events-none absolute left-3 top-2.5 text-[13px] leading-5 text-slate-400 truncate max-w-[calc(100%-24px)]">
+                className="hint-fade pointer-events-none absolute left-3 top-2.5 text-[13px] leading-5 truncate max-w-[calc(100%-24px)]"
+                style={{ color: '#6b62c9' }}>
                 {HINTS[hintIdx]}
               </span>
             )}
