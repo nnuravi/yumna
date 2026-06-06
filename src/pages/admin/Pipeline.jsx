@@ -283,6 +283,7 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
   const [extraDocs,       setExtraDocs]       = useState(0)
   const [extraMeetings,   setExtraMeetings]   = useState(0)
   const [extraQuotes,     setExtraQuotes]     = useState(0)
+  const [custOpen,        setCustOpen]        = useState(true)  // customer info card collapse/expand
 
   // Counter-proposal (risk stage)
   const [editingField,    setEditingField]    = useState(null)  // 'amount'|'tenure'|'mdr'|null
@@ -682,10 +683,20 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
         <style>{`@keyframes yumnai-pulse { 0%,100%{opacity:1} 50%{opacity:0.35} }`}</style>
         <div className="flex-1 flex flex-col overflow-hidden">
 
-          {/* CUSTOMER & BASIC INFO — persistent across both tabs */}
-          <div className="px-6 pt-4 pb-4 border-b border-black/5 shrink-0">
-            <div className="bg-white rounded-2xl border border-black/5 p-5" style={{ boxShadow: 'var(--shadow-card)' }}>
-              <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+          {/* Scroll container — customer info scrolls away; tabs stick */}
+          <div className="flex-1 overflow-y-auto">
+
+          {/* CUSTOMER & BASIC INFO — persistent across both tabs, collapsible */}
+          <div className="px-6 pt-4 pb-4">
+            <div className="bg-white rounded-2xl border border-black/5 p-5 relative" style={{ boxShadow: 'var(--shadow-card)' }}>
+              <button onClick={() => setCustOpen(o => !o)} title={custOpen ? 'Collapse' : 'Expand'}
+                className="absolute top-3 end-3 w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-black/5 transition-colors">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"
+                  style={{ transform: custOpen ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.2s' }}>
+                  <polyline points="6 9 12 15 18 9"/>
+                </svg>
+              </button>
+              <div className="grid grid-cols-2 gap-x-6 gap-y-4 pe-8">
                 <Field label="Seller (Merchant)">
                   <button onClick={() => onNavigate('sellers')}
                     className="text-[13px] font-semibold text-left hover:underline"
@@ -702,6 +713,7 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
                     </button>
                   </Field>
                 )}
+                {custOpen && (<>
                 <Field label="Assigned To">
                   <span className="text-[13px] text-slate-700">{assignedTo}</span>
                 </Field>
@@ -747,12 +759,13 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
                     </div>
                   </Field>
                 )}
+                </>)}
               </div>
             </div>
           </div>
 
-          {/* Tab bar */}
-          <div className="flex items-end gap-0 px-6 pt-2 border-b border-black/5 shrink-0">
+          {/* Tab bar — sticky under the stage tracker */}
+          <div className="sticky top-0 z-20 flex items-end gap-0 px-6 pt-2 border-b border-black/5" style={{ background: 'var(--color-page)' }}>
             {[
               { id: 'overview',   label: 'Overview' },
               { id: 'documents',  label: `Documents (${card.documents.length})` },
@@ -772,7 +785,7 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
 
           {/* Documents tab */}
           {activeTab === 'documents' && (
-            <div className="flex-1 flex overflow-hidden">
+            <div className="flex" style={{ minHeight: 'calc(100vh - 360px)' }}>
               {/* Document list */}
               <div className="overflow-y-auto border-r border-slate-100 shrink-0 p-4" style={{ width: 300, background: '#fafafa' }}>
                 <div className="flex flex-col gap-2">
@@ -881,7 +894,6 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
 
           {/* Overview tab */}
           {activeTab === 'overview' && (
-          <div className="flex-1 overflow-y-auto">
           <div className="p-6 space-y-6">
 
             {/* YUMNAI BRIEFING */}
@@ -1568,8 +1580,9 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
             })()}
 
           </div>
-          </div>
           )} {/* end overview tab */}
+
+          </div>{/* end scroll container */}
         </div>
 
         {/* RIGHT — Chatter */}
