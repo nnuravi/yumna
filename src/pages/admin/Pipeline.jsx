@@ -684,7 +684,7 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
 
           {/* CUSTOMER & BASIC INFO — persistent across both tabs */}
           <div className="px-6 pt-4 pb-4 border-b border-black/5 shrink-0">
-            <Section title="Customer & Basic Info">
+            <div className="bg-white rounded-2xl border border-black/5 p-5" style={{ boxShadow: 'var(--shadow-card)' }}>
               <div className="grid grid-cols-2 gap-x-6 gap-y-4">
                 <Field label="Seller (Merchant)">
                   <button onClick={() => onNavigate('sellers')}
@@ -748,7 +748,7 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
                   </Field>
                 )}
               </div>
-            </Section>
+            </div>
           </div>
 
           {/* Tab bar */}
