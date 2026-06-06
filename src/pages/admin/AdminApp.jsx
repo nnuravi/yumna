@@ -154,7 +154,7 @@ export default function AdminApp() {
         <div className="shrink-0 flex items-center h-full ps-6 overflow-hidden ease-entrance"
           style={{ width: sidebarOpen ? '248px' : '92px', transition: 'width 0.32s var(--ease-entrance)' }}>
           <img src="/logo-mark.svg" alt="Yumna" className="h-8 w-auto shrink-0" />
-          <img src="/logo-word.svg" alt="Yumna" className="h-4 w-auto shrink-0 ms-2 mt-0.5"
+          <img src="/assets/logotype.svg" alt="Yumna" className="h-8 w-auto shrink-0 ms-2"
             style={{ opacity: sidebarOpen ? 1 : 0, maxWidth: sidebarOpen ? '120px' : '0px', transition: 'opacity 0.25s var(--ease-entrance), max-width 0.32s var(--ease-entrance)' }} />
         </div>
 
