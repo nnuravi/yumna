@@ -641,14 +641,15 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
                           title={isNAForType ? 'N/A for onboarding' : undefined}
                           style={{
                             display: 'flex', alignItems: 'center', gap: 5,
-                            padding: '4px 6px', borderRadius: 8, border: 'none',
-                            background: isCurrent ? 'rgba(0,0,0,0.05)' : 'transparent',
+                            padding: '4px 8px', borderRadius: 8,
+                            border: isCurrent ? '1px solid #86d6a3' : '1px solid transparent',
+                            background: isCurrent ? '#dcfce7' : 'transparent',
                             cursor: isCurrent || isNAForType ? 'default' : 'pointer',
                           }}>
                           <span style={{
                             width: 14, height: 14, borderRadius: '50%',
-                            border: `1.5px solid ${isPast ? '#d4d4d4' : isCurrent ? '#171717' : '#e5e5e5'}`,
-                            background: isPast ? '#f0f0f0' : isCurrent ? '#171717' : 'transparent',
+                            border: `1.5px solid ${isPast ? '#d4d4d4' : isCurrent ? '#16a34a' : '#e5e5e5'}`,
+                            background: isPast ? '#f0f0f0' : isCurrent ? '#16a34a' : 'transparent',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                             fontSize: 8, color: isPast ? '#a3a3a3' : 'white',
                             flexShrink: 0,
@@ -658,7 +659,7 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
                           <span style={{
                             fontSize: 11,
                             fontWeight: isCurrent ? 700 : 400,
-                            color: isCurrent ? '#171717' : isPast ? '#a3a3a3' : '#525252',
+                            color: isCurrent ? '#15803d' : isPast ? '#a3a3a3' : '#525252',
                             whiteSpace: 'nowrap',
                           }}>
                             {s.label}
