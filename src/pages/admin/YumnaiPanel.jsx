@@ -231,8 +231,8 @@ export default function YumnaiPanel({ activeSection, width = 400, onWidth, onClo
           /* Conversation — active state */
           <div className="space-y-2">
             {conversation.map((msg, i) => (
-              <div key={i} className={`rounded-xl p-3 text-[11px] leading-relaxed ${msg.from === 'user' ? 'bg-slate-100 text-slate-700 ml-4' : 'border text-slate-600'}`}
-                style={msg.from === 'yumnai' ? { background: '#fafafa', borderColor: '#e5e5e5' } : {}}>
+              <div key={i} className={`rounded-xl p-3 text-[11px] leading-relaxed ${msg.from === 'user' ? 'ml-4' : 'border text-slate-600'}`}
+                style={msg.from === 'yumnai' ? { background: '#fafafa', borderColor: '#e5e5e5' } : { background: 'var(--color-primary-soft)', color: '#000000' }}>
                 {msg.from === 'yumnai' && <span className="font-semibold inline-flex items-center gap-1 align-middle" style={{ color: 'var(--color-primary)' }}><img src="/yumnai.svg" alt="" className="h-3 w-auto" /> Yumnai · </span>}
                 {msg.text}
               </div>
