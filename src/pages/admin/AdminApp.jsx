@@ -6,12 +6,13 @@ import Avatar from '../../components/Avatar'
 import LanguageToggle from '../../components/LanguageToggle'
 import BizOverview from './BizOverview'
 import Pipeline from './Pipeline'
+import RepaymentsPipeline from './RepaymentsPipeline'
 import SellersSection from './SellersSection'
 import BuyersSection from './BuyersSection'
 import TaskManager from './TaskManager'
 import Templates from './Templates'
 import YumiPanel from './YumiPanel'
-import { PIPELINE_CARDS, TASKS } from '../../data/mockData'
+import { PIPELINE_CARDS, REPAYMENTS_CARDS, TASKS } from '../../data/mockData'
 
 const ALL_NAV = [
   {
@@ -32,6 +33,17 @@ const ALL_NAV = [
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <rect x="3" y="3" width="4" height="18" rx="1"/><rect x="10" y="3" width="4" height="12" rx="1"/><rect x="17" y="3" width="4" height="15" rx="1"/>
+      </svg>
+    ),
+  },
+  {
+    id: 'repayments',
+    label: 'Repayments',
+    roles: ['super', 'collections', 'legal', 'account_mgr'],
+    badge: true,
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/>
       </svg>
     ),
   },
@@ -100,24 +112,36 @@ export default function AdminApp() {
     : PIPELINE_CARDS.filter(c => c.assignedTo === user.name).map(c => c.id)
   const pipelineBadge = myStageIds.length
 
+  const REPAYMENTS_ROLE_STAGES = {
+    collections: ['rp_active', 'rp_overdue', 'rp_escalation_l1'],
+    legal:       ['rp_escalation_l2', 'rp_escalation_l3'],
+  }
+  const repaymentsBadge = adminRole === 'super'
+    ? REPAYMENTS_CARDS.filter(c => c.stage !== 'rp_closed').length
+    : REPAYMENTS_CARDS.filter(c => {
+        const myStages = REPAYMENTS_ROLE_STAGES[adminRole] || []
+        return myStages.includes(c.stage)
+      }).length
+
   const myTaskCount = TASKS.filter(t => t.assignedTo === user.name && t.status !== 'done').length
 
   const navItems = ALL_NAV.filter(item => !item.roles || item.roles.includes(adminRole))
 
   const renderSection = () => {
     switch (activeSection) {
-      case 'overview':  return <BizOverview />
-      case 'pipeline':  return <Pipeline onNavigate={setActiveSection} />
-      case 'sellers':   return <SellersSection />
-      case 'buyers':    return <BuyersSection />
-      case 'tasks':     return <TaskManager />
-      case 'templates': return <Templates />
-      default:          return <BizOverview />
+      case 'overview':    return <BizOverview />
+      case 'pipeline':    return <Pipeline onNavigate={setActiveSection} />
+      case 'repayments':  return <RepaymentsPipeline />
+      case 'sellers':     return <SellersSection />
+      case 'buyers':      return <BuyersSection />
+      case 'tasks':       return <TaskManager />
+      case 'templates':   return <Templates />
+      default:            return <BizOverview />
     }
   }
 
   const sectionLabel = navItems.find(n => n.id === activeSection)?.label || 'Overview'
-  const isPipelineFullHeight = activeSection === 'pipeline'
+  const isPipelineFullHeight = activeSection === 'pipeline' || activeSection === 'repayments'
 
   return (
     <div className="flex h-dvh overflow-hidden" style={{ background: 'var(--color-page)' }}>
@@ -139,7 +163,7 @@ export default function AdminApp() {
         <nav className="flex-1 py-4 overflow-y-auto">
           {navItems.map(item => {
             const active = activeSection === item.id
-            const badge = item.id === 'pipeline' ? pipelineBadge : item.id === 'tasks' ? myTaskCount : 0
+            const badge = item.id === 'pipeline' ? pipelineBadge : item.id === 'repayments' ? repaymentsBadge : item.id === 'tasks' ? myTaskCount : 0
             return (
               <button key={item.id} onClick={() => setActiveSection(item.id)}
                 className="w-full flex items-center gap-3 px-3 py-2.5 mb-0.5 rounded-xl transition-all text-start mx-1"

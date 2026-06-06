@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useApp } from '../../context/AppContext'
-import { PIPELINE_STAGES, PIPELINE_CARDS, USERS, MOCK_BUYERS, formatSAR } from '../../data/mockData'
+import { PIPELINE_STAGES, PIPELINE_CARDS, USERS, MOCK_BUYERS, MOCK_SELLERS, formatSAR } from '../../data/mockData'
 
 const ROLE_STAGE_MAP = {
   verifier:    ['submitted', 'kyc'],
@@ -23,6 +23,14 @@ const STAGE_GROUPS = [
 
 const stageDept = {}
 STAGE_GROUPS.forEach(g => g.stages.forEach(id => { stageDept[id] = g.label }))
+
+function getDocChecklist(type, amount) {
+  const base = ['Commercial Registration', 'Tax Certificate', 'National Address']
+  if (type === 'merchant' || !amount) return base
+  const buyerBase = [...base, 'Sales Ledger (6 months)', 'Manager / Owner Bank Account']
+  if (Number(amount) < 50000) return buyerBase
+  return [...buyerBase, 'SIMAH Credit Report', 'Tax Returns (4 Quarters)', 'Financial Statements (2 Years)']
+}
 
 function riskColor(score) {
   if (score === null) return { bg: '#f5f5f5', text: '#a3a3a3' }
@@ -304,6 +312,9 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
   const [contractMode,    setContractMode]    = useState('template')
   const [selectedTpl,     setSelectedTpl]     = useState('')
   const [uploadName,      setUploadName]      = useState('')
+
+  // Doc Collection editable amount (may be blank if not entered at ticket creation)
+  const [editAmount, setEditAmount] = useState(String(card.amount || ''))
 
   // Tabs
   const [activeTab,    setActiveTab]    = useState('overview')
@@ -680,7 +691,6 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
                 padding: '7px 16px 8px',
                 fontSize: 12, fontWeight: activeTab === tab.id ? 700 : 500,
                 color: activeTab === tab.id ? 'var(--color-primary)' : '#525252',
-                borderBottom: activeTab === tab.id ? '2.5px solid var(--color-primary)' : '2.5px solid transparent',
                 background: 'none', border: 'none',
                 borderBottom: activeTab === tab.id ? '2.5px solid var(--color-primary)' : '2.5px solid transparent',
                 cursor: 'pointer', whiteSpace: 'nowrap',
@@ -906,17 +916,108 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
             {/* STAGE BRIEF — editable, role-gated */}
             {(currentUser?.adminRole === stageInfo?.assignedRole || currentUser?.adminRole === 'super') && (() => {
               const fieldStyle = { border: '1px solid #e5e5e5', borderRadius: 8, padding: '5px 10px', fontSize: 12, outline: 'none', fontFamily: 'inherit', color: '#262626', background: 'white' }
+
+              const isBuyer      = !!card.buyer
+              const routingPath  = !isBuyer ? 'merchant_only' : Number(editAmount) >= 50000 ? 'full' : 'standard'
+              const activeDocList = getDocChecklist(isBuyer ? 'buyer' : 'merchant', editAmount ? Number(editAmount) : 999999)
+              const verifiedCount = activeDocList.filter(n => (docStatuses[n] || 'pending') === 'verified').length
+              const allVerified   = verifiedCount === activeDocList.length
+
               const toggleDoc = (name) => setDocStatuses(prev => {
-                const next = { missing: 'pending', pending: 'verified', verified: 'missing' }
-                return { ...prev, [name]: next[prev[name]] || 'pending' }
+                const cycle = { missing: 'pending', pending: 'verified', verified: 'missing' }
+                const updated = { ...prev, [name]: cycle[prev[name]] || 'pending' }
+                const nowAllVerified = activeDocList.every(n => (updated[n] || 'pending') === 'verified')
+                if (nowAllVerified) {
+                  setCardStage('doc_check')
+                  onCardUpdate?.({ ...card, stage: 'doc_check', documents: activeDocList.map(n => ({ name: n, status: updated[n] || 'pending' })) })
+                }
+                return updated
               })
+
               const docStatusColor = { verified: '#262626', pending: '#525252', missing: '#737373' }
               return (
                 <Section title={`${stageInfo?.label || ''} — Stage Actions`} badge="Your Stage" badgeColor={stageInfo?.color || '#6b7280'}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
 
-                    {/* VERIFIER — submitted / kyc */}
-                    {['submitted', 'kyc'].includes(cardStage) && (
+                    {/* SALES — submitted */}
+                    {cardStage === 'submitted' && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+
+                        {/* Finance Request (buyer only) */}
+                        {isBuyer && (
+                          <>
+                            <div style={{ fontSize: 11, fontWeight: 600, color: '#525252', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Finance Request</div>
+                            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, border: '1px solid #e5e5e5', borderRadius: 10, padding: '7px 12px', background: 'white' }}>
+                                <span style={{ fontSize: 11, fontWeight: 700, color: '#a3a3a3' }}>SAR</span>
+                                <input
+                                  type="number"
+                                  value={editAmount}
+                                  onChange={e => setEditAmount(e.target.value)}
+                                  placeholder="Finance amount"
+                                  style={{ border: 'none', outline: 'none', flex: 1, fontSize: 13, color: '#262626', fontFamily: 'inherit', background: 'transparent' }}
+                                />
+                              </div>
+                              <span style={{
+                                fontSize: 11, fontWeight: 700, padding: '5px 12px', borderRadius: 20, whiteSpace: 'nowrap',
+                                background: routingPath === 'full' ? '#262626' : '#f0f0f0',
+                                color: routingPath === 'full' ? 'white' : '#525252',
+                                border: '1px solid', borderColor: routingPath === 'full' ? '#262626' : '#e5e5e5',
+                              }}>
+                                {routingPath === 'full' ? 'Full Financing' : 'Standard'}
+                              </span>
+                            </div>
+                            <div style={{ height: 1, background: '#f0f0f0' }} />
+                          </>
+                        )}
+
+                        {/* Document Checklist */}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <div style={{ fontSize: 11, fontWeight: 600, color: '#525252', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Required Documents</div>
+                          <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 10px', borderRadius: 20,
+                            background: allVerified ? '#262626' : '#f0f0f0',
+                            color: allVerified ? 'white' : '#737373' }}>
+                            {verifiedCount} / {activeDocList.length}
+                          </span>
+                        </div>
+                        {activeDocList.map(docName => {
+                          const status = docStatuses[docName] || 'pending'
+                          return (
+                            <button key={docName} onClick={() => toggleDoc(docName)}
+                              style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 10,
+                                border: '1.5px solid', borderColor: status === 'verified' ? '#d4d4d4' : '#f0f0f0',
+                                background: status === 'verified' ? '#fafafa' : 'white', cursor: 'pointer', textAlign: 'left' }}>
+                              <span style={{ width: 18, height: 18, borderRadius: '50%', border: '2px solid',
+                                borderColor: status === 'verified' ? '#262626' : '#d4d4d4',
+                                background: status === 'verified' ? '#262626' : 'transparent',
+                                display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                {status === 'verified' && (
+                                  <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                )}
+                                {status === 'missing' && (
+                                  <svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="#d4d4d4" strokeWidth="3" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                                )}
+                              </span>
+                              <span style={{ fontSize: 12, flex: 1, color: '#262626' }}>{docName}</span>
+                              <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 20,
+                                background: status === 'verified' ? '#f0f0f0' : '#fafafa',
+                                color: status === 'verified' ? '#262626' : status === 'missing' ? '#737373' : '#a3a3a3' }}>
+                                {status}
+                              </span>
+                            </button>
+                          )
+                        })}
+
+                        {allVerified && (
+                          <div style={{ padding: '8px 12px', borderRadius: 10, background: '#f0f0f0', border: '1px solid #e5e5e5', fontSize: 12, fontWeight: 600, color: '#262626' }}>
+                            ✓ All documents received — advancing to Checking Docs…
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* VERIFIER — kyc */}
+                    {cardStage === 'kyc' && (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                         <div style={{ fontSize: 11, fontWeight: 600, color: '#525252', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Document Status — click to toggle</div>
                         {card.documents.map(doc => (
@@ -930,15 +1031,13 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
                             </span>
                           </button>
                         ))}
-                        {cardStage === 'kyc' && (
-                          <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
-                            {[['Nafath Verified', nafathVerified, setNafathVerified], ['CR Verified', crVerified, setCrVerified]].map(([label, val, setter]) => (
-                              <button key={label} onClick={() => setter(!val)} style={{ flex: 1, padding: '7px 10px', borderRadius: 10, border: '1.5px solid', borderColor: val ? '#262626' : '#e5e5e5', background: val ? '#f0f0f0' : 'white', fontSize: 12, fontWeight: 600, color: val ? '#262626' : '#525252', cursor: 'pointer' }}>
-                                {val ? '✓ ' : '○ '}{label}
-                              </button>
-                            ))}
-                          </div>
-                        )}
+                        <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+                          {[['Nafath Verified', nafathVerified, setNafathVerified], ['CR Verified', crVerified, setCrVerified]].map(([label, val, setter]) => (
+                            <button key={label} onClick={() => setter(!val)} style={{ flex: 1, padding: '7px 10px', borderRadius: 10, border: '1.5px solid', borderColor: val ? '#262626' : '#e5e5e5', background: val ? '#f0f0f0' : 'white', fontSize: 12, fontWeight: 600, color: val ? '#262626' : '#525252', cursor: 'pointer' }}>
+                              {val ? '✓ ' : '○ '}{label}
+                            </button>
+                          ))}
+                        </div>
                       </div>
                     )}
 
@@ -1026,19 +1125,36 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
                     {card.seller} <span className="text-[11px] opacity-60">↗</span>
                   </button>
                 </Field>
-                <Field label="Buyer (Customer)">
-                  <button onClick={() => onNavigate('buyers')}
-                    className="text-[13px] font-semibold text-left hover:underline"
-                    style={{ color: 'var(--color-primary)' }}>
-                    {card.buyer} <span className="text-[11px] opacity-60">↗</span>
-                  </button>
-                </Field>
+                {card.buyer && (
+                  <Field label="Buyer (Customer)">
+                    <button onClick={() => onNavigate('buyers')}
+                      className="text-[13px] font-semibold text-left hover:underline"
+                      style={{ color: 'var(--color-primary)' }}>
+                      {card.buyer} <span className="text-[11px] opacity-60">↗</span>
+                    </button>
+                  </Field>
+                )}
                 <Field label="Assigned To">
                   <span className="text-[13px] text-slate-700">{assignedTo}</span>
                 </Field>
                 <Field label="Days in Stage">
                   <span className="text-[13px] text-slate-700">{card.daysInStage} days</span>
                 </Field>
+                {card.contactPerson && (
+                  <Field label="Contact Person">
+                    <span className="text-[13px] text-slate-700">{card.contactPerson}</span>
+                  </Field>
+                )}
+                {card.contactEmail && (
+                  <Field label="Email">
+                    <a href={`mailto:${card.contactEmail}`} className="text-[13px] font-medium hover:underline" style={{ color: 'var(--color-primary)' }}>{card.contactEmail}</a>
+                  </Field>
+                )}
+                {card.contactPhone && (
+                  <Field label="Phone">
+                    <span className="text-[13px] text-slate-700">{card.contactPhone}</span>
+                  </Field>
+                )}
                 <Field label="Process Type">
                   <span className="inline-flex items-center gap-1 text-[12px] font-semibold px-2 py-0.5 rounded-full"
                     style={card.type === 'invoice_finance'
@@ -1067,7 +1183,7 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
             </Section>
 
             {/* ── FINANCE REQUEST ── */}
-            {(() => {
+            {card.amount > 0 && cardStage !== 'submitted' && (() => {
               const canEditCore   = cardStage === 'risk'     && ['risk',        'super'].includes(currentUser?.adminRole)
               const canEditFee    = cardStage === 'approved' && ['account_mgr', 'super'].includes(currentUser?.adminRole)
               const activeAmount  = Number(propAmount)  || card.amount
@@ -1628,10 +1744,314 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
   )
 }
 
+// ── New Ticket Modal ──────────────────────────────────────────────────────────
+
+const SECTORS = ['ICT', 'Consumer Staples', 'Manufacturing', 'Consumer Discretionary', 'HealthCare', 'FMCG']
+
+function NewTicketModal({ currentUser, cards, onClose, onAdd }) {
+  const [step, setStep] = useState(1)
+
+  // Step 1
+  const [clientType, setClientType] = useState('buyer')
+  const [businessName, setBusinessName] = useState('')
+  const [contactPerson, setContactPerson] = useState('')
+  const [contactEmail, setContactEmail] = useState('')
+  const [contactPhone, setContactPhone] = useState('')
+
+  // Step 2
+  const [sellerId, setSellerId] = useState(MOCK_SELLERS[0]?.id || '')
+  const [sector, setSector] = useState('')
+  const [amount, setAmount] = useState('')
+
+  // Step 3 — documents (tracks uploaded filenames per doc)
+  const [docFiles, setDocFiles] = useState({})
+
+  // empty amount → assume max tier so we collect all possible docs
+  const docList    = getDocChecklist(clientType, amount ? Number(amount) : 999999)
+  const documents  = docList.map(name => ({ name, status: docFiles[name] ? 'verified' : 'pending' }))
+  const receivedDocs = documents.filter(d => d.status === 'verified')
+  const missingDocs  = documents.filter(d => d.status !== 'verified').map(d => d.name)
+
+  const step1Valid = businessName.trim() && contactPerson.trim() && contactEmail.trim()
+  const step2Valid = sector.trim()
+  const canCreate  = step1Valid && step2Valid
+
+  const handleFileUpload = (name, file) => {
+    if (file) setDocFiles(prev => ({ ...prev, [name]: file.name }))
+  }
+  const handleRemoveFile = (name) => {
+    setDocFiles(prev => { const next = { ...prev }; delete next[name]; return next })
+  }
+
+  const linkedSeller = MOCK_SELLERS.find(s => s.id === sellerId)
+
+  const handleCreate = () => {
+    const nextId = Math.max(0, ...cards.map(c => parseInt(c.id.replace('FR-', '')) || 0)) + 1
+    const today  = new Date().toISOString().slice(0, 10)
+    const newCard = {
+      id: `FR-${String(nextId).padStart(4, '0')}`,
+      type: 'onboarding',
+      seller: clientType === 'merchant' ? businessName : (linkedSeller?.name || ''),
+      sellerId: clientType === 'merchant' ? null : sellerId,
+      buyer: clientType === 'buyer' ? businessName : null,
+      buyerId: null,
+      amount: clientType === 'merchant' ? 0 : (Number(amount) || 0),
+      mdrRate: null,
+      stage: 'submitted',
+      daysInStage: 0,
+      riskScore: null,
+      assignedTo: currentUser.name,
+      sector,
+      tenure: null,
+      emiFrequency: null,
+      documents,
+      contracts: [],
+      correspondence: [{
+        from: 'System',
+        message: `Ticket created by ${currentUser.name}. ${missingDocs.length > 0 ? `${missingDocs.length} document(s) still needed.` : 'All documents confirmed.'}`,
+        time: `${today} · System`,
+        autoRead: true,
+      }],
+      yumiSuggestion: {
+        action: missingDocs.length > 0 ? 'request_document' : 'monitor',
+        message: missingDocs.length > 0
+          ? `${missingDocs.length} required document(s) missing for ${businessName}. Send a document request to get them in.`
+          : `${businessName} documents are all confirmed. Advance to document checking when ready.`,
+        draftText: missingDocs.length > 0
+          ? `Dear ${contactPerson},\n\nTo process your finance request, we still need the following documents:\n${missingDocs.map(d => `• ${d}`).join('\n')}\n\nPlease provide these at your earliest convenience.\n\nYumna Finance Team`
+          : '',
+      },
+      contactPerson, contactEmail, contactPhone,
+      createdAt: today, createdBy: currentUser.name,
+      proposedAmount: null, proposedTenure: null, proposedMdrRate: null,
+      counterProposedBy: null, counterProposedAt: null,
+    }
+    onAdd(newCard)
+  }
+
+  const inputCls = 'w-full px-3 py-2 rounded-xl border text-[13px] outline-none bg-white'
+  const inputStyle = { borderColor: '#e5e5e5' }
+
+  const steps = ['Client & Contact', 'Business Details', 'Documents']
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)' }}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl mx-4 flex flex-col" style={{ maxHeight: '90vh' }}>
+        {/* Header */}
+        <div className="px-6 py-4 border-b border-black/5 flex items-center justify-between shrink-0">
+          <div>
+            <div className="text-[15px] font-bold text-slate-800">New Ticket</div>
+            <div className="text-[11px] text-slate-400 mt-0.5">{steps[step - 1]}</div>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-slate-100 transition-colors">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+
+        {/* Step indicator */}
+        <div className="px-6 pt-4 flex items-center gap-2 shrink-0">
+          {steps.map((s, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
+                <div className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold transition-all"
+                  style={{ background: step > i + 1 ? '#262626' : step === i + 1 ? 'var(--color-primary)' : '#f0f0f0', color: step >= i + 1 ? 'white' : '#a3a3a3' }}>
+                  {step > i + 1 ? '✓' : i + 1}
+                </div>
+                <span className="text-[11px] font-medium" style={{ color: step === i + 1 ? 'var(--color-primary)' : step > i + 1 ? '#525252' : '#a3a3a3' }}>{s}</span>
+              </div>
+              {i < steps.length - 1 && <div className="w-6 h-px" style={{ background: step > i + 1 ? '#262626' : '#e5e5e5' }} />}
+            </div>
+          ))}
+        </div>
+
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+
+          {/* ── Step 1 ── */}
+          {step === 1 && (
+            <>
+              <div>
+                <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-2">Client Type</div>
+                <div className="flex gap-2">
+                  {[{ id: 'buyer', label: 'Buyer' }, { id: 'merchant', label: 'Merchant' }].map(opt => (
+                    <button key={opt.id} onClick={() => setClientType(opt.id)}
+                      className="flex-1 py-2 rounded-xl border text-[13px] font-semibold transition-all"
+                      style={{ borderColor: clientType === opt.id ? 'var(--color-primary)' : '#e5e5e5', background: clientType === opt.id ? 'rgba(0,0,0,0.03)' : 'white', color: clientType === opt.id ? 'var(--color-primary)' : '#525252' }}>
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1.5">Business Name *</div>
+                <input value={businessName} onChange={e => setBusinessName(e.target.value)} placeholder={clientType === 'buyer' ? 'e.g. Al-Noor Trading Co.' : 'e.g. Zahrani Group'}
+                  className={inputCls} style={inputStyle} />
+              </div>
+              <div>
+                <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1.5">Contact Person *</div>
+                <input value={contactPerson} onChange={e => setContactPerson(e.target.value)} placeholder="Full name"
+                  className={inputCls} style={inputStyle} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1.5">Email *</div>
+                  <input value={contactEmail} onChange={e => setContactEmail(e.target.value)} type="email" placeholder="contact@example.com"
+                    className={inputCls} style={inputStyle} />
+                </div>
+                <div>
+                  <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1.5">Phone</div>
+                  <input value={contactPhone} onChange={e => setContactPhone(e.target.value)} placeholder="+966 5x xxx xxxx"
+                    className={inputCls} style={inputStyle} />
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* ── Step 2 ── */}
+          {step === 2 && (
+            <>
+              {clientType === 'buyer' && (
+                <div>
+                  <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1.5">Linked Seller *</div>
+                  <select value={sellerId} onChange={e => setSellerId(e.target.value)} className={inputCls} style={inputStyle}>
+                    {MOCK_SELLERS.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  </select>
+                </div>
+              )}
+              <div>
+                <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1.5">Sector *</div>
+                <select value={sector} onChange={e => setSector(e.target.value)} className={inputCls} style={inputStyle}>
+                  <option value="">Select sector…</option>
+                  {SECTORS.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
+              {clientType === 'buyer' && (
+                <div>
+                  <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1.5">Finance Amount (SAR)</div>
+                  <input value={amount} onChange={e => setAmount(e.target.value)} type="number" placeholder="Optional — determines document tier"
+                    className={inputCls} style={inputStyle} />
+                  <div className="text-[10px] text-slate-400 mt-1">Leave blank to collect the full document set</div>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* ── Step 3 ── */}
+          {step === 3 && (
+            <>
+              <div className="flex items-center justify-between mb-1">
+                <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Required Documents</div>
+                <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full"
+                  style={{ background: receivedDocs.length === docList.length ? '#262626' : '#f0f0f0', color: receivedDocs.length === docList.length ? 'white' : '#525252' }}>
+                  {receivedDocs.length} / {docList.length} uploaded
+                </span>
+              </div>
+              <div className="space-y-2">
+                {docList.map(docName => {
+                  const fileName = docFiles[docName]
+                  const inputId = `doc-upload-${docName.replace(/\s+/g, '-')}`
+                  return (
+                    <div key={docName} className="flex items-center gap-3 p-3 rounded-xl border transition-all"
+                      style={{ borderColor: fileName ? '#d4d4d4' : '#f0f0f0', background: fileName ? '#fafafa' : 'white' }}>
+                      {/* Status icon */}
+                      <span style={{ width: 18, height: 18, borderRadius: '50%', border: '2px solid',
+                        borderColor: fileName ? '#262626' : '#d4d4d4',
+                        background: fileName ? '#262626' : 'transparent',
+                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        {fileName && (
+                          <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                        )}
+                      </span>
+                      {/* Doc name */}
+                      <span className="text-[13px] flex-1" style={{ color: fileName ? '#262626' : '#525252' }}>{docName}</span>
+                      {/* Upload / filename + remove */}
+                      {fileName ? (
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[11px] text-slate-500 max-w-[120px] truncate">{fileName}</span>
+                          <button onClick={() => handleRemoveFile(docName)}
+                            className="w-5 h-5 rounded-full flex items-center justify-center hover:bg-slate-200 transition-colors"
+                            style={{ color: '#a3a3a3' }}>
+                            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <input id={inputId} type="file" className="hidden"
+                            onChange={e => handleFileUpload(docName, e.target.files?.[0])} />
+                          <label htmlFor={inputId}
+                            className="flex items-center gap-1 px-2.5 py-1 rounded-lg border text-[11px] font-semibold cursor-pointer transition-all"
+                            style={{ borderColor: '#e5e5e5', color: '#525252', background: 'white' }}>
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                            Upload
+                          </label>
+                        </>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* Yumi AI analysis */}
+              <div className="rounded-xl border px-4 py-3 flex gap-3 mt-2"
+                style={{ background: '#fafafa', borderColor: '#e5e5e5' }}>
+                <span className="text-[14px] shrink-0" style={{ color: 'var(--color-primary)' }}>✦</span>
+                <div className="flex-1">
+                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Yumi</div>
+                  {missingDocs.length === 0 ? (
+                    <p className="text-[12px] text-slate-600 leading-relaxed">All documents uploaded. Ticket is ready to submit.</p>
+                  ) : (
+                    <>
+                      <p className="text-[12px] text-slate-600 leading-relaxed mb-2">{missingDocs.length} document{missingDocs.length > 1 ? 's' : ''} still missing:</p>
+                      <ul className="space-y-0.5 mb-3">
+                        {missingDocs.map(d => (
+                          <li key={d} className="text-[11px] text-slate-500 flex items-center gap-1.5">
+                            <span className="w-1 h-1 rounded-full bg-slate-400 shrink-0" />
+                            {d}
+                          </li>
+                        ))}
+                      </ul>
+                      <div className="text-[11px] text-slate-400 italic">A document request draft will be pre-loaded in the ticket.</div>
+                    </>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 py-4 border-t border-black/5 flex items-center gap-3 shrink-0">
+          {step > 1 && (
+            <button onClick={() => setStep(s => s - 1)}
+              className="px-4 py-2 rounded-xl border border-black/10 text-[13px] font-semibold text-slate-600 hover:bg-slate-50 transition-colors">
+              Back
+            </button>
+          )}
+          <div className="flex-1" />
+          {step < 3 ? (
+            <button onClick={() => setStep(s => s + 1)}
+              disabled={step === 1 ? !step1Valid : !step2Valid}
+              className="px-5 py-2 rounded-xl text-[13px] font-semibold text-white transition-all"
+              style={{ background: (step === 1 ? step1Valid : step2Valid) ? 'var(--color-primary)' : '#d4d4d4', cursor: (step === 1 ? step1Valid : step2Valid) ? 'pointer' : 'not-allowed' }}>
+              Continue →
+            </button>
+          ) : (
+            <button onClick={handleCreate} disabled={!canCreate}
+              className="px-5 py-2 rounded-xl text-[13px] font-semibold text-white transition-all"
+              style={{ background: canCreate ? 'var(--color-primary)' : '#d4d4d4', cursor: canCreate ? 'pointer' : 'not-allowed' }}>
+              {missingDocs.length > 0 ? 'Create & Request Missing Docs' : 'Create Ticket'}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Pipeline board ────────────────────────────────────────────────────────────
 
 export default function Pipeline({ onNavigate }) {
-  const { state } = useApp()
+  const { state, addToast } = useApp()
   const adminRole = state.currentUser?.adminRole
   const [selectedCard,    setSelectedCard]    = useState(null)
   const [filterRole,      setFilterRole]      = useState('mine')
@@ -1644,10 +2064,17 @@ export default function Pipeline({ onNavigate }) {
   const [filterDaysMin,   setFilterDaysMin]   = useState('')
   const [showFilters,     setShowFilters]     = useState(false)
   const [processFilter,   setProcessFilter]   = useState('all')
+  const [showNewTicket,   setShowNewTicket]   = useState(false)
 
   const handleCardUpdate = (updated) => {
     setCards(prev => prev.map(c => c.id === updated.id ? updated : c))
     setSelectedCard(updated)
+  }
+
+  const handleAddCard = (newCard) => {
+    setCards(prev => [newCard, ...prev])
+    setShowNewTicket(false)
+    if (addToast) addToast(`${newCard.id} created — now in Doc Collection.`, 'success')
   }
 
   const myStages = ROLE_STAGE_MAP[adminRole] || PIPELINE_STAGES.map(s => s.id)
@@ -1687,8 +2114,8 @@ export default function Pipeline({ onNavigate }) {
 
   const filteredCards = cards.filter(card => {
     const q = searchQuery.trim().toLowerCase()
-    if (q && !card.buyer.toLowerCase().includes(q) &&
-             !card.seller.toLowerCase().includes(q) &&
+    if (q && !(card.buyer || '').toLowerCase().includes(q) &&
+             !(card.seller || '').toLowerCase().includes(q) &&
              !card.id.toLowerCase().includes(q)) return false
     if (filterAssignee && card.assignedTo !== filterAssignee) return false
     if (filterRiskMin !== '' && card.riskScore !== null && card.riskScore < Number(filterRiskMin)) return false
@@ -1726,7 +2153,6 @@ export default function Pipeline({ onNavigate }) {
             padding: '6px 14px 8px',
             fontSize: 12, fontWeight: tab.id === processFilter ? 700 : 500,
             color: tab.id === processFilter ? 'var(--color-primary)' : '#64748b',
-            borderBottom: tab.id === processFilter ? '2.5px solid var(--color-primary)' : '2.5px solid transparent',
             background: 'none', border: 'none',
             borderBottom: tab.id === processFilter ? '2.5px solid var(--color-primary)' : '2.5px solid transparent',
             cursor: 'pointer', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 6,
@@ -1798,12 +2224,22 @@ export default function Pipeline({ onNavigate }) {
           style={{ background: filterRole === 'all' || adminRole === 'super' ? 'var(--color-primary)' : '#e5e5e5', color: filterRole === 'all' || adminRole === 'super' ? 'white' : '#64748b' }}>
           All Stages
         </button>
-        <span className="text-[11px] text-slate-400 ml-auto">
-          {searchQuery || activeFilterCount > 0 || processFilter !== 'all'
-            ? <><strong style={{ color: '#262626' }}>{processFiltered.length}</strong> of {cards.length}</>
-            : <>{cards.length} transactions</>
-          }
-        </span>
+        <div className="ml-auto flex items-center gap-3">
+          {(adminRole === 'account_mgr' || adminRole === 'super') && (
+            <button onClick={() => setShowNewTicket(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold text-white transition-all"
+              style={{ background: 'var(--color-primary)' }}>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              New Ticket
+            </button>
+          )}
+          <span className="text-[11px] text-slate-400">
+            {searchQuery || activeFilterCount > 0 || processFilter !== 'all'
+              ? <><strong style={{ color: '#262626' }}>{processFiltered.length}</strong> of {cards.length}</>
+              : <>{cards.length} transactions</>
+            }
+          </span>
+        </div>
       </div>
 
       {/* Filter panel — Row 2 (collapsible) */}
@@ -1900,7 +2336,7 @@ export default function Pipeline({ onNavigate }) {
                             : <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-slate-50 text-slate-400">Scoring…</span>}
                         </div>
                         <div className="text-[13px] font-semibold text-slate-800 leading-tight mb-0.5 truncate">{card.seller}</div>
-                        <div className="text-[11px] text-slate-400 mb-2">→ {card.buyer}</div>
+                        {card.buyer && <div className="text-[11px] text-slate-400 mb-2">→ {card.buyer}</div>}
                         <div className="text-[14px] font-bold tabular-nums text-slate-900 mb-1">{formatSAR(card.amount)}</div>
 
                         {/* Stage-specific info block */}
@@ -1968,6 +2404,15 @@ export default function Pipeline({ onNavigate }) {
           })}
         </div>
       </div>
+
+      {showNewTicket && (
+        <NewTicketModal
+          currentUser={state.currentUser}
+          cards={cards}
+          onClose={() => setShowNewTicket(false)}
+          onAdd={handleAddCard}
+        />
+      )}
     </div>
   )
 }
