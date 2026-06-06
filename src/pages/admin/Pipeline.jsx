@@ -40,7 +40,7 @@ function riskColor(score) {
 }
 
 function statusColor(status) {
-  if (status === 'verified') return { color: '#262626', bg: '#f5f5f5' }
+  if (status === 'received') return { color: '#262626', bg: '#f5f5f5' }
   if (status === 'missing')  return { color: '#737373', bg: '#f0f0f0' }
   return                            { color: '#525252', bg: '#f5f5f5' }
 }
@@ -303,11 +303,17 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
   const [simahInput,      setSimahInput]      = useState(card.riskScore !== null ? String(card.riskScore) : '')
   const [riskDecision,    setRiskDecision]    = useState('approve')
   const [nafathVerified,  setNafathVerified]  = useState(
-    card.documents.some(d => d.name.toLowerCase().includes('nafath') && d.status === 'verified')
+    card.documents.some(d => d.name.toLowerCase().includes('nafath') && d.status === 'received')
   )
   const [crVerified,      setCrVerified]      = useState(
-    card.documents.some(d => d.name.toLowerCase().includes('commercial') && d.status === 'verified')
+    card.documents.some(d => d.name.toLowerCase().includes('commercial') && d.status === 'received')
   )
+
+  const [docAiChecks, setDocAiChecks] = useState(
+    Object.fromEntries(card.documents.map(d => [d.name, { check: d.aiCheck ?? null, discrepancy: d.discrepancy ?? null }]))
+  )
+  const [aiRunning,   setAiRunning]   = useState(false)
+  const [aiAdvanced,  setAiAdvanced]  = useState(false)
 
   // Contracts (legal stage)
   const [contracts,       setContracts]       = useState(card.contracts || [])
@@ -318,6 +324,10 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
 
   // Doc Collection editable amount (may be blank if not entered at ticket creation)
   const [editAmount, setEditAmount] = useState(String(card.amount || ''))
+
+  const isBuyer      = !!card.buyer
+  const routingPath  = !isBuyer ? 'merchant_only' : Number(editAmount) >= 50000 ? 'full' : 'standard'
+  const activeDocList = getDocChecklist(isBuyer ? 'buyer' : 'merchant', editAmount ? Number(editAmount) : 999999)
 
   // Tabs
   const [activeTab,    setActiveTab]    = useState('overview')
@@ -434,6 +444,22 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
     onCardUpdate?.({ ...card, stage: newStageId, assignedTo })
   }
 
+  const handleDocStatusChange = (docName, newStatus) => {
+    setDocStatuses(prev => {
+      const updated = { ...prev, [docName]: newStatus }
+      const nowAllVerified = activeDocList.every(n => (updated[n] || 'pending') === 'received')
+      if (nowAllVerified) {
+        setCardStage('kyc')
+        onCardUpdate?.({
+          ...card,
+          stage: 'kyc',
+          documents: activeDocList.map(n => ({ name: n, status: updated[n] || 'pending' })),
+        })
+      }
+      return updated
+    })
+  }
+
   const handleApprove = () => {
     const nextStage = cardStage === 'legal' ? 'approved' : 'disbursed'
     const label = cardStage === 'legal' ? 'APPROVED' : 'DISBURSED'
@@ -461,6 +487,24 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
     setAssignTarget(null)
     setAssignNote('')
     onCardUpdate?.({ ...card, stage: cardStage, assignedTo: targetUser.name })
+  }
+
+  const handleRerunChecks = () => {
+    if (aiRunning) return
+    setAiRunning(true)
+    setAiAdvanced(false)
+    const t = setTimeout(() => {
+      setDocAiChecks(Object.fromEntries(
+        card.documents.map(d => [d.name, { check: d.aiCheck ?? null, discrepancy: d.discrepancy ?? null }])
+      ))
+      setAiRunning(false)
+      setTimeline(prev => [...prev, {
+        id: `rerun-${Date.now()}`, type: 'history', icon: '🔄',
+        text: 'Yumnai AI re-check complete.',
+        date: new Date().toLocaleString('en-SA', { dateStyle: 'short', timeStyle: 'short' }),
+      }])
+    }, 1500)
+    return () => clearTimeout(t)
   }
 
   const handleYumnaiAction = () => {
@@ -565,6 +609,22 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
     setTimeline(prev => [...prev, { id: `cpw-${Date.now()}`, type: 'history', icon: '↩️', text: `Counter-proposal withdrawn by ${currentUser?.name || 'You'}`, date: new Date().toLocaleString('en-SA', { dateStyle: 'short', timeStyle: 'short' }) }])
     onCardUpdate?.({ ...card, stage: cardStage, assignedTo, proposedAmount: null, proposedTenure: null, proposedMdrRate: null, counterProposedBy: null, counterProposedAt: null })
   }
+
+  useEffect(() => {
+    if (cardStage !== 'kyc' || aiAdvanced || aiRunning) return
+    const relevantChecks = Object.values(docAiChecks).filter(c => c.check !== null)
+    if (relevantChecks.length === 0) return
+    if (relevantChecks.every(c => c.check === 'pass')) {
+      setAiAdvanced(true)
+      setTimeline(prev => [...prev, {
+        id: `kyc-pass-${Date.now()}`, type: 'history', icon: '✅',
+        text: 'Yumnai AI: All document checks passed — advancing to Credit Review.',
+        date: new Date().toLocaleString('en-SA', { dateStyle: 'short', timeStyle: 'short' }),
+      }])
+      const t = setTimeout(() => handleMoveStage('credit_score'), 2000)
+      return () => clearTimeout(t)
+    }
+  }, [cardStage, docAiChecks, aiAdvanced, aiRunning])
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -806,7 +866,7 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
                           cursor: 'pointer', textAlign: 'left',
                         }}>
                         <span style={{ fontSize: 18, color: sc.color }}>
-                          {st === 'verified' ? '✓' : st === 'missing' ? '✗' : '○'}
+                          {st === 'received' ? '✓' : st === 'missing' ? '✗' : '○'}
                         </span>
                         <div style={{ flex: 1 }}>
                           <div style={{ fontSize: 12, fontWeight: 600, color: '#262626' }}>{doc.name}</div>
@@ -837,15 +897,36 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
                         <div style={{ flex: 1 }}>
                           <div style={{ fontSize: 16, fontWeight: 700, color: '#171717', marginBottom: 4 }}>{selectedDoc.name}</div>
                           {canEdit ? (
-                            <select value={st} onChange={e => setDocStatuses(prev => ({ ...prev, [selectedDoc.name]: e.target.value }))}
+                            <select value={st} onChange={e => handleDocStatusChange(selectedDoc.name, e.target.value)}
                               style={{ border: '1.5px solid #e5e5e5', borderRadius: 8, padding: '4px 10px', fontSize: 12, outline: 'none', fontFamily: 'inherit', color: sc.color, background: sc.bg, fontWeight: 600, cursor: 'pointer' }}>
-                              {['verified', 'pending', 'missing'].map(s => <option key={s} value={s} style={{ color: '#262626', background: 'white' }}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
+                              {['received', 'pending', 'missing'].map(s => <option key={s} value={s} style={{ color: '#262626', background: 'white' }}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
                             </select>
                           ) : (
                             <span style={{ fontSize: 12, fontWeight: 600, padding: '3px 10px', borderRadius: 20, background: sc.bg, color: sc.color, textTransform: 'capitalize' }}>{st}</span>
                           )}
                         </div>
                       </div>
+
+                      {/* Yumnai AI Check — kyc stage only */}
+                      {cardStage === 'kyc' && (() => {
+                        const ac = docAiChecks[selectedDoc.name]
+                        const aiCheck = ac?.check
+                        const discrepancy = ac?.discrepancy
+                        if (!aiCheck && st !== 'missing') return null
+                        const label = aiCheck === 'pass' ? '✓ AI Check: Pass'
+                          : aiCheck === 'flagged' ? '⚠ AI Check: Flagged'
+                          : 'AI Check: N/A (missing)'
+                        const labelColor = aiCheck === 'pass' ? '#262626' : aiCheck === 'flagged' ? '#737373' : '#a3a3a3'
+                        return (
+                          <div style={{ padding: '10px 14px', borderRadius: 10, background: '#f5f5f5', border: `1.5px solid ${aiCheck === 'flagged' ? '#d4d4d4' : '#e5e5e5'}` }}>
+                            <div style={{ fontSize: 10, fontWeight: 700, color: '#a3a3a3', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Yumnai AI Check</div>
+                            <div style={{ fontSize: 12, fontWeight: 700, color: labelColor }}>{label}</div>
+                            {discrepancy && (
+                              <div style={{ fontSize: 11, color: '#525252', lineHeight: 1.5, marginTop: 6 }}>{discrepancy}</div>
+                            )}
+                          </div>
+                        )
+                      })()}
 
                       {/* Meta */}
                       <div style={{ padding: '12px 16px', borderRadius: 10, background: 'white', border: '1px solid #f1f5f9', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
@@ -881,9 +962,9 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
                             Request from buyer →
                           </button>
                         )}
-                        {canEdit && st !== 'verified' && (
-                          <button onClick={() => setDocStatuses(prev => ({ ...prev, [selectedDoc.name]: 'verified' }))} style={{ padding: '7px 16px', borderRadius: 10, background: '#171717', border: 'none', fontSize: 12, fontWeight: 700, color: 'white', cursor: 'pointer' }}>
-                            ✓ Mark as Verified
+                        {canEdit && st !== 'received' && (
+                          <button onClick={() => handleDocStatusChange(selectedDoc.name, 'received')} style={{ padding: '7px 16px', borderRadius: 10, background: '#171717', border: 'none', fontSize: 12, fontWeight: 700, color: 'white', cursor: 'pointer' }}>
+                            ✓ Mark as Received
                           </button>
                         )}
                       </div>
@@ -1001,24 +1082,10 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
             {(currentUser?.adminRole === stageInfo?.assignedRole || currentUser?.adminRole === 'super') && (() => {
               const fieldStyle = { border: '1px solid #e5e5e5', borderRadius: 8, padding: '5px 10px', fontSize: 12, outline: 'none', fontFamily: 'inherit', color: '#262626', background: 'white' }
 
-              const isBuyer      = !!card.buyer
-              const routingPath  = !isBuyer ? 'merchant_only' : Number(editAmount) >= 50000 ? 'full' : 'standard'
-              const activeDocList = getDocChecklist(isBuyer ? 'buyer' : 'merchant', editAmount ? Number(editAmount) : 999999)
-              const verifiedCount = activeDocList.filter(n => (docStatuses[n] || 'pending') === 'verified').length
+              const verifiedCount = activeDocList.filter(n => (docStatuses[n] || 'pending') === 'received').length
               const allVerified   = verifiedCount === activeDocList.length
 
-              const toggleDoc = (name) => setDocStatuses(prev => {
-                const cycle = { missing: 'pending', pending: 'verified', verified: 'missing' }
-                const updated = { ...prev, [name]: cycle[prev[name]] || 'pending' }
-                const nowAllVerified = activeDocList.every(n => (updated[n] || 'pending') === 'verified')
-                if (nowAllVerified) {
-                  setCardStage('doc_check')
-                  onCardUpdate?.({ ...card, stage: 'doc_check', documents: activeDocList.map(n => ({ name: n, status: updated[n] || 'pending' })) })
-                }
-                return updated
-              })
-
-              const docStatusColor = { verified: '#262626', pending: '#525252', missing: '#737373' }
+              const docStatusColor = { received: '#262626', pending: '#525252', missing: '#737373' }
               return (
                 <Section title={`${stageInfo?.label || ''} — Stage Actions`} badge="Your Stage" badgeColor={stageInfo?.color || '#6b7280'}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -1027,8 +1094,8 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
                     {cardStage === 'submitted' && (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
 
-                        {/* Finance Request (buyer only) */}
-                        {isBuyer && (
+                        {/* Finance Request (invoice_finance only) */}
+                        {isBuyer && card.type !== 'onboarding' && (
                           <>
                             <div style={{ fontSize: 11, fontWeight: 600, color: '#525252', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Finance Request</div>
                             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -1067,15 +1134,15 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
                         {activeDocList.map(docName => {
                           const status = docStatuses[docName] || 'pending'
                           return (
-                            <button key={docName} onClick={() => toggleDoc(docName)}
+                            <div key={docName}
                               style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 10,
-                                border: '1.5px solid', borderColor: status === 'verified' ? '#d4d4d4' : '#f0f0f0',
-                                background: status === 'verified' ? '#fafafa' : 'white', cursor: 'pointer', textAlign: 'left' }}>
+                                border: '1.5px solid', borderColor: status === 'received' ? '#d4d4d4' : '#f0f0f0',
+                                background: status === 'received' ? '#fafafa' : 'white', cursor: 'default', textAlign: 'left' }}>
                               <span style={{ width: 18, height: 18, borderRadius: '50%', border: '2px solid',
-                                borderColor: status === 'verified' ? '#262626' : '#d4d4d4',
-                                background: status === 'verified' ? '#262626' : 'transparent',
+                                borderColor: status === 'received' ? '#262626' : '#d4d4d4',
+                                background: status === 'received' ? '#262626' : 'transparent',
                                 display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                                {status === 'verified' && (
+                                {status === 'received' && (
                                   <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                                 )}
                                 {status === 'missing' && (
@@ -1084,11 +1151,11 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
                               </span>
                               <span style={{ fontSize: 12, flex: 1, color: '#262626' }}>{docName}</span>
                               <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 20,
-                                background: status === 'verified' ? '#f0f0f0' : '#fafafa',
-                                color: status === 'verified' ? '#262626' : status === 'missing' ? '#737373' : '#a3a3a3' }}>
+                                background: status === 'received' ? '#f0f0f0' : '#fafafa',
+                                color: status === 'received' ? '#262626' : status === 'missing' ? '#737373' : '#a3a3a3' }}>
                                 {status}
                               </span>
-                            </button>
+                            </div>
                           )
                         })}
 
@@ -1100,30 +1167,83 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
                       </div>
                     )}
 
-                    {/* VERIFIER — kyc */}
-                    {cardStage === 'kyc' && (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                        <div style={{ fontSize: 11, fontWeight: 600, color: '#525252', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Document Status — click to toggle</div>
-                        {card.documents.map(doc => (
-                          <button key={doc.name} onClick={() => toggleDoc(doc.name)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 10, border: '1.5px solid #f1f5f9', background: 'white', cursor: 'pointer', textAlign: 'left' }}>
-                            <span style={{ fontSize: 16, color: docStatusColor[docStatuses[doc.name] || doc.status] }}>
-                              {docStatuses[doc.name] === 'verified' ? '✓' : docStatuses[doc.name] === 'missing' ? '✗' : '○'}
-                            </span>
-                            <span style={{ fontSize: 12, flex: 1, color: '#262626' }}>{doc.name}</span>
-                            <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 20, background: docStatusColor[docStatuses[doc.name] || doc.status] + '18', color: docStatusColor[docStatuses[doc.name] || doc.status] }}>
-                              {docStatuses[doc.name] || doc.status}
-                            </span>
+                    {/* VERIFIER — kyc: Yumnai AI Document Review */}
+                    {cardStage === 'kyc' && (() => {
+                      const flaggedDocs = card.documents.filter(d => docAiChecks[d.name]?.check === 'flagged')
+                      const allRelevantPass = card.documents.every(d => {
+                        const c = docAiChecks[d.name]?.check
+                        return c === null || c === 'pass'
+                      }) && card.documents.some(d => docAiChecks[d.name]?.check === 'pass')
+                      return (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+
+                          {/* Summary banner */}
+                          {aiRunning ? (
+                            <div style={{ padding: '10px 14px', borderRadius: 10, background: '#f5f5f5', border: '1px solid #e5e5e5', display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <span style={{ fontSize: 12 }}>⏳</span>
+                              <span style={{ fontSize: 12, fontWeight: 600, color: '#525252' }}>Checking documents…</span>
+                            </div>
+                          ) : allRelevantPass ? (
+                            <div style={{ padding: '10px 14px', borderRadius: 10, background: '#f0f0f0', border: '1px solid #d4d4d4' }}>
+                              <span style={{ fontSize: 12, fontWeight: 700, color: '#262626' }}>✓ All checks passed — advancing to Credit Review…</span>
+                            </div>
+                          ) : flaggedDocs.length > 0 ? (
+                            <div style={{ padding: '10px 14px', borderRadius: 10, background: '#f5f5f5', border: '1px solid #d4d4d4' }}>
+                              <span style={{ fontSize: 12, fontWeight: 700, color: '#525252' }}>⚠ {flaggedDocs.length} discrepanc{flaggedDocs.length === 1 ? 'y' : 'ies'} found — review and contact client</span>
+                            </div>
+                          ) : null}
+
+                          {/* Re-run button */}
+                          <button onClick={handleRerunChecks} disabled={aiRunning}
+                            style={{ alignSelf: 'flex-start', padding: '6px 14px', borderRadius: 10, border: '1.5px solid #e5e5e5', background: aiRunning ? '#f5f5f5' : 'white', fontSize: 12, fontWeight: 600, color: aiRunning ? '#a3a3a3' : '#525252', cursor: aiRunning ? 'default' : 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+                            🔄 {aiRunning ? 'Checking…' : 'Re-run AI Checks'}
                           </button>
-                        ))}
-                        <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
-                          {[['Nafath Verified', nafathVerified, setNafathVerified], ['CR Verified', crVerified, setCrVerified]].map(([label, val, setter]) => (
-                            <button key={label} onClick={() => setter(!val)} style={{ flex: 1, padding: '7px 10px', borderRadius: 10, border: '1.5px solid', borderColor: val ? '#262626' : '#e5e5e5', background: val ? '#f0f0f0' : 'white', fontSize: 12, fontWeight: 600, color: val ? '#262626' : '#525252', cursor: 'pointer' }}>
-                              {val ? '✓ ' : '○ '}{label}
-                            </button>
-                          ))}
+
+                          {/* Per-document cards */}
+                          {card.documents.map((doc, i) => {
+                            const ac = docAiChecks[doc.name]
+                            const aiCheck = ac?.check
+                            const discrepancy = ac?.discrepancy
+                            const st = docStatuses[doc.name] || doc.status
+                            const badgeStyle = aiCheck === 'pass'
+                              ? { background: '#f0f0f0', color: '#262626', borderColor: '#d4d4d4' }
+                              : aiCheck === 'flagged'
+                              ? { background: '#f5f5f5', color: '#737373', borderColor: '#d4d4d4' }
+                              : { background: '#f5f5f5', color: '#a3a3a3', borderColor: '#e5e5e5' }
+                            const badgeLabel = aiCheck === 'pass' ? '✓ pass'
+                              : aiCheck === 'flagged' ? '⚠ flagged'
+                              : st === 'missing' ? 'missing'
+                              : 'pending'
+                            return (
+                              <div key={i} style={{ borderRadius: 12, border: '1.5px solid', borderColor: aiCheck === 'flagged' ? '#d4d4d4' : '#e5e5e5', background: 'white', overflow: 'hidden' }}>
+                                {/* Document viewer placeholder */}
+                                <div style={{ height: 80, background: '#f5f5f5', borderBottom: '1px solid #e5e5e5', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 4 }}>
+                                  <span style={{ fontSize: 24 }}>📄</span>
+                                  <span style={{ fontSize: 10, color: '#a3a3a3', fontWeight: 500 }}>{doc.name}</span>
+                                  <span style={{ fontSize: 9, color: '#d4d4d4' }}>Document preview</span>
+                                </div>
+                                {/* Info row */}
+                                <div style={{ padding: '10px 12px', display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                                  <div style={{ flex: 1 }}>
+                                    <div style={{ fontSize: 12, fontWeight: 600, color: '#262626' }}>{doc.name}</div>
+                                    {discrepancy && !aiRunning && (
+                                      <div style={{ fontSize: 11, color: '#525252', lineHeight: 1.5, padding: '6px 8px', borderRadius: 8, background: '#f5f5f5', border: '1px solid #e5e5e5', marginTop: 6 }}>
+                                        {discrepancy}
+                                      </div>
+                                    )}
+                                  </div>
+                                  {!aiRunning && (
+                                    <span style={{ fontSize: 10, fontWeight: 700, padding: '3px 10px', borderRadius: 20, border: '1px solid', flexShrink: 0, ...badgeStyle }}>
+                                      {badgeLabel}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            )
+                          })}
                         </div>
-                      </div>
-                    )}
+                      )
+                    })()}
 
                     {/* CREDIT — credit_score */}
                     {cardStage === 'credit_score' && (
@@ -1200,7 +1320,7 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
             })()}
 
             {/* ── FINANCE REQUEST ── */}
-            {card.amount > 0 && cardStage !== 'submitted' && (() => {
+            {card.type !== 'onboarding' && card.amount > 0 && cardStage !== 'submitted' && (() => {
               const canEditCore   = cardStage === 'risk'     && ['risk',        'super'].includes(currentUser?.adminRole)
               const canEditFee    = cardStage === 'approved' && ['account_mgr', 'super'].includes(currentUser?.adminRole)
               const activeAmount  = Number(propAmount)  || card.amount
@@ -1786,8 +1906,8 @@ function NewTicketModal({ currentUser, cards, onClose, onAdd }) {
 
   // empty amount → assume max tier so we collect all possible docs
   const docList    = getDocChecklist(clientType, amount ? Number(amount) : 999999)
-  const documents  = docList.map(name => ({ name, status: docFiles[name] ? 'verified' : 'pending' }))
-  const receivedDocs = documents.filter(d => d.status === 'verified')
+  const documents  = docList.map(name => ({ name, status: docFiles[name] ? 'received' : 'pending' }))
+  const receivedDocs = documents.filter(d => d.status === 'received')
   const missingDocs  = documents.filter(d => d.status !== 'verified').map(d => d.name)
 
   const step1Valid = businessName.trim() && contactPerson.trim() && contactEmail.trim()
@@ -2347,7 +2467,7 @@ export default function Pipeline({ onNavigate, onBreadcrumb }) {
                     const hasYumnai = !!card.yumnaiSuggestion.message
                     const aboveLimit = isAboveLimitCard(card)
                     const canSeeDetail = adminRole === stage.assignedRole || adminRole === 'super'
-                    const verifiedCount = card.documents.filter(d => d.status === 'verified').length
+                    const verifiedCount = card.documents.filter(d => d.status === 'received').length
                     return (
                       <button key={card.id}
                         onClick={() => { setSelectedCard(card); setLaneActionStage(null) }}
@@ -2366,10 +2486,10 @@ export default function Pipeline({ onNavigate, onBreadcrumb }) {
                         {/* Stage-specific info block */}
                         <div className="mb-2" style={{ fontSize: 11, color: '#525252' }}>
                           {stage.id === 'submitted' && (
-                            <span>{verifiedCount}/{card.documents.length} docs verified{missing > 0 ? ` · ${missing} missing` : ''}</span>
+                            <span>{verifiedCount}/{card.documents.length} docs received{missing > 0 ? ` · ${missing} missing` : ''}</span>
                           )}
                           {stage.id === 'kyc' && (
-                            <span>{verifiedCount}/{card.documents.length} docs · {missing > 0 ? <span style={{ color: '#737373' }}>{missing} pending</span> : <span style={{ color: '#262626' }}>all clear</span>}</span>
+                            <span>{verifiedCount}/{card.documents.length} docs · {missing > 0 ? <span style={{ color: '#737373' }}>{missing} missing</span> : <span style={{ color: '#262626' }}>all received</span>}</span>
                           )}
                           {stage.id === 'credit_score' && canSeeDetail && (
                             <span>{card.riskScore !== null ? <span>SIMAH: <strong style={{ color: card.riskScore >= 600 ? '#262626' : '#737373' }}>{card.riskScore}</strong></span> : 'Awaiting SIMAH score'}</span>

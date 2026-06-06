@@ -873,10 +873,10 @@ export const PIPELINE_CARDS = [
     tenure: 60,
     emiFrequency: 'bimonthly',
     documents: [
-      { name: 'Commercial Registration', status: 'verified' },
-      { name: 'Nafath Verification', status: 'verified' },
-      { name: 'Bank Statements (3 months)', status: 'missing' },
-      { name: 'VAT Certificate', status: 'verified' },
+      { name: 'Commercial Registration', status: 'received', aiCheck: null, discrepancy: null },
+      { name: 'Nafath Verification', status: 'received', aiCheck: null, discrepancy: null },
+      { name: 'Bank Statements (3 months)', status: 'missing', aiCheck: null, discrepancy: null },
+      { name: 'VAT Certificate', status: 'received', aiCheck: null, discrepancy: null },
     ],
     correspondence: [
       { from: 'Sara Al-Ghamdi', message: 'KYC verified. CR and Nafath checks passed. Forwarding to credit team.', time: '2026-05-28 10:14', autoRead: false },
@@ -905,10 +905,10 @@ export const PIPELINE_CARDS = [
     tenure: 30,
     emiFrequency: 'monthly',
     documents: [
-      { name: 'Commercial Registration', status: 'verified' },
-      { name: 'Nafath Verification', status: 'verified' },
-      { name: 'Bank Statements (3 months)', status: 'verified' },
-      { name: 'Signed Framework Agreement', status: 'verified' },
+      { name: 'Commercial Registration', status: 'received', aiCheck: null, discrepancy: null },
+      { name: 'Nafath Verification', status: 'received', aiCheck: null, discrepancy: null },
+      { name: 'Bank Statements (3 months)', status: 'received', aiCheck: null, discrepancy: null },
+      { name: 'Signed Framework Agreement', status: 'received', aiCheck: null, discrepancy: null },
     ],
     correspondence: [
       { from: 'Noura Al-Shehri', message: 'Risk assessment complete. Score: 28 (Low). All checks passed. Approved for disbursement.', time: '2026-05-30 11:00', autoRead: false },
@@ -936,8 +936,8 @@ export const PIPELINE_CARDS = [
     tenure: 30,
     emiFrequency: 'weekly',
     documents: [
-      { name: 'Commercial Registration', status: 'verified' },
-      { name: 'Signed Framework Agreement', status: 'verified' },
+      { name: 'Commercial Registration', status: 'received', aiCheck: null, discrepancy: null },
+      { name: 'Signed Framework Agreement', status: 'received', aiCheck: null, discrepancy: null },
     ],
     correspondence: [
       { from: 'Yumnai AI', message: 'Payment reminder sent on 2026-05-20. No reply received.', time: '2026-05-20 09:00', autoRead: true },
@@ -967,15 +967,15 @@ export const PIPELINE_CARDS = [
     tenure: 60,
     emiFrequency: 'bimonthly',
     documents: [
-      { name: 'Commercial Registration', status: 'verified' },
-      { name: 'Nafath Verification', status: 'pending' },
-      { name: 'VAT Certificate', status: 'missing' },
-      { name: 'Bank Statements (3 months)', status: 'missing' },
+      { name: 'Commercial Registration', status: 'received', aiCheck: 'flagged', discrepancy: "Name on Commercial Registration: 'Al-Noor Co.' — does not match VAT filing name: 'Al-Noor Trading LLC'" },
+      { name: 'Nafath Verification', status: 'received', aiCheck: 'pass', discrepancy: null },
+      { name: 'VAT Certificate', status: 'received', aiCheck: 'flagged', discrepancy: "CR certificate expiry date: 2026-03-01 — document is expired" },
+      { name: 'Bank Statements (3 months)', status: 'received', aiCheck: 'pass', discrepancy: null },
     ],
     correspondence: [],
     yumnaiSuggestion: {
       action: 'request_document',
-      message: 'VAT Certificate and Bank Statements are missing. Nafath verification is still pending. I can send a combined document request to Al-Noor Trading.',
+      message: '2 discrepancies found. The Commercial Registration name does not match the VAT filing, and the VAT Certificate is expired. I can send a correction request to Al-Noor Trading.',
       draftText: 'Dear Al-Noor Trading,\n\nTo proceed with your finance application (FR-0044, SAR 148,000), we require the following documents:\n\n1. VAT Certificate\n2. Bank Statements (last 3 months)\n\nYour Nafath verification is also still pending. Please complete this via the Nafath app.\n\nThank you,\nYumna Verification Team',
     },
   },
@@ -996,10 +996,10 @@ export const PIPELINE_CARDS = [
     tenure: 60,
     emiFrequency: 'bimonthly',
     documents: [
-      { name: 'Commercial Registration', status: 'verified' },
-      { name: 'Signed Framework Agreement', status: 'verified' },
-      { name: 'Delivery Confirmation', status: 'verified' },
-      { name: 'MDR Consent', status: 'verified' },
+      { name: 'Commercial Registration', status: 'received', aiCheck: null, discrepancy: null },
+      { name: 'Signed Framework Agreement', status: 'received', aiCheck: null, discrepancy: null },
+      { name: 'Delivery Confirmation', status: 'received', aiCheck: null, discrepancy: null },
+      { name: 'MDR Consent', status: 'received', aiCheck: null, discrepancy: null },
     ],
     correspondence: [
       { from: 'Yumnai AI', message: 'Installment 1 of 5 due on 2026-06-20. Pre-emptive reminder sent to buyer.', time: '2026-05-28 09:00', autoRead: true },
@@ -1028,9 +1028,9 @@ export const PIPELINE_CARDS = [
     tenure: 60,
     emiFrequency: 'bimonthly',
     documents: [
-      { name: 'Commercial Registration', status: 'verified' },
-      { name: 'Nafath Verification', status: 'verified' },
-      { name: 'Bank Statements (3 months)', status: 'verified' },
+      { name: 'Commercial Registration', status: 'received', aiCheck: null, discrepancy: null },
+      { name: 'Nafath Verification', status: 'received', aiCheck: null, discrepancy: null },
+      { name: 'Bank Statements (3 months)', status: 'received', aiCheck: null, discrepancy: null },
     ],
     correspondence: [
       { from: 'Sara Al-Ghamdi', message: 'KYC complete. All documents verified. Forwarding to credit scoring.', time: '2026-05-28 14:00', autoRead: false },
@@ -1063,10 +1063,10 @@ export const PIPELINE_CARDS = [
     tenure: 90,
     emiFrequency: 'monthly',
     documents: [
-      { name: 'Commercial Registration', status: 'verified' },
-      { name: 'Nafath Verification', status: 'verified' },
-      { name: 'Bank Statements (3 months)', status: 'verified' },
-      { name: 'Framework Agreement', status: 'pending' },
+      { name: 'Commercial Registration', status: 'received', aiCheck: null, discrepancy: null },
+      { name: 'Nafath Verification', status: 'received', aiCheck: null, discrepancy: null },
+      { name: 'Bank Statements (3 months)', status: 'received', aiCheck: null, discrepancy: null },
+      { name: 'Framework Agreement', status: 'pending', aiCheck: null, discrepancy: null },
     ],
     correspondence: [],
     yumnaiSuggestion: {
@@ -1092,9 +1092,9 @@ export const PIPELINE_CARDS = [
     tenure: 30,
     emiFrequency: 'weekly',
     documents: [
-      { name: 'Commercial Registration', status: 'pending' },
-      { name: 'Nafath Verification', status: 'missing' },
-      { name: 'Bank Statements (3 months)', status: 'missing' },
+      { name: 'Commercial Registration', status: 'pending', aiCheck: null, discrepancy: null },
+      { name: 'Nafath Verification', status: 'missing', aiCheck: null, discrepancy: null },
+      { name: 'Bank Statements (3 months)', status: 'missing', aiCheck: null, discrepancy: null },
     ],
     correspondence: [],
     yumnaiSuggestion: {
@@ -1120,10 +1120,10 @@ export const PIPELINE_CARDS = [
     tenure: 60,
     emiFrequency: 'bimonthly',
     documents: [
-      { name: 'Commercial Registration', status: 'verified' },
-      { name: 'Signed Framework Agreement', status: 'verified' },
-      { name: 'Delivery Confirmation', status: 'verified' },
-      { name: 'MDR Consent', status: 'verified' },
+      { name: 'Commercial Registration', status: 'received', aiCheck: null, discrepancy: null },
+      { name: 'Signed Framework Agreement', status: 'received', aiCheck: null, discrepancy: null },
+      { name: 'Delivery Confirmation', status: 'received', aiCheck: null, discrepancy: null },
+      { name: 'MDR Consent', status: 'received', aiCheck: null, discrepancy: null },
     ],
     correspondence: [
       { from: 'Rania Al-Sabban', message: 'Invoice generated and shared with buyer. MDR paid by seller.', time: '2026-05-26 13:00', autoRead: false },
