@@ -82,7 +82,7 @@ The tracker is two nested concepts:
 | State | When | Look |
 |---|---|---|
 | **Completed** | step is before the current stage | circle `#f0f0f0` fill with a `✓`, label `#a3a3a3` |
-| **Current** | step == the deal's stage | circle solid `#171717`, label `#171717` **bold**, soft `rgba(0,0,0,0.05)` pill behind |
+| **Current** | step == the deal's stage | **light-green pill** `#dcfce7` with `#86d6a3` border, green dot `#16a34a`, label `#15803d` **bold** — so the active stage is obvious |
 | **Upcoming** | step is after the current stage | empty circle, border `#e5e5e5`, label `#525252` |
 | **N/A** | onboarding deals on `risk`/`repayment`/`overdue` | whole step dimmed to `opacity: 0.3` |
 
