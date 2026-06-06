@@ -56,8 +56,8 @@ how it looks.
 | 3 | **Stage Progress Tracker** | Row 2 — the full horizontal stage row (code comment: "Pipeline Stage Bar") | [Pipeline.jsx:615-675](src/pages/admin/Pipeline.jsx#L615-L675) |
 | 3a | **Department Lanes** *(Swimlanes)* | The `SALES / OPS / CREDIT / LEGAL` bands. Data: `STAGE_GROUPS` | [Pipeline.jsx:15-22](src/pages/admin/Pipeline.jsx#L15-L22), render :618/:625 |
 | 3b | **Stage Step** *(Stage node)* | One circle + label (Doc Collection, Checking Docs…). Data: `PIPELINE_STAGES` | [mockData.js:653](src/data/mockData.js#L653), render :628-666 |
-| 4a | **Customer & Basic Info** band | Persistent header **above the tabs** (shown for both Overview and Documents): Seller/Buyer, Assigned To, Days in Stage, Contact, Process Type, Buyer Credit | [Pipeline.jsx:685](src/pages/admin/Pipeline.jsx#L685) |
-| 4b | **Detail Tabs** | `Overview` \| `Documents (n)` | [Pipeline.jsx:760-775](src/pages/admin/Pipeline.jsx#L760-L775) |
+| 4a | **Customer & Basic Info** card | White card above the tabs (shown on both tabs). **Collapsible** via the chevron toggle (top-right): collapsed = Seller + Buyer only; expanded = all fields. **Scrolls away** with the content under the Stage Progress Tracker. | [Pipeline.jsx:685](src/pages/admin/Pipeline.jsx#L685) |
+| 4b | **Detail Tabs** | `Overview` \| `Documents (n)` — **sticky** directly under the Stage Progress Tracker while you scroll | [Pipeline.jsx:760-775](src/pages/admin/Pipeline.jsx#L760-L775) |
 | 6 | **Yumnai Briefing** panel | AI attention items + suggested actions | [Pipeline.jsx:898](src/pages/admin/Pipeline.jsx#L898) |
 | 7 | **Finance Request** panel | Amount / Tenure / MDR, fee structure, outcomes, repayment schedule | [Pipeline.jsx:1239](src/pages/admin/Pipeline.jsx#L1239) |
 | 8 | **Required Documents** checklist | The doc-collection block (verify/request docs) | [Pipeline.jsx:1043](src/pages/admin/Pipeline.jsx#L1043) |
