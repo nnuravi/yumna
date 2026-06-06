@@ -682,10 +682,79 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
         <style>{`@keyframes yumnai-pulse { 0%,100%{opacity:1} 50%{opacity:0.35} }`}</style>
         <div className="flex-1 flex flex-col overflow-hidden">
 
+          {/* CUSTOMER & BASIC INFO — persistent across both tabs */}
+          <div className="px-6 pt-4 pb-4 border-b border-black/5 shrink-0">
+            <Section title="Customer & Basic Info">
+              <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+                <Field label="Seller (Merchant)">
+                  <button onClick={() => onNavigate('sellers')}
+                    className="text-[13px] font-semibold text-left hover:underline"
+                    style={{ color: 'var(--color-primary)' }}>
+                    {card.seller} <span className="text-[11px] opacity-60">↗</span>
+                  </button>
+                </Field>
+                {card.buyer && (
+                  <Field label="Buyer (Customer)">
+                    <button onClick={() => onNavigate('buyers')}
+                      className="text-[13px] font-semibold text-left hover:underline"
+                      style={{ color: 'var(--color-primary)' }}>
+                      {card.buyer} <span className="text-[11px] opacity-60">↗</span>
+                    </button>
+                  </Field>
+                )}
+                <Field label="Assigned To">
+                  <span className="text-[13px] text-slate-700">{assignedTo}</span>
+                </Field>
+                <Field label="Days in Stage">
+                  <span className="text-[13px] text-slate-700">{card.daysInStage} days</span>
+                </Field>
+                {card.contactPerson && (
+                  <Field label="Contact Person">
+                    <span className="text-[13px] text-slate-700">{card.contactPerson}</span>
+                  </Field>
+                )}
+                {card.contactEmail && (
+                  <Field label="Email">
+                    <a href={`mailto:${card.contactEmail}`} className="text-[13px] font-medium hover:underline" style={{ color: 'var(--color-primary)' }}>{card.contactEmail}</a>
+                  </Field>
+                )}
+                {card.contactPhone && (
+                  <Field label="Phone">
+                    <span className="text-[13px] text-slate-700">{card.contactPhone}</span>
+                  </Field>
+                )}
+                <Field label="Process Type">
+                  <span className="inline-flex items-center gap-1 text-[12px] font-semibold px-2 py-0.5 rounded-full"
+                    style={card.type === 'invoice_finance'
+                      ? { background: '#f5f5f5', color: '#525252' }
+                      : { background: 'rgba(0,0,0,0.03)', color: '#525252' }}>
+                    {card.type === 'invoice_finance' ? '💼 Invoice Finance' : '🚀 Onboarding'}
+                  </span>
+                </Field>
+                {buyerInfo && (
+                  <Field label="Buyer Credit">
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      <div style={{ display: 'flex', gap: 8, fontSize: 12, color: '#525252' }}>
+                        <span>Limit: <strong style={{ color: '#262626' }}>{formatSAR(buyerInfo.creditLimit)}</strong></span>
+                        <span>Used: <strong style={{ color: buyerInfo.creditUsed / buyerInfo.creditLimit > 0.8 ? '#737373' : '#334155' }}>
+                          {formatSAR(buyerInfo.creditUsed)} ({Math.round(buyerInfo.creditUsed / buyerInfo.creditLimit * 100)}%)
+                        </strong></span>
+                      </div>
+                      <div style={{ fontSize: 12 }}>
+                        Remaining: <strong style={{ color: isAboveLimit ? '#737373' : '#262626' }}>{formatSAR(remainingCredit)}</strong>
+                        {isAboveLimit && <span style={{ marginLeft: 6, fontSize: 10, fontWeight: 600, color: '#737373' }}>⚠️ Request exceeds limit</span>}
+                      </div>
+                    </div>
+                  </Field>
+                )}
+              </div>
+            </Section>
+          </div>
+
           {/* Tab bar */}
           <div className="flex items-end gap-0 px-6 pt-2 border-b border-black/5 shrink-0">
             {[
-              { id: 'overview',   label: 'Deal Overview' },
+              { id: 'overview',   label: 'Overview' },
               { id: 'documents',  label: `Documents (${card.documents.length})` },
             ].map(tab => (
               <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{
@@ -814,73 +883,6 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
           {activeTab === 'overview' && (
           <div className="flex-1 overflow-y-auto">
           <div className="p-6 space-y-6">
-
-            {/* CUSTOMER & BASIC INFO — always first */}
-            <Section title="Customer & Basic Info">
-              <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-                <Field label="Seller (Merchant)">
-                  <button onClick={() => onNavigate('sellers')}
-                    className="text-[13px] font-semibold text-left hover:underline"
-                    style={{ color: 'var(--color-primary)' }}>
-                    {card.seller} <span className="text-[11px] opacity-60">↗</span>
-                  </button>
-                </Field>
-                {card.buyer && (
-                  <Field label="Buyer (Customer)">
-                    <button onClick={() => onNavigate('buyers')}
-                      className="text-[13px] font-semibold text-left hover:underline"
-                      style={{ color: 'var(--color-primary)' }}>
-                      {card.buyer} <span className="text-[11px] opacity-60">↗</span>
-                    </button>
-                  </Field>
-                )}
-                <Field label="Assigned To">
-                  <span className="text-[13px] text-slate-700">{assignedTo}</span>
-                </Field>
-                <Field label="Days in Stage">
-                  <span className="text-[13px] text-slate-700">{card.daysInStage} days</span>
-                </Field>
-                {card.contactPerson && (
-                  <Field label="Contact Person">
-                    <span className="text-[13px] text-slate-700">{card.contactPerson}</span>
-                  </Field>
-                )}
-                {card.contactEmail && (
-                  <Field label="Email">
-                    <a href={`mailto:${card.contactEmail}`} className="text-[13px] font-medium hover:underline" style={{ color: 'var(--color-primary)' }}>{card.contactEmail}</a>
-                  </Field>
-                )}
-                {card.contactPhone && (
-                  <Field label="Phone">
-                    <span className="text-[13px] text-slate-700">{card.contactPhone}</span>
-                  </Field>
-                )}
-                <Field label="Process Type">
-                  <span className="inline-flex items-center gap-1 text-[12px] font-semibold px-2 py-0.5 rounded-full"
-                    style={card.type === 'invoice_finance'
-                      ? { background: '#f5f5f5', color: '#525252' }
-                      : { background: 'rgba(0,0,0,0.03)', color: '#525252' }}>
-                    {card.type === 'invoice_finance' ? '💼 Invoice Finance' : '🚀 Onboarding'}
-                  </span>
-                </Field>
-                {buyerInfo && (
-                  <Field label="Buyer Credit">
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                      <div style={{ display: 'flex', gap: 8, fontSize: 12, color: '#525252' }}>
-                        <span>Limit: <strong style={{ color: '#262626' }}>{formatSAR(buyerInfo.creditLimit)}</strong></span>
-                        <span>Used: <strong style={{ color: buyerInfo.creditUsed / buyerInfo.creditLimit > 0.8 ? '#737373' : '#334155' }}>
-                          {formatSAR(buyerInfo.creditUsed)} ({Math.round(buyerInfo.creditUsed / buyerInfo.creditLimit * 100)}%)
-                        </strong></span>
-                      </div>
-                      <div style={{ fontSize: 12 }}>
-                        Remaining: <strong style={{ color: isAboveLimit ? '#737373' : '#262626' }}>{formatSAR(remainingCredit)}</strong>
-                        {isAboveLimit && <span style={{ marginLeft: 6, fontSize: 10, fontWeight: 600, color: '#737373' }}>⚠️ Request exceeds limit</span>}
-                      </div>
-                    </div>
-                  </Field>
-                )}
-              </div>
-            </Section>
 
             {/* YUMNAI BRIEFING */}
             <div style={{

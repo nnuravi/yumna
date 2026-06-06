@@ -20,9 +20,9 @@ how it looks.
 │  SALES ● Doc Collection │ OPS ○ Checking Docs │ CREDIT ○ Credit Review …     │  ← Stage Progress Tracker
 │  └─ Department Lane ──┘   └─ Department Lane ┘   (each ○/● = a Stage Step)    │     (Department Lanes + Stage Steps)
 ├──────────────────────────────────────────────────────────┬─────────────────┤
-│  [ Deal Overview ]  [ Documents (3) ]          ← Detail Tabs                  │
-│                                                          │                   │
-│  CUSTOMER & BASIC INFO         (Customer & Basic Info)   │   Activity panel  │
+│  CUSTOMER & BASIC INFO   (persistent band — both tabs)   │                   │
+│  [ Overview ]  [ Documents (3) ]               ← Detail Tabs                  │
+│                                                          │   Activity panel  │
 │  ✦ Yumnai Briefing             (Yumnai Briefing)         │   (Chatter /      │
 │  Finance Request               (Finance Request panel)   │    Timeline)      │
 │  Required Documents  ☐☐☐       (Required Documents)      │                   │
@@ -56,8 +56,8 @@ how it looks.
 | 3 | **Stage Progress Tracker** | Row 2 — the full horizontal stage row (code comment: "Pipeline Stage Bar") | [Pipeline.jsx:615-675](src/pages/admin/Pipeline.jsx#L615-L675) |
 | 3a | **Department Lanes** *(Swimlanes)* | The `SALES / OPS / CREDIT / LEGAL` bands. Data: `STAGE_GROUPS` | [Pipeline.jsx:15-22](src/pages/admin/Pipeline.jsx#L15-L22), render :618/:625 |
 | 3b | **Stage Step** *(Stage node)* | One circle + label (Doc Collection, Checking Docs…). Data: `PIPELINE_STAGES` | [mockData.js:653](src/data/mockData.js#L653), render :628-666 |
-| 4 | **Detail Tabs** | `Deal Overview` \| `Documents (n)` | [Pipeline.jsx:685-700](src/pages/admin/Pipeline.jsx#L685-L700) |
-| 5 | **Customer & Basic Info** panel | Seller/Buyer, Assigned To, Days in Stage, Contact, Process Type, Buyer Credit | [Pipeline.jsx:817](src/pages/admin/Pipeline.jsx#L817) |
+| 4a | **Customer & Basic Info** band | Persistent header **above the tabs** (shown for both Overview and Documents): Seller/Buyer, Assigned To, Days in Stage, Contact, Process Type, Buyer Credit | [Pipeline.jsx:685](src/pages/admin/Pipeline.jsx#L685) |
+| 4b | **Detail Tabs** | `Overview` \| `Documents (n)` | [Pipeline.jsx:760-775](src/pages/admin/Pipeline.jsx#L760-L775) |
 | 6 | **Yumnai Briefing** panel | AI attention items + suggested actions | [Pipeline.jsx:898](src/pages/admin/Pipeline.jsx#L898) |
 | 7 | **Finance Request** panel | Amount / Tenure / MDR, fee structure, outcomes, repayment schedule | [Pipeline.jsx:1239](src/pages/admin/Pipeline.jsx#L1239) |
 | 8 | **Required Documents** checklist | The doc-collection block (verify/request docs) | [Pipeline.jsx:1043](src/pages/admin/Pipeline.jsx#L1043) |
@@ -96,15 +96,17 @@ calls `handleMoveStage` to move the deal.
 
 ---
 
-## 4. Deal Overview tab — panels
+## 4. Overview tab — panels
 
-Top to bottom in the `Deal Overview` tab:
+**Customer & Basic Info** is now a **persistent band above the tabs** (visible on both the
+Overview and Documents tabs), not part of the Overview tab — 2-column grid: Seller (Merchant),
+Buyer (Customer), Assigned To, Days in Stage, Contact Person/Email/Phone, Process Type badge
+(💼 Invoice Finance / 🚀 Onboarding), and Buyer Credit (limit/used/remaining). Labels are 10px
+uppercase `#a3a3a3`; values 13px `#262626`; links use `--color-primary`.
 
-- **Customer & Basic Info** ([:817](src/pages/admin/Pipeline.jsx#L817)) — 2-column grid:
-  Seller (Merchant), Buyer (Customer), Assigned To, Days in Stage, Contact Person/Email/Phone,
-  Process Type badge (💼 Invoice Finance / 🚀 Onboarding), and Buyer Credit (limit/used/remaining).
-  Labels are 10px uppercase `#a3a3a3`; values 13px `#262626`; links use `--color-primary`.
-- **Yumnai Briefing** ([:898](src/pages/admin/Pipeline.jsx#L898)) — heading `✦ Yumnai Briefing`
+The **Overview tab** itself now starts with Yumnai Briefing, top to bottom:
+
+- **Yumnai Briefing** (heading `✦ Yumnai Briefing`)
   + an animated pulse dot (`@keyframes yumnai-pulse`), a list of attention items, and a
   suggested action (e.g. **Send Request →**) driven by `card.yumnaiSuggestion`.
 - **Finance Request** ([:1239](src/pages/admin/Pipeline.jsx#L1239)) — Amount / Tenure / MDR
