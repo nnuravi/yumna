@@ -11,7 +11,7 @@ import SellersSection from './SellersSection'
 import BuyersSection from './BuyersSection'
 import TaskManager from './TaskManager'
 import Templates from './Templates'
-import YumiPanel from './YumiPanel'
+import YumnaiPanel from './YumnaiPanel'
 import { PIPELINE_CARDS, REPAYMENTS_CARDS, TASKS } from '../../data/mockData'
 
 const ALL_NAV = [
@@ -97,7 +97,10 @@ const ALL_NAV = [
 export default function AdminApp() {
   const [activeSection, setActiveSection] = useState('overview')
   const [sidebarOpen, setSidebarOpen] = useState(true)
-  const [yumiOpen, setYumiOpen] = useState(false)
+  const [yumnaiOpen, setYumnaiOpen] = useState(false)
+  const [yumnaiMinimized, setYumnaiMinimized] = useState(false)
+  const [yumnaiWidth, setYumnaiWidth] = useState(400)
+  const [breadcrumb, setBreadcrumb] = useState(null)
   const { state } = useApp()
   const navigate = useNavigate()
   const user = state.currentUser
@@ -130,10 +133,10 @@ export default function AdminApp() {
   const renderSection = () => {
     switch (activeSection) {
       case 'overview':    return <BizOverview />
-      case 'pipeline':    return <Pipeline onNavigate={setActiveSection} />
-      case 'repayments':  return <RepaymentsPipeline />
-      case 'sellers':     return <SellersSection />
-      case 'buyers':      return <BuyersSection />
+      case 'pipeline':    return <Pipeline onNavigate={setActiveSection} onBreadcrumb={setBreadcrumb} />
+      case 'repayments':  return <RepaymentsPipeline onBreadcrumb={setBreadcrumb} />
+      case 'sellers':     return <SellersSection onBreadcrumb={setBreadcrumb} />
+      case 'buyers':      return <BuyersSection onBreadcrumb={setBreadcrumb} />
       case 'tasks':       return <TaskManager />
       case 'templates':   return <Templates />
       default:            return <BizOverview />
@@ -144,77 +147,41 @@ export default function AdminApp() {
   const isPipelineFullHeight = activeSection === 'pipeline' || activeSection === 'repayments'
 
   return (
-    <div className="flex h-dvh overflow-hidden" style={{ background: 'var(--color-page)' }}>
-      {/* Sidebar */}
-      <aside className="flex flex-col border-r border-black/5 bg-white transition-all duration-300 shrink-0"
-        style={{ width: sidebarOpen ? '220px' : '60px' }}>
-        {/* Logo */}
-        <div className="px-4 py-5 border-b border-black/5 flex items-center gap-3">
-          <img src="/logo.png" alt="Yumna" className="h-8 w-auto shrink-0 object-contain" />
-          {sidebarOpen && (
-            <div>
-              <div className="display font-semibold text-ink text-[15px]">Yumna</div>
-              <div className="text-[10px] text-muted">Internal Portal</div>
-            </div>
-          )}
+    <div className="app-bg flex flex-col h-dvh overflow-hidden">
+      {/* Full-width app bar — transparent over the gradient */}
+      <header className="shrink-0 h-16 flex items-center pe-5 z-40">
+        {/* Logo zone — sits above the sidebar, width tracks the rail */}
+        <div className="shrink-0 flex items-center h-full ps-6 overflow-hidden ease-entrance"
+          style={{ width: sidebarOpen ? '248px' : '92px', transition: 'width 0.32s var(--ease-entrance)' }}>
+          <img src="/logo-mark.svg" alt="Yumna" className="h-8 w-auto shrink-0" />
+          <img src="/logo-word.svg" alt="Yumna" className="h-4 w-auto shrink-0 ms-2 mt-0.5"
+            style={{ opacity: sidebarOpen ? 1 : 0, maxWidth: sidebarOpen ? '120px' : '0px', transition: 'opacity 0.25s var(--ease-entrance), max-width 0.32s var(--ease-entrance)' }} />
         </div>
 
-        {/* Nav */}
-        <nav className="flex-1 py-4 overflow-y-auto">
-          {navItems.map(item => {
-            const active = activeSection === item.id
-            const badge = item.id === 'pipeline' ? pipelineBadge : item.id === 'repayments' ? repaymentsBadge : item.id === 'tasks' ? myTaskCount : 0
-            return (
-              <button key={item.id} onClick={() => setActiveSection(item.id)}
-                className="w-full flex items-center gap-3 px-3 py-2.5 mb-0.5 rounded-xl transition-all text-start mx-1"
-                style={{ width: 'calc(100% - 8px)', background: active ? 'rgba(0,0,0,0.06)' : 'transparent', color: active ? 'var(--color-primary)' : 'var(--color-muted)' }}>
-                <div className="relative shrink-0">
-                  {item.icon}
-                  {badge > 0 && (
-                    <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full border border-white text-[8px] text-white font-bold flex items-center justify-center" style={{ background: '#404040' }}>
-                      {badge}
-                    </span>
-                  )}
-                </div>
-                {sidebarOpen && (
-                  <span className={`text-[13px] truncate ${active ? 'font-semibold' : 'font-medium'}`}>{item.label}</span>
-                )}
+        {/* Right block — section heading + controls */}
+        <div className="flex-1 flex items-center justify-between min-w-0 ps-1">
+          {breadcrumb ? (
+            <div className="flex items-center gap-2 min-w-0 text-[16px]">
+              <button onClick={breadcrumb.onHome}
+                className="font-medium text-muted hover:text-ink transition-colors shrink-0">
+                {sectionLabel}
               </button>
-            )
-          })}
-        </nav>
-
-        {/* User + collapse */}
-        <div className="border-t border-black/5 p-3">
-          <div className="flex items-center gap-2.5">
-            <Avatar initials={user.initials} bg={user.avatar} size="sm" />
-            {sidebarOpen && (
-              <div className="flex-1 min-w-0">
-                <div className="text-[12px] font-semibold text-ink truncate">{user.name}</div>
-                <div className="text-[10px] text-muted truncate">{user.title}</div>
-              </div>
-            )}
-            <button onClick={() => setSidebarOpen(o => !o)}
-              className="w-7 h-7 rounded-lg flex items-center justify-center bg-card border border-black/5 shrink-0">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
-                style={{ transform: sidebarOpen ? 'rotate(0deg)' : 'rotate(180deg)', transition: 'transform 0.3s' }}>
-                <polyline points="15 18 9 12 15 6"/>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-muted)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                <polyline points="9 18 15 12 9 6"/>
               </svg>
-            </button>
-          </div>
-        </div>
-      </aside>
-
-      {/* Main area */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Top bar */}
-        <header className="shrink-0 h-14 px-6 flex items-center justify-between bg-white border-b border-black/5 z-40">
-          <h1 className="font-semibold text-ink text-[15px]">{sectionLabel}</h1>
-          <div className="flex items-center gap-3">
+              <span className="font-semibold text-ink truncate">{breadcrumb.label}</span>
+              {breadcrumb.id && (
+                <span className="text-muted font-medium shrink-0">| {breadcrumb.id}</span>
+              )}
+            </div>
+          ) : (
+            <h1 className="font-semibold text-ink text-[16px] truncate">{sectionLabel}</h1>
+          )}
+          <div className="flex items-center gap-2.5">
             <LanguageToggle />
             {/* Notification bell */}
             <div className="relative">
-              <button className="w-9 h-9 rounded-full bg-card border border-black/5 flex items-center justify-center">
+              <button className="w-9 h-9 rounded-full bg-card border border-black/5 flex items-center justify-center shadow-sm hover:bg-white transition-colors">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/>
                   <path d="M13.73 21a2 2 0 01-3.46 0"/>
@@ -226,35 +193,111 @@ export default function AdminApp() {
                 </span>
               )}
             </div>
-            {/* Yumi toggle */}
-            <button onClick={() => setYumiOpen(o => !o)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-[12px] font-semibold transition-all"
+            {/* Yumnai toggle */}
+            <button onClick={() => { setYumnaiMinimized(false); setYumnaiOpen(o => !o) }}
+              className="flex items-center gap-1.5 px-3.5 h-9 rounded-full border text-[12px] font-semibold shadow-sm transition-all"
               style={{
-                background: yumiOpen ? 'var(--color-primary)' : 'white',
-                color: yumiOpen ? 'white' : 'var(--color-primary)',
+                background: yumnaiOpen ? 'var(--color-primary-soft)' : 'white',
+                color: 'var(--color-primary)',
                 borderColor: 'var(--color-primary)',
               }}>
-              <span>✦</span> Yumi
+              <img src="/yumnai.svg" alt="" className="h-3.5 w-auto" /> Yumnai
             </button>
             {/* Switch user */}
             <button onClick={() => navigate('/')}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-black/5 bg-card text-[12px] font-medium text-muted hover:text-ink transition-colors">
+              className="flex items-center gap-2 px-3.5 h-9 rounded-full border border-black/5 bg-card text-[12px] font-medium text-muted shadow-sm hover:text-ink transition-colors">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 014-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>
               Switch User
             </button>
           </div>
-        </header>
+        </div>
+      </header>
 
-        {/* Content + Yumi */}
+      {/* Body — sidebar (left block) + content (right block) */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Sidebar — floating pill rail */}
+        <aside className="shrink-0 pb-3 ps-3 overflow-hidden"
+          style={{ width: sidebarOpen ? '248px' : '92px', transition: 'width 0.32s var(--ease-entrance)' }}>
+          <div className="flex h-full flex-col rounded-3xl bg-white border border-[var(--color-line)] overflow-hidden"
+            style={{ boxShadow: 'var(--shadow-rail)' }}>
+            {/* Nav */}
+            <nav className="flex-1 overflow-y-auto px-3 pt-4 pb-2 flex flex-col gap-1.5">
+              {navItems.map(item => {
+                const active = activeSection === item.id
+                const badge = item.id === 'pipeline' ? pipelineBadge : item.id === 'repayments' ? repaymentsBadge : item.id === 'tasks' ? myTaskCount : 0
+                return (
+                  <button key={item.id} onClick={() => { setBreadcrumb(null); setActiveSection(item.id) }} title={item.label}
+                    className="group relative flex items-center h-12 w-full rounded-2xl transition-colors"
+                    style={{
+                      background: active ? 'var(--color-primary)' : 'transparent',
+                      color: active ? '#fff' : 'var(--color-ink-soft)',
+                    }}
+                    onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'var(--color-page)' }}
+                    onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent' }}>
+                    {/* Icon holder — full width when collapsed (centres icon), fixed when expanded */}
+                    <span className="relative grid place-items-center h-7 shrink-0"
+                      style={{ width: sidebarOpen ? '40px' : '100%', transition: 'width 0.32s var(--ease-entrance)' }}>
+                      {item.icon}
+                      {badge > 0 && (
+                        <span className="absolute top-0 right-1.5 min-w-[15px] h-[15px] px-1 rounded-full border-2 border-white text-[8px] font-bold flex items-center justify-center"
+                          style={{ background: active ? '#fff' : 'var(--color-primary)', color: active ? 'var(--color-primary)' : '#fff' }}>
+                          {badge}
+                        </span>
+                      )}
+                    </span>
+                    <span className={`text-[13px] truncate ${active ? 'font-semibold' : 'font-medium'}`}
+                      style={{ opacity: sidebarOpen ? 1 : 0, maxWidth: sidebarOpen ? '150px' : '0px', transition: 'opacity 0.22s var(--ease-entrance), max-width 0.32s var(--ease-entrance)' }}>
+                      {item.label}
+                    </span>
+                  </button>
+                )
+              })}
+            </nav>
+
+            {/* User + collapse */}
+            <div className="border-t border-[var(--color-line)] p-3">
+              <div className={`flex items-center ${sidebarOpen ? 'gap-2.5' : 'flex-col gap-2'}`}>
+                <Avatar initials={user.initials} bg={user.avatar} size="sm" />
+                <div className="flex-1 min-w-0 overflow-hidden"
+                  style={{ opacity: sidebarOpen ? 1 : 0, maxWidth: sidebarOpen ? '150px' : '0px', transition: 'opacity 0.22s var(--ease-entrance), max-width 0.32s var(--ease-entrance)' }}>
+                  <div className="text-[12px] font-semibold text-ink truncate">{user.name}</div>
+                  <div className="text-[10px] text-muted truncate">{user.title}</div>
+                </div>
+                <button onClick={() => setSidebarOpen(o => !o)} title={sidebarOpen ? 'Collapse' : 'Expand'}
+                  className="w-8 h-8 rounded-xl flex items-center justify-center bg-[var(--color-page)] border border-[var(--color-line)] shrink-0 hover:bg-white transition-colors">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
+                    style={{ transform: sidebarOpen ? 'rotate(0deg)' : 'rotate(180deg)', transition: 'transform 0.32s var(--ease-entrance)' }}>
+                    <polyline points="15 18 9 12 15 6"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </aside>
+
+        {/* Content + Yumnai */}
         <div className="flex-1 flex overflow-hidden">
-          <main className={`flex-1 overflow-hidden ${isPipelineFullHeight ? '' : 'overflow-y-auto p-6'}`}>
-            {renderSection()}
+          <main className={`flex-1 overflow-hidden ${isPipelineFullHeight ? '' : 'overflow-y-auto p-6 pt-2'}`}>
+            <div key={activeSection} className="tab-content h-full">
+              {renderSection()}
+            </div>
           </main>
-          {yumiOpen && (
-            <YumiPanel activeSection={activeSection} />
+          {(yumnaiOpen || yumnaiMinimized) && (
+            <YumnaiPanel activeSection={activeSection} width={yumnaiWidth} onWidth={setYumnaiWidth}
+              hidden={yumnaiMinimized}
+              onClose={(engaged) => { setYumnaiOpen(false); setYumnaiMinimized(engaged) }} />
           )}
         </div>
       </div>
+
+      {/* Yumnai minimized FAB */}
+      {yumnaiMinimized && (
+        <button onClick={() => { setYumnaiMinimized(false); setYumnaiOpen(true) }} title="Open Yumnai"
+          className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full flex items-center justify-center transition-transform hover:scale-105 active:scale-95"
+          style={{ background: 'linear-gradient(135deg, #9084fd 0%, #6a7bff 50%, #3da4ff 100%)', boxShadow: '0 10px 28px rgba(144,132,253,0.45)' }}>
+          <img src="/yumnai.svg" alt="Yumnai" className="h-6 w-auto" style={{ filter: 'brightness(0) invert(1)' }} />
+        </button>
+      )}
 
       <ToastStack />
     </div>
