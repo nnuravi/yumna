@@ -776,7 +776,7 @@ function SuperAdminOverview({ onDrill, onSwitchReport, onDetail }) {
   ]
 
   return (
-    <div className="space-y-6 max-w-6xl">
+    <div className="space-y-6">
       <div className="grid grid-cols-4 gap-4">
         <KpiCard label="Disbursement Volume" value={`SAR ${fmtNum(s.disbursementVolume)}`} sub="Total disbursed to date"
           drillData={{ title: 'Sales — All Orders', filename: 'sales_report', rows: DASHBOARD_STATS.salesRows, rowType: 'sales' }} onDrill={onDrill} />
@@ -838,7 +838,7 @@ function CreditView({ showSalesSummary, onDetail }) {
   const s = DASHBOARD_STATS.sales
   const statusColor = { Approve: '#525252', Reject: '#525252', Pending: '#525252' }
   return (
-    <div className="space-y-6 max-w-6xl">
+    <div className="space-y-6">
       {!onDetail && localDetail && (
         <DetailModal item={localDetail.item} type={localDetail.type} onClose={() => setLocalDetail(null)} />
       )}
@@ -919,7 +919,7 @@ function RiskView({ onDetail }) {
 
   const r = DASHBOARD_STATS.risk
   return (
-    <div className="space-y-6 max-w-6xl">
+    <div className="space-y-6">
       {!onDetail && localDetail && (
         <DetailModal item={localDetail.item} type={localDetail.type} onClose={() => setLocalDetail(null)} />
       )}
@@ -1015,7 +1015,7 @@ function CollectionsView({ onDetail }) {
   const inst = DASHBOARD_STATS.installments
   const statusColor = { Paid: '#262626', Overdue: '#737373', 'Due Soon': '#525252' }
   return (
-    <div className="space-y-6 max-w-6xl">
+    <div className="space-y-6">
       {!onDetail && localDetail && (
         <DetailModal item={localDetail.item} type={localDetail.type} onClose={() => setLocalDetail(null)} />
       )}
@@ -1150,7 +1150,7 @@ function SuperAdminDashboard() {
 
   return (
     <>
-      <div className="flex gap-1 mb-6 bg-white rounded-xl border border-black/5 p-1 w-fit">
+      <div className="flex gap-1 mb-6 bg-white/50 backdrop-blur-sm rounded-xl border border-white/60 p-1 w-fit">
         {REPORT_TABS.map(tab => (
           <button key={tab.id} onClick={() => setActiveReport(tab.id)}
             className="px-4 py-2 rounded-lg text-[13px] font-medium transition-all"

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useApp } from '../../context/AppContext'
 import { REPAYMENTS_STAGES, REPAYMENTS_CARDS, formatSAR } from '../../data/mockData'
 
@@ -186,14 +186,14 @@ function BoardView({ cards, adminRole, onSelect, search, setSearch }) {
   return (
     <div className="flex flex-col h-full">
       {/* Search bar */}
-      <div className="px-6 py-3 border-b border-black/5 bg-white flex items-center gap-3 shrink-0">
+      <div className="px-6 py-3 border-b border-black/5 flex items-center gap-3 shrink-0">
         <div className="relative flex-1 max-w-xs">
           <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
             <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
           </svg>
           <input value={search} onChange={e => setSearch(e.target.value)}
             placeholder="Search buyer, merchant or ID…"
-            className="w-full pl-8 pr-3 py-1.5 rounded-xl border text-[12px] outline-none"
+            className="w-full pl-8 pr-3 py-1.5 rounded-xl border text-[12px] outline-none bg-white/70 backdrop-blur-sm focus:bg-white"
             style={{ borderColor: '#e5e5e5' }} />
         </div>
         <span className="text-[11px] text-slate-400">{filtered.filter(c => c.stage !== 'rp_closed').length} active</span>
@@ -946,7 +946,7 @@ function DetailView({ card, adminRole, onBack, onUpdate, cards, addToast }) {
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* Top bar */}
-      <div className="shrink-0 px-6 py-3 border-b border-black/5 bg-white flex items-center gap-3">
+      <div className="shrink-0 px-6 py-3 border-b border-black/5 flex items-center gap-3">
         <button onClick={onBack}
           className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-500 hover:text-slate-800 transition-colors">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
@@ -967,7 +967,7 @@ function DetailView({ card, adminRole, onBack, onUpdate, cards, addToast }) {
       </div>
 
       {/* Stage bar */}
-      <div className="shrink-0 px-6 py-3 border-b border-black/5 bg-white overflow-x-auto">
+      <div className="shrink-0 px-6 py-3 border-b border-black/5 overflow-x-auto">
         <StageBar currentStage={card.stage} />
       </div>
 
@@ -975,13 +975,13 @@ function DetailView({ card, adminRole, onBack, onUpdate, cards, addToast }) {
       <div className="flex-1 overflow-hidden flex">
         {/* Left scrollable form */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
-          {/* Yumi suggestion */}
-          {card.yumiSuggestion?.message && (
+          {/* Yumnai suggestion */}
+          {card.yumnaiSuggestion?.message && (
             <div className="rounded-xl border px-4 py-3 flex gap-3" style={{ background: '#fafafa', borderColor: '#e5e5e5' }}>
               <span className="text-[14px] shrink-0">✦</span>
               <div>
-                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Yumi</div>
-                <p className="text-[12px] text-slate-600 leading-relaxed">{card.yumiSuggestion.message}</p>
+                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Yumnai</div>
+                <p className="text-[12px] text-slate-600 leading-relaxed">{card.yumnaiSuggestion.message}</p>
               </div>
             </div>
           )}
@@ -1057,13 +1057,18 @@ function DetailView({ card, adminRole, onBack, onUpdate, cards, addToast }) {
 
 // ── Main Component ────────────────────────────────────────────────────────────
 
-export default function RepaymentsPipeline() {
+export default function RepaymentsPipeline({ onBreadcrumb }) {
   const { state, addToast } = useApp()
   const adminRole = state.currentUser?.adminRole || 'super'
 
   const [cards, setCards] = useState(REPAYMENTS_CARDS)
   const [selected, setSelected] = useState(null)
   const [search, setSearch] = useState('')
+
+  useEffect(() => {
+    onBreadcrumb?.(selected ? { label: selected.buyer, id: selected.id, onHome: () => setSelected(null) } : null)
+    return () => onBreadcrumb?.(null)
+  }, [selected])
 
   const updateCard = (updated) => {
     setCards(prev => prev.map(c => c.id === updated.id ? updated : c))

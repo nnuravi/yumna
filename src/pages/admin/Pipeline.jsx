@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useApp } from '../../context/AppContext'
 import { PIPELINE_STAGES, PIPELINE_CARDS, USERS, MOCK_BUYERS, MOCK_SELLERS, formatSAR } from '../../data/mockData'
 
@@ -111,15 +111,15 @@ function Field({ label, children }) {
 function LaneActions({ stage, onClose }) {
   const [applied, setApplied] = useState(null)
   const actions = [
-    { id: 'chase',  label: 'Auto-chase missing documents',  desc: `Yumi will message all buyers in ${stage.label} with incomplete documents.` },
-    { id: 'flag',   label: 'Flag stale cards (>3 days)',    desc: 'Yumi will mark cards sitting here longer than 3 days as overdue for review.' },
-    { id: 'assign', label: 'Auto-assign unassigned cards',  desc: 'Yumi will distribute unassigned cards to available team members based on capacity.' },
+    { id: 'chase',  label: 'Auto-chase missing documents',  desc: `Yumnai will message all buyers in ${stage.label} with incomplete documents.` },
+    { id: 'flag',   label: 'Flag stale cards (>3 days)',    desc: 'Yumnai will mark cards sitting here longer than 3 days as overdue for review.' },
+    { id: 'assign', label: 'Auto-assign unassigned cards',  desc: 'Yumnai will distribute unassigned cards to available team members based on capacity.' },
   ]
   return (
     <div className="absolute top-10 left-0 z-30 w-72 bg-white rounded-2xl border border-black/5 shadow-xl p-4">
       <div className="flex items-center gap-2 mb-3">
         <span className="text-[13px]">✦</span>
-        <span className="text-[12px] font-bold text-slate-800">Yumi · Lane Actions</span>
+        <span className="text-[12px] font-bold text-slate-800">Yumnai · Lane Actions</span>
         <button onClick={onClose} className="ml-auto text-slate-400 hover:text-slate-600">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
@@ -134,7 +134,7 @@ function LaneActions({ stage, onClose }) {
             }}>
             <div className="text-[12px] font-semibold text-slate-800 mb-0.5">{a.label}</div>
             <div className="text-[11px] text-slate-400 leading-snug">{a.desc}</div>
-            {applied === a.id && <div className="mt-2 text-[11px] font-semibold" style={{ color: '#525252' }}>✓ Yumi is on it</div>}
+            {applied === a.id && <div className="mt-2 text-[11px] font-semibold" style={{ color: '#525252' }}>✓ Yumnai is on it</div>}
           </button>
         ))}
       </div>
@@ -246,7 +246,7 @@ function ChatterPanel({ timeline, chatterMode, setChatterMode, draftText, setDra
                 {entry.autoRead && (
                   <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
                     style={{ background: 'rgba(0,0,0,0.06)', color: 'var(--color-primary)' }}>
-                    🤖 Yumi
+                    🤖 Yumnai
                   </span>
                 )}
                 <span className="ml-auto text-[10px] text-slate-400 shrink-0">{entry.date}</span>
@@ -356,7 +356,7 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
   const remainingCredit = buyerInfo ? buyerInfo.creditLimit - buyerInfo.creditUsed : null
   const isAboveLimit    = remainingCredit !== null && card.amount > remainingCredit
 
-  const yumiItems = [
+  const yumnaiItems = [
     // Process-type context item (always first)
     ...(card.type === 'invoice_finance' && isAboveLimit ? [{
       icon: '🔴',
@@ -385,7 +385,7 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
   }
 
   const openComposerWithDraft = () => {
-    setDraftText(card.yumiSuggestion.draftText)
+    setDraftText(card.yumnaiSuggestion.draftText)
     setChatterMode('message')
   }
 
@@ -400,19 +400,19 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
       autoRead: false,
       date: 'Just now',
     }
-    const yumiFollowUp = chatterMode === 'message' &&
-      (card.yumiSuggestion.action === 'request_document' || card.yumiSuggestion.action === 'escalate')
+    const yumnaiFollowUp = chatterMode === 'message' &&
+      (card.yumnaiSuggestion.action === 'request_document' || card.yumnaiSuggestion.action === 'escalate')
       ? [{
-          id: `yumi-${Date.now()}`,
+          id: `yumnai-${Date.now()}`,
           type: 'correspondence',
-          from: 'Yumi AI',
+          from: 'Yumnai AI',
           message: 'Message sent. I will monitor the reply and auto-attach any documents received from the client.',
           autoRead: true,
           date: 'Just now',
         }]
       : []
-    setTimeline(prev => [...prev, newEntry, ...yumiFollowUp])
-    if (yumiFollowUp.length > 0) setSent(true)
+    setTimeline(prev => [...prev, newEntry, ...yumnaiFollowUp])
+    if (yumnaiFollowUp.length > 0) setSent(true)
     setDraftText('')
     setChatterMode(null)
   }
@@ -460,12 +460,12 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
     onCardUpdate?.({ ...card, stage: cardStage, assignedTo: targetUser.name })
   }
 
-  const handleYumiAction = () => {
-    const text = card.yumiSuggestion.draftText
+  const handleYumnaiAction = () => {
+    const text = card.yumnaiSuggestion.draftText
     if (!text) return
     setTimeline(prev => [...prev,
       { id: `msg-${Date.now()}`, type: 'correspondence', from: 'You', message: text, autoRead: false, date: 'Just now' },
-      { id: `yumi-${Date.now()}`, type: 'correspondence', from: 'Yumi AI', message: 'Message sent. I will monitor the reply and auto-attach any documents received from the client.', autoRead: true, date: 'Just now' },
+      { id: `yumnai-${Date.now()}`, type: 'correspondence', from: 'Yumnai AI', message: 'Message sent. I will monitor the reply and auto-attach any documents received from the client.', autoRead: true, date: 'Just now' },
     ])
     setSent(true)
   }
@@ -564,10 +564,10 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
   }
 
   return (
-    <div className="flex flex-col h-full bg-white overflow-hidden">
+    <div className="flex flex-col h-full overflow-hidden">
 
       {/* ── Top action bar ── */}
-      <div className="px-5 py-3 border-b border-slate-100 bg-white flex items-center gap-3 shrink-0 flex-wrap">
+      <div className="px-5 py-3 border-b border-black/5 flex items-center gap-3 shrink-0 flex-wrap">
         {/* Breadcrumb */}
         <button onClick={onClose}
           className="flex items-center gap-1.5 text-[13px] font-semibold"
@@ -613,7 +613,7 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
       </div>
 
       {/* ── Row 2: Pipeline Stage Bar ── */}
-      <div className="px-5 py-2 border-b border-slate-100 bg-white shrink-0 overflow-x-auto">
+      <div className="px-5 py-2 border-b border-black/5 shrink-0 overflow-x-auto">
         <div className="flex items-center gap-0" style={{ minWidth: 'max-content' }}>
           {STAGE_GROUPS.map((group, gi) => {
             const stageOrder = PIPELINE_STAGES.map(s => s.id)
@@ -678,11 +678,11 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
       <div className="flex-1 flex overflow-hidden">
 
         {/* LEFT — scrollable form */}
-        <style>{`@keyframes yumi-pulse { 0%,100%{opacity:1} 50%{opacity:0.35} }`}</style>
-        <div className="flex-1 flex flex-col overflow-hidden" style={{ background: '#f5f5f5' }}>
+        <style>{`@keyframes yumnai-pulse { 0%,100%{opacity:1} 50%{opacity:0.35} }`}</style>
+        <div className="flex-1 flex flex-col overflow-hidden">
 
           {/* Tab bar */}
-          <div className="flex items-end gap-0 px-6 pt-2 border-b border-slate-200 bg-white shrink-0">
+          <div className="flex items-end gap-0 px-6 pt-2 border-b border-black/5 shrink-0">
             {[
               { id: 'overview',   label: 'Deal Overview' },
               { id: 'documents',  label: `Documents (${card.documents.length})` },
@@ -745,7 +745,7 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
                   const sc = statusColor(st)
                   const canEdit = currentUser?.adminRole === 'verifier' || currentUser?.adminRole === 'super'
                   return (
-                    <div style={{ maxWidth: 480, display: 'flex', flexDirection: 'column', gap: 16 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                       {/* Header */}
                       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
                         <span style={{ fontSize: 32, marginTop: 2 }}>📄</span>
@@ -792,7 +792,7 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
                       {/* Actions */}
                       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                         {st === 'missing' && (
-                          <button onClick={handleYumiAction} style={{ padding: '7px 16px', borderRadius: 10, background: 'var(--color-primary)', border: 'none', fontSize: 12, fontWeight: 700, color: 'white', cursor: 'pointer' }}>
+                          <button onClick={handleYumnaiAction} style={{ padding: '7px 16px', borderRadius: 10, background: 'var(--color-primary)', border: 'none', fontSize: 12, fontWeight: 700, color: 'white', cursor: 'pointer' }}>
                             Request from buyer →
                           </button>
                         )}
@@ -812,7 +812,7 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
           {/* Overview tab */}
           {activeTab === 'overview' && (
           <div className="flex-1 overflow-y-auto">
-          <div className="max-w-2xl mx-auto p-6 space-y-6">
+          <div className="p-6 space-y-6">
 
             {/* CUSTOMER & BASIC INFO — always first */}
             <Section title="Customer & Basic Info">
@@ -881,7 +881,7 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
               </div>
             </Section>
 
-            {/* YUMI BRIEFING */}
+            {/* YUMNAI BRIEFING */}
             <div style={{
               borderRadius: 16,
               background: '#fafafa',
@@ -895,21 +895,21 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
                 display: 'flex', alignItems: 'center', gap: 8,
               }}>
                 <span style={{ fontSize: 12, color: '#525252' }}>✦</span>
-                <span style={{ fontSize: 12, fontWeight: 700, color: '#171717', letterSpacing: '0.02em' }}>Yumi Briefing</span>
+                <span style={{ fontSize: 12, fontWeight: 700, color: '#171717', letterSpacing: '0.02em' }}>Yumnai Briefing</span>
                 <span style={{
                   width: 7, height: 7, borderRadius: '50%', display: 'inline-block',
                   background: '#525252',
-                  animation: 'yumi-pulse 2s infinite',
+                  animation: 'yumnai-pulse 2s infinite',
                 }} />
                 <span style={{ marginLeft: 'auto', fontSize: 10, color: '#a3a3a3', fontWeight: 500 }}>
-                  {yumiItems.length} item{yumiItems.length !== 1 ? 's' : ''} need attention
+                  {yumnaiItems.length} item{yumnaiItems.length !== 1 ? 's' : ''} need attention
                 </span>
               </div>
               <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {yumiItems.length === 0 && (
+                {yumnaiItems.length === 0 && (
                   <div style={{ fontSize: 12, color: '#525252', fontStyle: 'italic' }}>No action items — this ticket looks healthy.</div>
                 )}
-                {yumiItems.map((item, idx) => (
+                {yumnaiItems.map((item, idx) => (
                   <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
                     <span style={{ fontSize: 13, marginTop: 1, flexShrink: 0 }}>{item.icon}</span>
                     <span style={{ fontSize: 12, color: '#404040', lineHeight: 1.5, flex: 1 }}>{item.text}</span>
@@ -927,24 +927,24 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
                 display: 'flex', flexDirection: 'column', gap: 10,
               }}>
                 <p style={{ fontSize: 12, color: '#404040', lineHeight: 1.5, margin: 0 }}>
-                  {card.yumiSuggestion.message}
+                  {card.yumnaiSuggestion.message}
                 </p>
 
-                {(card.yumiSuggestion.action === 'request_document' || card.yumiSuggestion.action === 'escalate') && (
+                {(card.yumnaiSuggestion.action === 'request_document' || card.yumnaiSuggestion.action === 'escalate') && (
                   sent
                     ? <div style={{ padding: '8px 12px', borderRadius: 10, background: '#f5f5f5', border: '1px solid #e5e5e5' }}>
-                        <span style={{ fontSize: 12, fontWeight: 600, color: '#262626' }}>✓ Message sent — Yumi is monitoring the reply</span>
+                        <span style={{ fontSize: 12, fontWeight: 600, color: '#262626' }}>✓ Message sent — Yumnai is monitoring the reply</span>
                       </div>
-                    : <button onClick={handleYumiAction} style={{
+                    : <button onClick={handleYumnaiAction} style={{
                         alignSelf: 'flex-start', padding: '7px 16px', borderRadius: 20, border: 'none',
                         background: 'var(--color-primary)',
                         color: 'white', fontSize: 12, fontWeight: 700, cursor: 'pointer',
                       }}>
-                        {card.yumiSuggestion.action === 'escalate' ? 'Send Formal Notice →' : 'Send Request →'}
+                        {card.yumnaiSuggestion.action === 'escalate' ? 'Send Formal Notice →' : 'Send Request →'}
                       </button>
                 )}
 
-                {card.yumiSuggestion.action === 'suggest_template' && (
+                {card.yumnaiSuggestion.action === 'suggest_template' && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                     <div style={{ padding: '10px 12px', borderRadius: 10, border: '1px solid #e5e5e5', background: 'white' }}>
                       <div style={{ fontSize: 12, fontWeight: 600, color: '#262626', marginBottom: 2 }}>Standard ICT Credit Framework v2.1</div>
@@ -961,7 +961,7 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
                   </div>
                 )}
 
-                {card.yumiSuggestion.action === 'generate_invoice' && (
+                {card.yumnaiSuggestion.action === 'generate_invoice' && (
                   invoiceGenerated
                     ? <div style={{ display: 'flex', gap: 8 }}>
                         <button style={{ flex: 1, padding: '7px 0', borderRadius: 20, border: 'none', background: '#171717', color: 'white', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Share with Buyer →</button>
@@ -972,9 +972,9 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
                       </button>
                 )}
 
-                {(card.yumiSuggestion.action === 'monitor' || card.yumiSuggestion.action === 'score') && (
+                {(card.yumnaiSuggestion.action === 'monitor' || card.yumnaiSuggestion.action === 'score') && (
                   <div style={{ padding: '8px 12px', borderRadius: 10, background: '#f5f5f5', border: '1px solid #e5e5e5' }}>
-                    <span style={{ fontSize: 12, fontWeight: 600, color: '#262626' }}>✓ Yumi is on it</span>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: '#262626' }}>✓ Yumnai is on it</span>
                   </div>
                 )}
               </div>
@@ -1812,7 +1812,7 @@ function NewTicketModal({ currentUser, cards, onClose, onAdd }) {
         time: `${today} · System`,
         autoRead: true,
       }],
-      yumiSuggestion: {
+      yumnaiSuggestion: {
         action: missingDocs.length > 0 ? 'request_document' : 'monitor',
         message: missingDocs.length > 0
           ? `${missingDocs.length} required document(s) missing for ${businessName}. Send a document request to get them in.`
@@ -1991,12 +1991,12 @@ function NewTicketModal({ currentUser, cards, onClose, onAdd }) {
                 })}
               </div>
 
-              {/* Yumi AI analysis */}
+              {/* Yumnai AI analysis */}
               <div className="rounded-xl border px-4 py-3 flex gap-3 mt-2"
                 style={{ background: '#fafafa', borderColor: '#e5e5e5' }}>
                 <span className="text-[14px] shrink-0" style={{ color: 'var(--color-primary)' }}>✦</span>
                 <div className="flex-1">
-                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Yumi</div>
+                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Yumnai</div>
                   {missingDocs.length === 0 ? (
                     <p className="text-[12px] text-slate-600 leading-relaxed">All documents uploaded. Ticket is ready to submit.</p>
                   ) : (
@@ -2050,10 +2050,16 @@ function NewTicketModal({ currentUser, cards, onClose, onAdd }) {
 
 // ── Pipeline board ────────────────────────────────────────────────────────────
 
-export default function Pipeline({ onNavigate }) {
+export default function Pipeline({ onNavigate, onBreadcrumb }) {
   const { state, addToast } = useApp()
   const adminRole = state.currentUser?.adminRole
   const [selectedCard,    setSelectedCard]    = useState(null)
+
+  useEffect(() => {
+    onBreadcrumb?.(selectedCard ? { label: selectedCard.seller, id: selectedCard.id, onHome: () => setSelectedCard(null) } : null)
+    return () => onBreadcrumb?.(null)
+  }, [selectedCard])
+
   const [filterRole,      setFilterRole]      = useState('mine')
   const [laneActionStage, setLaneActionStage] = useState(null)
   const [cards,           setCards]           = useState(PIPELINE_CARDS)
@@ -2143,7 +2149,7 @@ export default function Pipeline({ onNavigate }) {
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* Process tabs */}
-      <div className="px-4 pt-2.5 pb-0 bg-white shrink-0 flex items-end gap-1 border-b border-slate-100">
+      <div className="px-4 pt-2.5 pb-0 shrink-0 flex items-end gap-1 border-b border-black/5">
         {[
           { id: 'all',             label: 'All',             count: cards.length },
           { id: 'invoice_finance', label: '💼 Invoice Finance', count: invoiceFinanceCount },
@@ -2169,9 +2175,9 @@ export default function Pipeline({ onNavigate }) {
       </div>
 
       {/* Search + filter bar — Row 1 */}
-      <div className="px-4 py-2.5 border-b border-slate-100 bg-white flex items-center gap-2.5 shrink-0 flex-wrap">
+      <div className="px-4 py-2.5 border-b border-black/5 flex items-center gap-2.5 shrink-0 flex-wrap">
         {/* Search */}
-        <div className="flex items-center gap-2 flex-1 min-w-[180px] border border-slate-200 rounded-lg px-3 py-1.5 bg-slate-50 focus-within:bg-white focus-within:border-slate-300 transition-colors">
+        <div className="flex items-center gap-2 flex-1 min-w-[180px] border border-black/10 rounded-lg px-3 py-1.5 bg-white/70 backdrop-blur-sm focus-within:bg-white focus-within:border-slate-300 transition-colors">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke='#a3a3a3' strokeWidth="2.5" strokeLinecap="round">
             <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
           </svg>
@@ -2320,7 +2326,7 @@ export default function Pipeline({ onNavigate }) {
                   {stageCards.map(card => {
                     const rc = riskColor(card.riskScore)
                     const missing = card.documents.filter(d => d.status === 'missing').length
-                    const hasYumi = !!card.yumiSuggestion.message
+                    const hasYumnai = !!card.yumnaiSuggestion.message
                     const aboveLimit = isAboveLimitCard(card)
                     const canSeeDetail = adminRole === stage.assignedRole || adminRole === 'super'
                     const verifiedCount = card.documents.filter(d => d.status === 'verified').length
@@ -2388,10 +2394,10 @@ export default function Pipeline({ onNavigate }) {
                           {missing > 0 && (
                             <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-semibold">{missing} doc{missing > 1 ? 's' : ''} missing</span>
                           )}
-                          {hasYumi && (
+                          {hasYumnai && (
                             <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold flex items-center gap-1"
                               style={{ background: 'rgba(0,0,0,0.06)', color: 'var(--color-primary)' }}>
-                              ✦ Yumi
+                              ✦ Yumnai
                             </span>
                           )}
                         </div>

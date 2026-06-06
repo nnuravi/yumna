@@ -696,7 +696,7 @@ export const REPAYMENTS_CARDS = [
     correspondence: [
       { from: 'Omar Al-Mutairi', message: 'Account set up. First payment received on schedule.', time: '2026-02-16 · 09:15 AST', autoRead: true },
     ],
-    yumiSuggestion: { action: 'monitor', message: 'RP-001 is on track. Next instalment due in 4 days — no action needed unless payment is missed.', draftText: '' },
+    yumnaiSuggestion: { action: 'monitor', message: 'RP-001 is on track. Next instalment due in 4 days — no action needed unless payment is missed.', draftText: '' },
   },
   {
     id: 'RP-002',
@@ -721,7 +721,7 @@ export const REPAYMENTS_CARDS = [
       { from: 'System', message: 'Instalment #2 (SAR 80,000) missed. Account moved to Overdue.', time: '2026-05-17 · 08:00 AST', autoRead: true },
       { from: 'Omar Al-Mutairi', message: 'Tried reaching buyer by phone — no response.', time: '2026-05-20 · 11:30 AST', autoRead: true },
     ],
-    yumiSuggestion: { action: 'escalate', message: 'RP-002 is 21 days overdue. Log a collections note and initiate L1 escalation if no response today.', draftText: 'Dear Mohammed,\n\nYour payment of SAR 80,000 is now 21 days overdue. Please contact us immediately to arrange settlement and avoid further escalation.\n\nYumna Finance Team' },
+    yumnaiSuggestion: { action: 'escalate', message: 'RP-002 is 21 days overdue. Log a collections note and initiate L1 escalation if no response today.', draftText: 'Dear Mohammed,\n\nYour payment of SAR 80,000 is now 21 days overdue. Please contact us immediately to arrange settlement and avoid further escalation.\n\nYumna Finance Team' },
   },
   {
     id: 'RP-003',
@@ -754,7 +754,7 @@ export const REPAYMENTS_CARDS = [
       { from: 'System', message: 'Account escalated to L1. Instalments #4 and #5 overdue.', time: '2026-05-29 · 09:00 AST', autoRead: true },
       { from: 'Omar Al-Mutairi', message: 'L1 initiated. First call logged — no answer.', time: '2026-05-29 · 09:30 AST', autoRead: true },
     ],
-    yumiSuggestion: { action: 'follow_up', message: 'RP-003 has had one unanswered call. Log a second attempt before escalating to L2 — legal involvement is premature at this stage.', draftText: '' },
+    yumnaiSuggestion: { action: 'follow_up', message: 'RP-003 has had one unanswered call. Log a second attempt before escalating to L2 — legal involvement is premature at this stage.', draftText: '' },
   },
   {
     id: 'RP-004',
@@ -788,7 +788,7 @@ export const REPAYMENTS_CARDS = [
       { from: 'System', message: 'Escalated to L2 — Legal involvement. 3 L1 call attempts made.', time: '2026-05-25 · 10:00 AST', autoRead: true },
       { from: 'Tariq Al-Ghamdi', message: 'Buyer is disputing 2 invoices. Sent formal demand letter via registered post.', time: '2026-05-25 · 14:30 AST', autoRead: true },
     ],
-    yumiSuggestion: { action: 'escalate', message: 'RP-004 buyer disputes are unresolved after L2 contact. Consider escalating to L3 if no payment or agreement is reached this week.', draftText: 'Dear Al-Noor Trading,\n\nDespite multiple contacts, outstanding payments totalling SAR 51,428 remain unresolved. We formally request payment within 7 days to avoid further legal action.\n\nYumna Legal Team' },
+    yumnaiSuggestion: { action: 'escalate', message: 'RP-004 buyer disputes are unresolved after L2 contact. Consider escalating to L3 if no payment or agreement is reached this week.', draftText: 'Dear Al-Noor Trading,\n\nDespite multiple contacts, outstanding payments totalling SAR 51,428 remain unresolved. We formally request payment within 7 days to avoid further legal action.\n\nYumna Legal Team' },
   },
   {
     id: 'RP-005',
@@ -822,7 +822,7 @@ export const REPAYMENTS_CARDS = [
       { from: 'System', message: 'Escalated to L3 — Lawyer engagement. PN execution in progress.', time: '2026-06-01 · 09:00 AST', autoRead: true },
       { from: 'Tariq Al-Ghamdi', message: 'Lawyer briefed. Promissory note served to buyer on 2026-06-01.', time: '2026-06-01 · 11:00 AST', autoRead: true },
     ],
-    yumiSuggestion: { action: 'close', message: 'RP-005 is at maximum escalation. Complete the execution checklist and close as resolved or written-off once lawyer confirms outcome.', draftText: '' },
+    yumnaiSuggestion: { action: 'close', message: 'RP-005 is at maximum escalation. Complete the execution checklist and close as resolved or written-off once lawyer confirms outcome.', draftText: '' },
   },
   {
     id: 'RP-006',
@@ -848,7 +848,7 @@ export const REPAYMENTS_CARDS = [
       { from: 'System', message: 'All instalments paid. Account closed — Resolved.', time: '2025-11-15 · 10:00 AST', autoRead: true },
       { from: 'Omar Al-Mutairi', message: 'Credit facility fully repaid. Account closed successfully.', time: '2025-11-15 · 10:05 AST', autoRead: true },
     ],
-    yumiSuggestion: { action: 'monitor', message: 'RP-006 is closed and fully repaid. No action required.', draftText: '' },
+    yumnaiSuggestion: { action: 'monitor', message: 'RP-006 is closed and fully repaid. No action required.', draftText: '' },
   },
 ]
 
@@ -882,7 +882,7 @@ export const PIPELINE_CARDS = [
       { from: 'Sara Al-Ghamdi', message: 'KYC verified. CR and Nafath checks passed. Forwarding to credit team.', time: '2026-05-28 10:14', autoRead: false },
       { from: 'Faisal Al-Dosari', message: 'SIMAH score retrieved: 608. Within acceptable range. Moving to risk assessment.', time: '2026-05-29 09:30', autoRead: false },
     ],
-    yumiSuggestion: {
+    yumnaiSuggestion: {
       action: 'request_document',
       message: 'Bank Statements are missing. I can draft a document request to Khalid Group now.',
       draftText: 'Dear Khalid Group,\n\nAs part of your credit assessment for Finance Request FR-0041 (SAR 120,000), we require your bank statements for the past 3 months.\n\nPlease upload or share these at your earliest convenience to avoid delays in processing your application.\n\nThank you,\nYumna Credit Team',
@@ -913,7 +913,7 @@ export const PIPELINE_CARDS = [
     correspondence: [
       { from: 'Noura Al-Shehri', message: 'Risk assessment complete. Score: 28 (Low). All checks passed. Approved for disbursement.', time: '2026-05-30 11:00', autoRead: false },
     ],
-    yumiSuggestion: {
+    yumnaiSuggestion: {
       action: 'generate_invoice',
       message: 'All approvals are in place. I can generate the invoice for this transaction now. Choose who pays the MDR.',
       draftText: '',
@@ -940,11 +940,11 @@ export const PIPELINE_CARDS = [
       { name: 'Signed Framework Agreement', status: 'verified' },
     ],
     correspondence: [
-      { from: 'Yumi AI', message: 'Payment reminder sent on 2026-05-20. No reply received.', time: '2026-05-20 09:00', autoRead: true },
-      { from: 'Yumi AI', message: 'Second reminder sent. Buyer read receipt confirmed at 14:32.', time: '2026-05-25 14:00', autoRead: true },
+      { from: 'Yumnai AI', message: 'Payment reminder sent on 2026-05-20. No reply received.', time: '2026-05-20 09:00', autoRead: true },
+      { from: 'Yumnai AI', message: 'Second reminder sent. Buyer read receipt confirmed at 14:32.', time: '2026-05-25 14:00', autoRead: true },
       { from: 'Mohammed Al-Rashid', message: 'We are experiencing a delay. Will settle by end of week.', time: '2026-05-26 10:15', autoRead: true },
     ],
-    yumiSuggestion: {
+    yumnaiSuggestion: {
       action: 'escalate',
       message: 'This account is 20 days overdue and the promised payment deadline has passed. I recommend escalating to a formal notice.',
       draftText: 'Dear Mohammed Al-Rashid,\n\nThis is a formal notice regarding your outstanding payment of SAR 240,000 for Finance Request FR-0043, which is now 20 days past due.\n\nFailure to settle within 5 business days may result in further action as per your signed Framework Agreement.\n\nPlease contact us immediately to arrange payment.\n\nYumna Collections Team',
@@ -973,7 +973,7 @@ export const PIPELINE_CARDS = [
       { name: 'Bank Statements (3 months)', status: 'missing' },
     ],
     correspondence: [],
-    yumiSuggestion: {
+    yumnaiSuggestion: {
       action: 'request_document',
       message: 'VAT Certificate and Bank Statements are missing. Nafath verification is still pending. I can send a combined document request to Al-Noor Trading.',
       draftText: 'Dear Al-Noor Trading,\n\nTo proceed with your finance application (FR-0044, SAR 148,000), we require the following documents:\n\n1. VAT Certificate\n2. Bank Statements (last 3 months)\n\nYour Nafath verification is also still pending. Please complete this via the Nafath app.\n\nThank you,\nYumna Verification Team',
@@ -1002,10 +1002,10 @@ export const PIPELINE_CARDS = [
       { name: 'MDR Consent', status: 'verified' },
     ],
     correspondence: [
-      { from: 'Yumi AI', message: 'Installment 1 of 5 due on 2026-06-20. Pre-emptive reminder sent to buyer.', time: '2026-05-28 09:00', autoRead: true },
+      { from: 'Yumnai AI', message: 'Installment 1 of 5 due on 2026-06-20. Pre-emptive reminder sent to buyer.', time: '2026-05-28 09:00', autoRead: true },
       { from: 'Ahmed Al-Otaibi', message: 'Confirmed. Will pay on the due date.', time: '2026-05-28 11:42', autoRead: true },
     ],
-    yumiSuggestion: {
+    yumnaiSuggestion: {
       action: 'monitor',
       message: 'Repayment is on track. Installment 1 of 5 is due on 2026-06-20. I have already sent a pre-emptive reminder and received acknowledgement.',
       draftText: '',
@@ -1035,7 +1035,7 @@ export const PIPELINE_CARDS = [
     correspondence: [
       { from: 'Sara Al-Ghamdi', message: 'KYC complete. All documents verified. Forwarding to credit scoring.', time: '2026-05-28 14:00', autoRead: false },
     ],
-    yumiSuggestion: {
+    yumnaiSuggestion: {
       action: 'score',
       message: 'All documents are in order. SIMAH pull is pending. I can initiate the credit scoring sequence now.',
       draftText: '',
@@ -1069,7 +1069,7 @@ export const PIPELINE_CARDS = [
       { name: 'Framework Agreement', status: 'pending' },
     ],
     correspondence: [],
-    yumiSuggestion: {
+    yumnaiSuggestion: {
       action: 'suggest_template',
       message: 'Based on this transaction (ICT sector, SAR 185,000, 90-day tenure), I suggest applying the Standard ICT Credit Framework v2.1. Would you like me to generate the agreement?',
       draftText: '',
@@ -1097,7 +1097,7 @@ export const PIPELINE_CARDS = [
       { name: 'Bank Statements (3 months)', status: 'missing' },
     ],
     correspondence: [],
-    yumiSuggestion: {
+    yumnaiSuggestion: {
       action: 'request_document',
       message: 'This is a new submission. KYC documents are incomplete. I can send an onboarding document checklist to Q Parts Co. immediately.',
       draftText: 'Dear Q Parts Co.,\n\nThank you for submitting your finance request FR-0047 (SAR 98,000) on Yumna.\n\nTo begin processing your application, please complete the following:\n\n1. Complete Nafath identity verification\n2. Upload your bank statements for the last 3 months\n3. Ensure your Commercial Registration is confirmed\n\nOnce received, we will begin your KYC review within 4 business hours.\n\nYumna Verification Team',
@@ -1127,9 +1127,9 @@ export const PIPELINE_CARDS = [
     ],
     correspondence: [
       { from: 'Rania Al-Sabban', message: 'Invoice generated and shared with buyer. MDR paid by seller.', time: '2026-05-26 13:00', autoRead: false },
-      { from: 'Yumi AI', message: 'Disbursement of SAR 215,600 (net of MDR) processed to Amoudi Distribution IBAN.', time: '2026-05-26 14:30', autoRead: true },
+      { from: 'Yumnai AI', message: 'Disbursement of SAR 215,600 (net of MDR) processed to Amoudi Distribution IBAN.', time: '2026-05-26 14:30', autoRead: true },
     ],
-    yumiSuggestion: {
+    yumnaiSuggestion: {
       action: 'monitor',
       message: 'Disbursement complete. SAR 220,000 repayment expected from Rukn AL-Trade on 2026-07-25. I will send installment reminders automatically.',
       draftText: '',
@@ -1137,7 +1137,7 @@ export const PIPELINE_CARDS = [
   },
 ]
 
-export const YUMI_PERSONAS = {
+export const YUMNAI_PERSONAS = {
   super:       { greeting: 'Good morning, Layla. Here\'s your business pulse.', focus: 'full portfolio overview and team performance' },
   verifier:    { greeting: 'Hi Sara! You have new submissions to verify.', focus: 'KYC document completeness and identity verification' },
   credit:      { greeting: 'Good morning, Faisal. 2 applications await credit scoring.', focus: 'SIMAH scores, credit limits, and utilisation ratios' },

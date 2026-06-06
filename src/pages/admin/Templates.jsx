@@ -9,36 +9,36 @@ const STATUS_META = {
 
 export default function Templates() {
   const [templates, setTemplates] = useState(TEMPLATES)
-  const [yumiApproved, setYumiApproved] = useState(false)
-  const [yumiDismissed, setYumiDismissed] = useState(false)
+  const [yumnaiApproved, setYumnaiApproved] = useState(false)
+  const [yumnaiDismissed, setYumnaiDismissed] = useState(false)
   const [uploading, setUploading] = useState(false)
 
-  const yumiSuggested = templates.find(t => t.aiSuggested)
+  const yumnaiSuggested = templates.find(t => t.aiSuggested)
 
   return (
-    <div className="max-w-5xl space-y-6">
-      {/* Yumi suggestion banner */}
-      {yumiSuggested && !yumiApproved && !yumiDismissed && (
+    <div className="space-y-6">
+      {/* Yumnai suggestion banner */}
+      {yumnaiSuggested && !yumnaiApproved && !yumnaiDismissed && (
         <div className="rounded-2xl border overflow-hidden" style={{ borderColor: 'rgba(143,133,255,0.3)' }}>
           <div className="px-4 py-2.5 flex items-center gap-2" style={{ background: 'var(--color-primary)' }}>
             <span className="text-white text-[13px]">✦</span>
-            <span className="text-[12px] font-bold text-white">Yumi · Template Suggestion</span>
+            <span className="text-[12px] font-bold text-white">Yumnai · Template Suggestion</span>
           </div>
           <div className="p-4" style={{ background: 'rgba(143,133,255,0.04)' }}>
             <p className="text-[13px] text-slate-700 mb-3">
               Based on Finance Request <strong>FR-0046</strong> (Lava Trading, ICT sector, SAR 185,000, 90-day tenure), I suggest applying:
             </p>
             <div className="p-3 rounded-xl border border-indigo-100 bg-white mb-4">
-              <div className="font-bold text-slate-800 text-[13px]">{yumiSuggested.name}</div>
-              <div className="text-[11px] text-slate-400 mt-0.5">{yumiSuggested.conditions}</div>
+              <div className="font-bold text-slate-800 text-[13px]">{yumnaiSuggested.name}</div>
+              <div className="text-[11px] text-slate-400 mt-0.5">{yumnaiSuggested.conditions}</div>
             </div>
             <div className="flex gap-2">
-              <button onClick={() => setYumiApproved(true)}
+              <button onClick={() => setYumnaiApproved(true)}
                 className="flex-1 py-2 rounded-xl text-white font-semibold text-[12px]"
                 style={{ background: 'var(--color-primary)' }}>
                 Apply to FR-0046 ✓
               </button>
-              <button onClick={() => setYumiDismissed(true)}
+              <button onClick={() => setYumnaiDismissed(true)}
                 className="px-4 py-2 rounded-xl font-semibold text-[12px] border border-slate-200 text-slate-500">
                 Dismiss
               </button>
@@ -47,9 +47,9 @@ export default function Templates() {
         </div>
       )}
 
-      {yumiApproved && (
+      {yumnaiApproved && (
         <div className="rounded-2xl border p-4" style={{ background: '#f0fdf4', borderColor: '#bbf7d0' }}>
-          <span className="font-semibold text-emerald-700 text-[13px]">✓ "{yumiSuggested?.name}" applied to FR-0046. Agreement generation in progress.</span>
+          <span className="font-semibold text-emerald-700 text-[13px]">✓ "{yumnaiSuggested?.name}" applied to FR-0046. Agreement generation in progress.</span>
         </div>
       )}
 
@@ -73,7 +73,7 @@ export default function Templates() {
               <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
             </svg>
             <div className="text-[13px] font-semibold text-slate-700">Drop files here or click to browse</div>
-            <div className="text-[11px] text-slate-400">PDF, DOCX supported · Yumi will auto-classify the template type</div>
+            <div className="text-[11px] text-slate-400">PDF, DOCX supported · Yumnai will auto-classify the template type</div>
             <button className="mt-2 px-4 py-1.5 rounded-lg text-[12px] font-semibold border border-slate-200 text-slate-600 hover:border-indigo-300 transition-colors">
               Select File
             </button>
@@ -92,7 +92,7 @@ export default function Templates() {
                   <div className="flex items-center gap-2 mb-0.5">
                     <span className="font-semibold text-[13px] text-slate-800">{tpl.name}</span>
                     {tpl.aiSuggested && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold" style={{ background: 'rgba(143,133,255,0.1)', color: 'var(--color-primary)' }}>✦ Yumi</span>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold" style={{ background: 'rgba(143,133,255,0.1)', color: 'var(--color-primary)' }}>✦ Yumnai</span>
                     )}
                   </div>
                   <div className="text-[11px] text-slate-500 mb-1">{tpl.type}</div>

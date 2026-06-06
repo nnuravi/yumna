@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { MOCK_BUYERS, MOCK_INVOICES_BUYER, formatSAR } from '../../data/mockData'
 import Badge from '../../components/Badge'
 import Avatar from '../../components/Avatar'
@@ -37,25 +37,30 @@ const BUYER_LINKED_SELLERS = {
 
 const BUYER_CORRESPONDENCE = {
   'buyer-001': [
-    { from: 'Yumi AI', message: 'Pre-payment reminder sent for INV-0041 (due 2026-07-20).', time: '2026-05-28 09:00', autoRead: true },
+    { from: 'Yumnai AI', message: 'Pre-payment reminder sent for INV-0041 (due 2026-07-20).', time: '2026-05-28 09:00', autoRead: true },
     { from: 'Ahmed Al-Otaibi', message: 'Confirmed. Will pay on the due date.', time: '2026-05-28 11:42', autoRead: true },
   ],
   'buyer-002': [
-    { from: 'Yumi AI', message: 'Automated alert: credit utilisation reached 90%.', time: '2026-05-27 10:00', autoRead: true },
-    { from: 'Yumi AI', message: 'Payment reminder sent for overdue INV-0036 (21 days past due).', time: '2026-05-28 09:00', autoRead: true },
+    { from: 'Yumnai AI', message: 'Automated alert: credit utilisation reached 90%.', time: '2026-05-27 10:00', autoRead: true },
+    { from: 'Yumnai AI', message: 'Payment reminder sent for overdue INV-0036 (21 days past due).', time: '2026-05-28 09:00', autoRead: true },
     { from: 'Mohammed Al-Rashid', message: 'We will settle by end of week, apologies for the delay.', time: '2026-05-29 14:22', autoRead: true },
   ],
   'buyer-003': [],
   'buyer-004': [],
 }
 
-export default function BuyersSection() {
+export default function BuyersSection({ onBreadcrumb }) {
   const [selected, setSelected] = useState(null)
   const [tab, setTab] = useState('Overview')
+
+  useEffect(() => {
+    onBreadcrumb?.(selected ? { label: selected.name, id: selected.cr ? `CR ${selected.cr}` : null, onHome: () => setSelected(null) } : null)
+    return () => onBreadcrumb?.(null)
+  }, [selected])
   const TABS = ['Overview', 'Finance Requests', 'Linked Sellers', 'Credit Health', 'Documents', 'Correspondence']
 
   return (
-    <div className="flex gap-5 max-w-6xl">
+    <div className="flex gap-5">
       {/* List */}
       <div className={selected ? 'w-[340px] shrink-0' : 'flex-1'}>
         <div className="bg-white rounded-2xl border border-black/5 overflow-hidden">
@@ -218,7 +223,7 @@ export default function BuyersSection() {
                   <div className="p-4 rounded-xl border" style={{ background: '#fafafa', borderColor: '#e5e5e5' }}>
                     <div className="flex items-center gap-2 mb-2">
                       <span className="text-[13px]">✦</span>
-                      <span className="text-[12px] font-bold" style={{ color: 'var(--color-primary)' }}>Yumi Credit Narrative</span>
+                      <span className="text-[12px] font-bold" style={{ color: 'var(--color-primary)' }}>Yumnai Credit Narrative</span>
                     </div>
                     <p className="text-[12px] text-slate-600 leading-relaxed">
                       {selected.risk === 'High'
@@ -271,7 +276,7 @@ export default function BuyersSection() {
                     }}>
                       <div className="flex items-center gap-2 mb-1">
                         <span className="text-[12px] font-semibold text-slate-700">{msg.from}</span>
-                        {msg.autoRead && <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium" style={{ background: 'rgba(0,0,0,0.06)', color: 'var(--color-primary)' }}>🤖 Yumi</span>}
+                        {msg.autoRead && <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium" style={{ background: 'rgba(0,0,0,0.06)', color: 'var(--color-primary)' }}>🤖 Yumnai</span>}
                         <span className="ml-auto text-[10px] text-slate-400">{msg.time}</span>
                       </div>
                       <p className="text-[12px] text-slate-600 leading-relaxed">{msg.message}</p>

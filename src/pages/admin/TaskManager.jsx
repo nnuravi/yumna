@@ -26,7 +26,7 @@ export default function TaskManager() {
   const [viewMine, setViewMine] = useState(true)
   const [reassigning, setReassigning] = useState(null)
   const [tasks, setTasks] = useState(TASKS)
-  const [yumiApplied, setYumiApplied] = useState(false)
+  const [yumnaiApplied, setYumnaiApplied] = useState(false)
 
   const visibleTasks = viewMine && adminRole !== 'super'
     ? tasks.filter(t => t.assignedTo === userName || t.status === 'unassigned' && t.team === adminRole)
@@ -40,39 +40,39 @@ export default function TaskManager() {
     setReassigning(null)
   }
 
-  const handleYumiAssign = () => {
+  const handleYumnaiAssign = () => {
     setTasks(prev => prev.map(t => {
       if (t.status !== 'unassigned') return t
       const capacityMap = { verifier: 'Sara Al-Ghamdi', credit: 'Faisal Al-Dosari', risk: 'Noura Al-Shehri', collections: 'Omar Al-Mutairi', account_mgr: 'Rania Al-Sabban', legal: 'Tariq Al-Ghamdi' }
       return { ...t, assignedTo: capacityMap[t.team] || t.assignedTo, status: 'open' }
     }))
-    setYumiApplied(true)
+    setYumnaiApplied(true)
   }
 
   return (
-    <div className="max-w-6xl space-y-6">
-      {/* Yumi banner */}
-      {(unassigned > 0 || overdueSLA > 0) && !yumiApplied && (
+    <div className="space-y-6">
+      {/* Yumnai banner */}
+      {(unassigned > 0 || overdueSLA > 0) && !yumnaiApplied && (
         <div className="rounded-2xl border p-4 flex items-center gap-4" style={{ background: '#fafafa', borderColor: '#e5e5e5' }}>
           <span className="text-[20px]">✦</span>
           <div className="flex-1">
-            <div className="font-semibold text-[13px] text-slate-800 mb-0.5">Yumi · Task Alert</div>
+            <div className="font-semibold text-[13px] text-slate-800 mb-0.5">Yumnai · Task Alert</div>
             <div className="text-[12px] text-slate-500">
               {unassigned > 0 && `${unassigned} task${unassigned > 1 ? 's are' : ' is'} unassigned. `}
               {overdueSLA > 0 && `${overdueSLA} critical task${overdueSLA > 1 ? 's are' : ' is'} approaching SLA. `}
               I can auto-assign unassigned tasks based on team capacity.
             </div>
           </div>
-          <button onClick={handleYumiAssign}
+          <button onClick={handleYumnaiAssign}
             className="px-4 py-2 rounded-xl text-white font-semibold text-[12px] shrink-0"
             style={{ background: 'var(--color-primary)' }}>
             Auto-assign →
           </button>
         </div>
       )}
-      {yumiApplied && (
+      {yumnaiApplied && (
         <div className="rounded-2xl border p-4" style={{ background: '#f5f5f5', borderColor: '#e5e5e5' }}>
-          <span className="font-semibold text-[13px]" style={{ color: '#262626' }}>✓ Yumi auto-assigned all unassigned tasks based on current team capacity.</span>
+          <span className="font-semibold text-[13px]" style={{ color: '#262626' }}>✓ Yumnai auto-assigned all unassigned tasks based on current team capacity.</span>
         </div>
       )}
 

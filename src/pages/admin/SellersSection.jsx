@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { MOCK_SELLERS, MOCK_BUYERS, MOCK_REQUESTS, formatSAR } from '../../data/mockData'
 import Badge from '../../components/Badge'
 import Avatar from '../../components/Avatar'
@@ -25,20 +25,25 @@ function HealthScore({ seller }) {
     <div className="flex items-center gap-2">
       <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-[11px] font-bold" style={{ background: color }}>{score}</div>
       <div>
-        <div className="text-[11px] font-semibold" style={{ color }}>✦ Yumi Health Score</div>
+        <div className="text-[11px] font-semibold" style={{ color }}>✦ Yumnai Health Score</div>
         <div className="text-[10px] text-slate-400">{score >= 80 ? 'Excellent' : score >= 60 ? 'Good' : 'Monitor'}</div>
       </div>
     </div>
   )
 }
 
-export default function SellersSection() {
+export default function SellersSection({ onBreadcrumb }) {
   const [selected, setSelected] = useState(null)
   const [tab, setTab] = useState('Overview')
+
+  useEffect(() => {
+    onBreadcrumb?.(selected ? { label: selected.business, id: selected.cr ? `CR ${selected.cr}` : null, onHome: () => setSelected(null) } : null)
+    return () => onBreadcrumb?.(null)
+  }, [selected])
   const TABS = ['Overview', 'Transactions', 'Linked Buyers', 'Credit Health', 'Documents']
 
   return (
-    <div className="flex gap-5 max-w-6xl">
+    <div className="flex gap-5">
       {/* List */}
       <div className={selected ? 'w-[320px] shrink-0' : 'flex-1'}>
         <div className="bg-white rounded-2xl border border-black/5 overflow-hidden">
@@ -183,7 +188,7 @@ export default function SellersSection() {
                   <div className="p-4 rounded-xl border" style={{ background: '#fafafa', borderColor: '#e5e5e5' }}>
                     <div className="flex items-center gap-2 mb-2">
                       <span className="text-[13px]">✦</span>
-                      <span className="text-[12px] font-bold" style={{ color: 'var(--color-primary)' }}>Yumi Credit Narrative</span>
+                      <span className="text-[12px] font-bold" style={{ color: 'var(--color-primary)' }}>Yumnai Credit Narrative</span>
                     </div>
                     <p className="text-[12px] text-slate-600 leading-relaxed">
                       {selected.id === 'seller-001'

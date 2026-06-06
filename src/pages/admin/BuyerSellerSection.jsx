@@ -9,7 +9,7 @@ export default function BuyerSellerSection() {
   const [buyerDetailTab, setBuyerDetailTab] = useState('Profile Details')
 
   return (
-    <div className="max-w-6xl">
+    <div>
       {/* Tab toggle */}
       <div className="flex gap-2 mb-5">
         {['Buyers', 'Sellers'].map(t => (
