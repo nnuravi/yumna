@@ -220,12 +220,6 @@ export default function AdminApp() {
               }}>
               <img src="/yumnai.svg" alt="" className="h-3.5 w-auto" /> Yumnai
             </button>
-            {/* Switch user */}
-            <button onClick={() => navigate('/')}
-              className="flex items-center gap-2 px-3.5 h-9 rounded-full border border-black/5 bg-card text-[12px] font-medium text-muted shadow-sm hover:text-ink transition-colors">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 014-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>
-              Switch User
-            </button>
           </div>
         </div>
       </header>

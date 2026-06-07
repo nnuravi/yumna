@@ -1,10 +1,11 @@
 import { createContext, useContext, useReducer } from 'react'
+import { USERS } from '../data/mockData'
 
 const AppCtx = createContext(null)
 
 const initialState = {
   language: 'en',
-  currentUser: null,
+  currentUser: USERS.admin_super,
   liveStatus: null,
   liveData: null,
   requests: [],
