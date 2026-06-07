@@ -160,7 +160,7 @@ const FR_ACCEPT_LABEL = {
   fr_dispersal: 'Confirm Disbursement →',
 }
 
-function FRCardDetailPage({ card, onClose, onCardUpdate, onPrev, onNext, currentIdx, totalCards }) {
+function FRCardDetailPage({ card, onClose, onCardUpdate, onPrev, onNext, currentIdx, totalCards, laneCards, laneIdx, onPrevInLane, onNextInLane }) {
   const { state } = useApp()
   const [localCard, setLocalCard] = useState(card)
   const [activeTab, setActiveTab]   = useState('overview')
@@ -183,8 +183,12 @@ function FRCardDetailPage({ card, onClose, onCardUpdate, onPrev, onNext, current
     setNewRequestCreated(false)
   }, [card])
 
-  const stageIdx  = FINANCE_REQUESTS_STAGES.findIndex(s => s.id === localCard.stage)
-  const buyerInfo = localCard.buyerId ? MOCK_BUYERS.find(b => b.id === localCard.buyerId) || null : null
+  const stageIdx   = FINANCE_REQUESTS_STAGES.findIndex(s => s.id === localCard.stage)
+  const stageInfo  = FINANCE_REQUESTS_STAGES.find(s => s.id === localCard.stage)
+  const laneLabel  = stageInfo?.label || localCard.stage
+  const laneTotal  = laneCards?.length ?? 1
+  const stageColor = stageInfo?.color || '#262626'
+  const buyerInfo  = localCard.buyerId ? MOCK_BUYERS.find(b => b.id === localCard.buyerId) || null : null
 
   const mdrFee     = Number(editAmt) * (Number(editMdr) / 100)
   const netToSeller = Number(editAmt) - (editPayer === 'seller_full' ? mdrFee : editPayer === 'split_50_50' ? mdrFee / 2 : 0)
@@ -761,27 +765,42 @@ function FRCardDetailPage({ card, onClose, onCardUpdate, onPrev, onNext, current
           )}
           {activeTab === 'documents' && <div className="p-6"><DocumentsTab documents={localCard.documents} /></div>}
         </div>
-        {localCard.stage !== 'fr_closed' ? (
-          <div className="shrink-0 border-t border-black/5 bg-white px-6 py-3.5 flex items-center gap-3">
-            <button onClick={handleContinue}
-              style={{ padding: '9px 20px', borderRadius: 20, border: '1.5px solid #e5e5e5', background: 'white', fontSize: 12, fontWeight: 600, color: '#525252', cursor: 'pointer' }}>
-              Continue
+        {/* ── Ticket action bar ── */}
+        <div className="shrink-0" style={{ background: 'rgba(248,250,252,0.97)', backdropFilter: 'blur(8px)', borderTop: '1px solid #e2e8f0', padding: '10px 24px', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          {/* Lane navigation */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <button onClick={onPrevInLane} disabled={!laneIdx || laneIdx <= 0}
+              className="w-7 h-7 rounded-lg border border-slate-200 bg-white flex items-center justify-center text-slate-500 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
             </button>
-            <button onClick={handleSuggest}
-              style={{ padding: '9px 20px', borderRadius: 20, border: '1.5px solid rgba(144,132,253,0.3)', background: 'rgba(144,132,253,0.06)', fontSize: 12, fontWeight: 600, color: 'var(--color-primary)', cursor: 'pointer' }}>
-              Suggest
+            <span style={{ fontSize: 11, color: '#525252', whiteSpace: 'nowrap' }}>
+              {laneTotal === 1
+                ? <span>Only ticket in <strong style={{ color: '#262626' }}>{laneLabel}</strong></span>
+                : <><strong style={{ color: '#262626' }}>{(laneIdx ?? 0) + 1}</strong> / {laneTotal} in <strong style={{ color: '#262626' }}>{laneLabel}</strong></>}
+            </span>
+            <button onClick={onNextInLane} disabled={laneIdx >= laneTotal - 1}
+              className="w-7 h-7 rounded-lg border border-slate-200 bg-white flex items-center justify-center text-slate-500 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>
             </button>
-            <button onClick={handleAccept}
-              style={{ marginLeft: 'auto', padding: '9px 24px', borderRadius: 20, border: 'none', background: 'linear-gradient(135deg, #9084fd 0%, #6a7bff 50%, #3da4ff 100%)', color: 'white', fontSize: 12, fontWeight: 700, cursor: 'pointer', boxShadow: '0 2px 12px rgba(144,132,253,0.35)' }}>
+          </div>
+          <span style={{ width: 1, height: 18, background: '#e5e5e5', flexShrink: 0 }} />
+          {/* Secondary actions */}
+          <button onClick={handleContinue} style={{ padding: '6px 14px', borderRadius: 20, background: 'white', border: '1.5px solid #e5e5e5', fontSize: 12, fontWeight: 600, color: '#525252', cursor: 'pointer' }}>Continue</button>
+          <button onClick={handleSuggest} style={{ padding: '6px 14px', borderRadius: 20, background: 'white', border: '1.5px solid #e5e5e5', fontSize: 12, fontWeight: 600, color: '#525252', cursor: 'pointer' }}>✦ Suggest</button>
+          {/* Primary CTA */}
+          {localCard.stage !== 'fr_closed' && (
+            <button onClick={handleAccept} style={{ padding: '7px 18px', borderRadius: 20, border: 'none', background: stageColor, fontSize: 13, fontWeight: 700, color: 'white', cursor: 'pointer', boxShadow: `0 2px 8px ${stageColor}44` }}>
               {FR_ACCEPT_LABEL[localCard.stage] || 'Accept →'}
             </button>
-          </div>
-        ) : (
-          <div className="shrink-0 border-t border-black/5 bg-white px-6 py-3.5 flex items-center gap-8">
-            <span style={{ fontSize: 16 }}>✅</span>
-            <span style={{ fontSize: 13, fontWeight: 700, color: '#15803d' }}>This request has been closed and credit disbursed.</span>
-          </div>
-        )}
+          )}
+          {localCard.stage === 'fr_closed' && (
+            <span style={{ fontSize: 12, fontWeight: 700, color: '#15803d' }}>✅ Closed — credit disbursed</span>
+          )}
+          {/* Assigned to */}
+          <span style={{ fontSize: 11, color: '#a3a3a3', marginLeft: 'auto' }}>
+            Assigned: <strong style={{ color: '#404040' }}>{localCard.assignedTo || '—'}</strong>
+          </span>
+        </div>
       </div>
       <ChatterPanel correspondence={localCard.correspondence} onSend={handleSend} />
     </div>
@@ -1074,18 +1093,6 @@ function IFCardDetailPage({ card, onClose, onCardUpdate, onPrev, onNext, current
                 </div>
               )}
 
-              {/* Stage movement */}
-              <div className="bg-white rounded-2xl border border-black/5 p-5">
-                <div style={{ fontSize: 11, fontWeight: 700, color: '#a3a3a3', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12 }}>Move Stage</div>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  {INVOICE_FINANCE_STAGES.map((s, i) => (
-                    <button key={s.id} onClick={() => handleStageMove(s.id)} disabled={s.id === localCard.stage}
-                      style={{ padding: '6px 14px', borderRadius: 20, fontSize: 12, fontWeight: 600, border: 'none', cursor: s.id === localCard.stage ? 'default' : 'pointer', background: s.id === localCard.stage ? 'var(--color-primary)' : '#f1f5f9', color: s.id === localCard.stage ? 'white' : '#475569', opacity: s.id === localCard.stage ? 1 : 0.85 }}>
-                      {i + 1}. {s.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
             </div>
           )}
           {activeTab === 'documents' && <div className="p-6"><DocumentsTab documents={localCard.documents} /></div>}
@@ -1241,7 +1248,9 @@ export default function FinanceRequestsPipeline({ onBreadcrumb }) {
 
   // Direct handlers
   const handleFrUpdate = (updated) => { setFrCards(prev => prev.map(c => c.id === updated.id ? updated : c)); setSelectedFrCard(updated) }
-  const frIdx = selectedFrCard ? frCards.findIndex(c => c.id === selectedFrCard.id) : -1
+  const frIdx      = selectedFrCard ? frCards.findIndex(c => c.id === selectedFrCard.id) : -1
+  const frLaneCards = selectedFrCard ? frCards.filter(c => c.stage === selectedFrCard.stage) : []
+  const frLaneIdx   = selectedFrCard ? frLaneCards.findIndex(c => c.id === selectedFrCard.id) : 0
 
   // IF handlers
   const handleIfUpdate = (updated) => { setIfCards(prev => prev.map(c => c.id === updated.id ? updated : c)); setSelectedIfCard(updated) }
@@ -1253,6 +1262,9 @@ export default function FinanceRequestsPipeline({ onBreadcrumb }) {
       onClose={() => setSelectedFrCard(null)}
       onPrev={() => frIdx > 0 && setSelectedFrCard(frCards[frIdx - 1])}
       onNext={() => frIdx < frCards.length - 1 && setSelectedFrCard(frCards[frIdx + 1])}
+      laneCards={frLaneCards} laneIdx={frLaneIdx}
+      onPrevInLane={() => frLaneIdx > 0 && setSelectedFrCard(frLaneCards[frLaneIdx - 1])}
+      onNextInLane={() => frLaneIdx < frLaneCards.length - 1 && setSelectedFrCard(frLaneCards[frLaneIdx + 1])}
       onCardUpdate={handleFrUpdate} />
   )
   if (selectedIfCard) return (
