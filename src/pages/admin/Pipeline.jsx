@@ -644,15 +644,39 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
         <span className="font-semibold text-slate-800 text-[13px]">{card.id}</span>
 
         {/* Smart profile buttons */}
-        <div className="flex gap-2 ml-2">
+        <div className="flex gap-2 ml-2 flex-wrap">
           <button onClick={() => onNavigate('sellers')}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-[12px] font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-800 hover:border-slate-200 transition-colors">
             🏪 {card.seller}
           </button>
-          <button onClick={() => onNavigate('buyers')}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-[12px] font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-800 hover:border-slate-200 transition-colors">
-            👤 {card.buyer}
-          </button>
+          {card.buyer && (
+            <button onClick={() => onNavigate('buyers')}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-[12px] font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-800 hover:border-slate-200 transition-colors">
+              👤 {card.buyer}
+            </button>
+          )}
+          {card.amount > 0 && (
+            <span className="flex items-center px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-[12px] font-bold text-slate-700">
+              {formatSAR(card.amount)}
+            </span>
+          )}
+          {card.riskScore !== null && card.riskScore !== undefined && (
+            <span className="flex items-center px-3 py-1.5 rounded-lg border text-[11px] font-bold"
+              style={{ background: riskColor(card.riskScore).bg, borderColor: riskColor(card.riskScore).bg, color: riskColor(card.riskScore).text }}>
+              Risk {card.riskScore}
+            </span>
+          )}
+          {card.referredBy && (
+            <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-[12px] font-semibold text-slate-600">
+              ↩ {card.referredBy}
+            </span>
+          )}
+          {isAboveLimit && (
+            <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-[11px] font-bold"
+              style={{ background: '#fff7ed', borderColor: '#fed7aa', color: '#c2410c' }}>
+              ⚠️ Above Limit
+            </span>
+          )}
         </div>
 
         <div className="flex-1" />
@@ -747,84 +771,6 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
 
           {/* Scroll container — customer info scrolls away; tabs stick */}
           <div className="flex-1 overflow-y-auto">
-
-          {/* CUSTOMER & BASIC INFO — persistent across both tabs, collapsible */}
-          <div className="px-6 pt-4 pb-4">
-            <div className="bg-white rounded-2xl border border-black/5 p-5 relative" style={{ boxShadow: 'var(--shadow-card)' }}>
-              <button onClick={() => setCustOpen(o => !o)} title={custOpen ? 'Collapse' : 'Expand'}
-                className="absolute top-3 end-3 w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-black/5 transition-colors">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"
-                  style={{ transform: custOpen ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.2s' }}>
-                  <polyline points="6 9 12 15 18 9"/>
-                </svg>
-              </button>
-              <div className="grid grid-cols-2 gap-x-6 gap-y-4 pe-8">
-                <Field label="Seller (Merchant)">
-                  <button onClick={() => onNavigate('sellers')}
-                    className="text-[13px] font-semibold text-left hover:underline"
-                    style={{ color: 'var(--color-primary)' }}>
-                    {card.seller} <span className="text-[11px] opacity-60">↗</span>
-                  </button>
-                </Field>
-                {card.buyer && (
-                  <Field label="Buyer (Customer)">
-                    <button onClick={() => onNavigate('buyers')}
-                      className="text-[13px] font-semibold text-left hover:underline"
-                      style={{ color: 'var(--color-primary)' }}>
-                      {card.buyer} <span className="text-[11px] opacity-60">↗</span>
-                    </button>
-                  </Field>
-                )}
-                {custOpen && (<>
-                <Field label="Assigned To">
-                  <span className="text-[13px] text-slate-700">{assignedTo}</span>
-                </Field>
-                <Field label="Days in Stage">
-                  <span className="text-[13px] text-slate-700">{card.daysInStage} days</span>
-                </Field>
-                {card.contactPerson && (
-                  <Field label="Contact Person">
-                    <span className="text-[13px] text-slate-700">{card.contactPerson}</span>
-                  </Field>
-                )}
-                {card.contactEmail && (
-                  <Field label="Email">
-                    <a href={`mailto:${card.contactEmail}`} className="text-[13px] font-medium hover:underline" style={{ color: 'var(--color-primary)' }}>{card.contactEmail}</a>
-                  </Field>
-                )}
-                {card.contactPhone && (
-                  <Field label="Phone">
-                    <span className="text-[13px] text-slate-700">{card.contactPhone}</span>
-                  </Field>
-                )}
-                <Field label="Process Type">
-                  <span className="inline-flex items-center gap-1 text-[12px] font-semibold px-2 py-0.5 rounded-full"
-                    style={card.type === 'invoice_finance'
-                      ? { background: '#f5f5f5', color: '#525252' }
-                      : { background: 'rgba(0,0,0,0.03)', color: '#525252' }}>
-                    {card.type === 'invoice_finance' ? '💼 Invoice Finance' : '🚀 Onboarding'}
-                  </span>
-                </Field>
-                {buyerInfo && (
-                  <Field label="Buyer Credit">
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                      <div style={{ display: 'flex', gap: 8, fontSize: 12, color: '#525252' }}>
-                        <span>Limit: <strong style={{ color: '#262626' }}>{formatSAR(buyerInfo.creditLimit)}</strong></span>
-                        <span>Used: <strong style={{ color: buyerInfo.creditUsed / buyerInfo.creditLimit > 0.8 ? '#737373' : '#334155' }}>
-                          {formatSAR(buyerInfo.creditUsed)} ({Math.round(buyerInfo.creditUsed / buyerInfo.creditLimit * 100)}%)
-                        </strong></span>
-                      </div>
-                      <div style={{ fontSize: 12 }}>
-                        Remaining: <strong style={{ color: isAboveLimit ? '#737373' : '#262626' }}>{formatSAR(remainingCredit)}</strong>
-                        {isAboveLimit && <span style={{ marginLeft: 6, fontSize: 10, fontWeight: 600, color: '#737373' }}>⚠️ Request exceeds limit</span>}
-                      </div>
-                    </div>
-                  </Field>
-                )}
-                </>)}
-              </div>
-            </div>
-          </div>
 
           {/* Tab bar — sticky under the stage tracker */}
           <div className="sticky top-0 z-20 flex items-end gap-0 px-6 pt-2 border-b border-black/5" style={{ background: 'var(--color-page)' }}>
@@ -980,100 +926,251 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
           <div className="p-6 space-y-6">
 
             {/* YUMNAI BRIEFING */}
+            {/* Gradient-border wrapper */}
             <div style={{
-              borderRadius: 16,
-              background: '#fafafa',
-              border: '1.5px solid #e5e5e5',
-              overflow: 'hidden',
+              background: 'linear-gradient(135deg, #9084fd 0%, #6a7bff 50%, #3da4ff 100%)',
+              padding: '1.5px',
+              borderRadius: 18,
             }}>
-              <div style={{
-                padding: '10px 16px',
-                background: '#f5f5f5',
-                borderBottom: '1px solid #e5e5e5',
-                display: 'flex', alignItems: 'center', gap: 8,
-              }}>
-                <span style={{ fontSize: 12, color: '#525252' }}>✦</span>
-                <span style={{ fontSize: 12, fontWeight: 700, color: '#171717', letterSpacing: '0.02em' }}>Yumnai Briefing</span>
-                <span style={{
-                  width: 7, height: 7, borderRadius: '50%', display: 'inline-block',
-                  background: '#525252',
-                  animation: 'yumnai-pulse 2s infinite',
-                }} />
-                <span style={{ marginLeft: 'auto', fontSize: 10, color: '#a3a3a3', fontWeight: 500 }}>
-                  {yumnaiItems.length} item{yumnaiItems.length !== 1 ? 's' : ''} need attention
-                </span>
-              </div>
-              <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {yumnaiItems.length === 0 && (
-                  <div style={{ fontSize: 12, color: '#525252', fontStyle: 'italic' }}>No action items — this ticket looks healthy.</div>
-                )}
-                {yumnaiItems.map((item, idx) => (
-                  <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-                    <span style={{ fontSize: 13, marginTop: 1, flexShrink: 0 }}>{item.icon}</span>
-                    <span style={{ fontSize: 12, color: '#404040', lineHeight: 1.5, flex: 1 }}>{item.text}</span>
-                    <span style={{
-                      width: 7, height: 7, borderRadius: '50%', flexShrink: 0, marginTop: 5,
-                      background: '#737373',
-                    }} />
-                  </div>
-                ))}
-              </div>
-              <div style={{
-                padding: '12px 16px 14px',
-                borderTop: '1px solid #e5e5e5',
-                background: 'rgba(0,0,0,0.03)',
-                display: 'flex', flexDirection: 'column', gap: 10,
-              }}>
-                <p style={{ fontSize: 12, color: '#404040', lineHeight: 1.5, margin: 0 }}>
-                  {card.yumnaiSuggestion.message}
-                </p>
+              <div style={{ borderRadius: 17, overflow: 'hidden', background: 'white' }}>
 
-                {(card.yumnaiSuggestion.action === 'request_document' || card.yumnaiSuggestion.action === 'escalate') && (
-                  sent
-                    ? <div style={{ padding: '8px 12px', borderRadius: 10, background: '#f5f5f5', border: '1px solid #e5e5e5' }}>
-                        <span style={{ fontSize: 12, fontWeight: 600, color: '#262626' }}>✓ Message sent — Yumnai is monitoring the reply</span>
-                      </div>
-                    : <button onClick={handleYumnaiAction} style={{
-                        alignSelf: 'flex-start', padding: '7px 16px', borderRadius: 20, border: 'none',
-                        background: 'var(--color-primary)',
-                        color: 'white', fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                {/* Branded header */}
+                <div style={{
+                  padding: '11px 16px',
+                  background: 'linear-gradient(135deg, #9084fd 0%, #6a7bff 50%, #3da4ff 100%)',
+                  display: 'flex', alignItems: 'center', gap: 8,
+                }}>
+                  <img src="/yumnai.svg" alt="Yumnai" style={{ height: 16, width: 'auto', filter: 'brightness(0) invert(1)', flexShrink: 0 }} />
+                  <span style={{ fontSize: 13, fontWeight: 700, color: 'white', letterSpacing: '0.01em' }}>Yumnai</span>
+                  <span style={{
+                    width: 6, height: 6, borderRadius: '50%', display: 'inline-block',
+                    background: 'rgba(255,255,255,0.7)',
+                    animation: 'yumnai-pulse 2s infinite',
+                    flexShrink: 0,
+                  }} />
+                  <span style={{ marginLeft: 'auto', fontSize: 11, color: 'rgba(255,255,255,0.65)', fontWeight: 500 }}>
+                    Deal Briefing
+                  </span>
+                </div>
+
+                {/* Alert chips */}
+                {yumnaiItems.length > 0 && (
+                  <div style={{
+                    padding: '10px 14px',
+                    background: 'rgba(144,132,253,0.04)',
+                    borderBottom: '1px solid rgba(144,132,253,0.12)',
+                    display: 'flex', gap: 6, flexWrap: 'wrap',
+                  }}>
+                    {yumnaiItems.map((item, idx) => (
+                      <span key={idx} style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 5,
+                        padding: '4px 10px', borderRadius: 20,
+                        background: 'rgba(144,132,253,0.10)',
+                        color: 'rgba(90,78,210,0.85)',
+                        fontSize: 11, fontWeight: 600,
                       }}>
-                        {card.yumnaiSuggestion.action === 'escalate' ? 'Send Formal Notice →' : 'Send Request →'}
-                      </button>
+                        <span style={{ fontSize: 12 }}>{item.icon}</span>
+                        {item.text}
+                      </span>
+                    ))}
+                  </div>
                 )}
-
-                {card.yumnaiSuggestion.action === 'suggest_template' && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    <div style={{ padding: '10px 12px', borderRadius: 10, border: '1px solid #e5e5e5', background: 'white' }}>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: '#262626', marginBottom: 2 }}>Standard ICT Credit Framework v2.1</div>
-                      <div style={{ fontSize: 11, color: '#a3a3a3' }}>ICT · Full Credit · SAR 50K–500K · ≤ 90 days</div>
-                    </div>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <button style={{ padding: '7px 16px', borderRadius: 20, border: 'none', background: 'var(--color-primary)', color: 'white', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
-                        Apply Template ✓
-                      </button>
-                      <button style={{ padding: '7px 14px', borderRadius: 20, border: '1.5px solid #e5e5e5', background: 'none', color: '#525252', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-                        Dismiss
-                      </button>
-                    </div>
+                {yumnaiItems.length === 0 && (
+                  <div style={{
+                    padding: '8px 14px',
+                    background: 'rgba(144,132,253,0.04)',
+                    borderBottom: '1px solid rgba(144,132,253,0.12)',
+                    display: 'flex', alignItems: 'center', gap: 6,
+                  }}>
+                    <span style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 5,
+                      padding: '3px 10px', borderRadius: 20,
+                      background: 'rgba(144,132,253,0.08)',
+                      color: 'rgba(90,78,210,0.7)',
+                      fontSize: 11, fontWeight: 600,
+                    }}>
+                      ✓ No issues detected — ticket looks healthy
+                    </span>
                   </div>
                 )}
 
-                {card.yumnaiSuggestion.action === 'generate_invoice' && (
-                  invoiceGenerated
-                    ? <div style={{ display: 'flex', gap: 8 }}>
-                        <button style={{ flex: 1, padding: '7px 0', borderRadius: 20, border: 'none', background: '#171717', color: 'white', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Share with Buyer →</button>
-                        <button style={{ padding: '7px 14px', borderRadius: 20, border: '1.5px solid #e5e5e5', background: 'none', color: '#525252', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Hold</button>
+                {/* Yumnai message bubble + actions */}
+                <div style={{ padding: '14px 16px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  {/* Chat bubble row */}
+                  <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                    {/* Avatar */}
+                    <div style={{
+                      width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
+                      background: 'linear-gradient(135deg, #9084fd 0%, #3da4ff 100%)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      padding: 5,
+                    }}>
+                      <img src="/yumnai.svg" alt="" style={{ width: '100%', height: '100%', filter: 'brightness(0) invert(1)' }} />
+                    </div>
+                    {/* Bubble */}
+                    <div style={{
+                      flex: 1,
+                      background: 'linear-gradient(135deg, #efedff 0%, #e9edff 50%, #e6f4ff 100%)',
+                      border: '1px solid rgba(144,132,253,0.30)',
+                      borderRadius: '4px 16px 16px 16px',
+                      padding: '10px 14px',
+                    }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-primary)', marginBottom: 4 }}>Yumnai</div>
+                      <p style={{ fontSize: 13, color: '#262626', lineHeight: 1.55, margin: 0 }}>
+                        {card.yumnaiSuggestion.message}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Action area */}
+                  {(card.yumnaiSuggestion.action === 'request_document' || card.yumnaiSuggestion.action === 'escalate') && (
+                    sent
+                      ? <div style={{ padding: '8px 14px', borderRadius: 12, background: 'rgba(144,132,253,0.06)', border: '1px solid rgba(144,132,253,0.15)' }}>
+                          <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-primary)' }}>✓ Message sent — Yumnai is monitoring the reply</span>
+                        </div>
+                      : <button onClick={handleYumnaiAction} style={{
+                          alignSelf: 'flex-start', padding: '8px 20px', borderRadius: 20, border: 'none',
+                          background: 'linear-gradient(135deg, #9084fd 0%, #6a7bff 50%, #3da4ff 100%)',
+                          color: 'white', fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                          boxShadow: '0 2px 12px rgba(144,132,253,0.35)',
+                        }}>
+                          {card.yumnaiSuggestion.action === 'escalate' ? 'Send Formal Notice →' : 'Send Request →'}
+                        </button>
+                  )}
+
+                  {card.yumnaiSuggestion.action === 'suggest_template' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      <div style={{ padding: '10px 12px', borderRadius: 12, border: '1px solid rgba(144,132,253,0.20)', background: 'rgba(144,132,253,0.04)' }}>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: '#262626', marginBottom: 2 }}>Standard ICT Credit Framework v2.1</div>
+                        <div style={{ fontSize: 11, color: '#a3a3a3' }}>ICT · Full Credit · SAR 50K–500K · ≤ 90 days</div>
                       </div>
-                    : <button onClick={() => setInvoiceGenerated(true)} style={{ alignSelf: 'flex-start', padding: '7px 16px', borderRadius: 20, border: 'none', background: 'var(--color-primary)', color: 'white', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
-                        Generate Invoice Preview →
-                      </button>
-                )}
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <button style={{ padding: '8px 18px', borderRadius: 20, border: 'none', background: 'linear-gradient(135deg, #9084fd 0%, #6a7bff 50%, #3da4ff 100%)', color: 'white', fontSize: 12, fontWeight: 700, cursor: 'pointer', boxShadow: '0 2px 12px rgba(144,132,253,0.35)' }}>
+                          Apply Template ✓
+                        </button>
+                        <button style={{ padding: '8px 14px', borderRadius: 20, border: '1.5px solid #e5e5e5', background: 'none', color: '#525252', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                          Dismiss
+                        </button>
+                      </div>
+                    </div>
+                  )}
 
-                {(card.yumnaiSuggestion.action === 'monitor' || card.yumnaiSuggestion.action === 'score') && (
-                  <div style={{ padding: '8px 12px', borderRadius: 10, background: '#f5f5f5', border: '1px solid #e5e5e5' }}>
-                    <span style={{ fontSize: 12, fontWeight: 600, color: '#262626' }}>✓ Yumnai is on it</span>
-                  </div>
+                  {card.yumnaiSuggestion.action === 'generate_invoice' && (
+                    invoiceGenerated
+                      ? <div style={{ display: 'flex', gap: 8 }}>
+                          <button style={{ flex: 1, padding: '8px 0', borderRadius: 20, border: 'none', background: '#171717', color: 'white', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Share with Buyer →</button>
+                          <button style={{ padding: '8px 14px', borderRadius: 20, border: '1.5px solid #e5e5e5', background: 'none', color: '#525252', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Hold</button>
+                        </div>
+                      : <button onClick={() => setInvoiceGenerated(true)} style={{ alignSelf: 'flex-start', padding: '8px 20px', borderRadius: 20, border: 'none', background: 'linear-gradient(135deg, #9084fd 0%, #6a7bff 50%, #3da4ff 100%)', color: 'white', fontSize: 12, fontWeight: 700, cursor: 'pointer', boxShadow: '0 2px 12px rgba(144,132,253,0.35)' }}>
+                          Generate Invoice Preview →
+                        </button>
+                  )}
+
+                  {(card.yumnaiSuggestion.action === 'monitor' || card.yumnaiSuggestion.action === 'score') && (
+                    <div style={{ padding: '8px 14px', borderRadius: 12, background: 'rgba(144,132,253,0.06)', border: '1px solid rgba(144,132,253,0.15)' }}>
+                      <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-primary)' }}>✓ Yumnai is on it</span>
+                    </div>
+                  )}
+                </div>
+
+              </div>
+            </div>
+
+            {/* CUSTOMER + DEAL INFO GRID */}
+            <div className="bg-white rounded-2xl border border-black/5 p-5">
+              <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+                <Field label="Seller (Merchant)">
+                  <button onClick={() => onNavigate('sellers')} className="text-[13px] font-semibold text-left hover:underline" style={{ color: 'var(--color-primary)' }}>
+                    {card.seller} <span className="text-[11px] opacity-60">↗</span>
+                  </button>
+                </Field>
+                {card.buyer && (
+                  <Field label="Buyer (Customer)">
+                    <button onClick={() => onNavigate('buyers')} className="text-[13px] font-semibold text-left hover:underline" style={{ color: 'var(--color-primary)' }}>
+                      {card.buyer} <span className="text-[11px] opacity-60">↗</span>
+                    </button>
+                  </Field>
+                )}
+                {card.referredBy && (
+                  <Field label="Referred By">
+                    <span className="text-[13px] font-semibold" style={{ color: 'var(--color-primary)' }}>{card.referredBy}</span>
+                  </Field>
+                )}
+                {card.amount > 0 && (
+                  <Field label="Amount">
+                    <span className="text-[15px] font-bold text-slate-900">{formatSAR(card.amount)}</span>
+                  </Field>
+                )}
+                {card.mdrRate !== undefined && (
+                  <Field label="MDR Rate">
+                    <span className="text-[13px] text-slate-700">{card.mdrRate}%</span>
+                  </Field>
+                )}
+                {card.tenure !== undefined && (
+                  <Field label="Tenure">
+                    <span className="text-[13px] text-slate-700">{card.tenure} days</span>
+                  </Field>
+                )}
+                {card.emiFrequency && (
+                  <Field label="EMI Frequency">
+                    <span className="text-[13px] text-slate-700 capitalize">{card.emiFrequency}</span>
+                  </Field>
+                )}
+                {card.sector && (
+                  <Field label="Sector">
+                    <span className="text-[13px] text-slate-700">{card.sector}</span>
+                  </Field>
+                )}
+                <Field label="Assigned To">
+                  <span className="text-[13px] text-slate-700">{assignedTo || '—'}</span>
+                </Field>
+                <Field label="Days in Stage">
+                  <span className="text-[13px] text-slate-700">{card.daysInStage} days</span>
+                </Field>
+                {card.contactPerson && (
+                  <Field label="Contact Person">
+                    <span className="text-[13px] text-slate-700">{card.contactPerson}</span>
+                  </Field>
+                )}
+                {card.contactEmail && (
+                  <Field label="Email">
+                    <a href={`mailto:${card.contactEmail}`} className="text-[13px] font-medium hover:underline" style={{ color: 'var(--color-primary)' }}>{card.contactEmail}</a>
+                  </Field>
+                )}
+                {card.contactPhone && (
+                  <Field label="Phone">
+                    <span className="text-[13px] text-slate-700">{card.contactPhone}</span>
+                  </Field>
+                )}
+                <Field label="Process Type">
+                  <span className="inline-flex items-center gap-1 text-[12px] font-semibold px-2 py-0.5 rounded-full"
+                    style={card.type === 'invoice_finance' ? { background: '#f5f5f5', color: '#525252' } : { background: 'rgba(0,0,0,0.03)', color: '#525252' }}>
+                    {card.type === 'invoice_finance' ? '💼 Invoice Finance' : '🚀 Onboarding'}
+                  </span>
+                </Field>
+                {card.riskScore !== null && card.riskScore !== undefined && (
+                  <Field label="Risk Score">
+                    <span className="text-[12px] font-bold px-2 py-0.5 rounded-full"
+                      style={{ background: riskColor(card.riskScore).bg, color: riskColor(card.riskScore).text }}>
+                      {card.riskScore}
+                    </span>
+                  </Field>
+                )}
+                {buyerInfo && (
+                  <Field label="Buyer Credit">
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      <div style={{ display: 'flex', gap: 8, fontSize: 12, color: '#525252', flexWrap: 'wrap' }}>
+                        <span>Limit: <strong style={{ color: '#262626' }}>{formatSAR(buyerInfo.creditLimit)}</strong></span>
+                        <span>Used: <strong style={{ color: buyerInfo.creditUsed / buyerInfo.creditLimit > 0.8 ? '#737373' : '#334155' }}>
+                          {formatSAR(buyerInfo.creditUsed)} ({Math.round(buyerInfo.creditUsed / buyerInfo.creditLimit * 100)}%)
+                        </strong></span>
+                      </div>
+                      <div style={{ fontSize: 12 }}>
+                        Remaining: <strong style={{ color: isAboveLimit ? '#737373' : '#262626' }}>{formatSAR(remainingCredit)}</strong>
+                        {isAboveLimit && <span style={{ marginLeft: 6, fontSize: 10, fontWeight: 600, color: '#737373' }}>⚠️ Request exceeds limit</span>}
+                      </div>
+                    </div>
+                  </Field>
                 )}
               </div>
             </div>
@@ -2207,7 +2304,6 @@ export default function Pipeline({ onNavigate, onBreadcrumb }) {
   const [filterRiskMax,   setFilterRiskMax]   = useState('')
   const [filterDaysMin,   setFilterDaysMin]   = useState('')
   const [showFilters,     setShowFilters]     = useState(false)
-  const [processFilter,   setProcessFilter]   = useState('all')
   const [showNewTicket,   setShowNewTicket]   = useState(false)
 
   const handleCardUpdate = (updated) => {
@@ -2257,6 +2353,7 @@ export default function Pipeline({ onNavigate, onBreadcrumb }) {
   const clearFilters = () => { setFilterAssignee(''); setFilterRiskMin(''); setFilterRiskMax(''); setFilterDaysMin('') }
 
   const filteredCards = cards.filter(card => {
+    if (card.type !== 'onboarding') return false
     const q = searchQuery.trim().toLowerCase()
     if (q && !(card.buyer || '').toLowerCase().includes(q) &&
              !(card.seller || '').toLowerCase().includes(q) &&
@@ -2268,50 +2365,19 @@ export default function Pipeline({ onNavigate, onBreadcrumb }) {
     return true
   })
 
-  const processFiltered = filteredCards.filter(c => processFilter === 'all' || c.type === processFilter)
-
   const getBuyerCredit = (buyerId) => buyerId ? MOCK_BUYERS.find(b => b.id === buyerId) || null : null
   const isAboveLimitCard = (card) => {
     const b = getBuyerCredit(card.buyerId)
     return b && card.type === 'invoice_finance' && card.amount > (b.creditLimit - b.creditUsed)
   }
 
-  const cardsForStage = (stageId) => processFiltered.filter(c => c.stage === stageId)
-  const myCardCount   = processFiltered.filter(c => myStages.includes(c.stage)).length
-
-  const onboardingCount     = cards.filter(c => c.type === 'onboarding').length
-  const invoiceFinanceCount = cards.filter(c => c.type === 'invoice_finance').length
+  const cardsForStage = (stageId) => filteredCards.filter(c => c.stage === stageId)
+  const myCardCount   = filteredCards.filter(c => myStages.includes(c.stage)).length
 
   const inputStyle = { border: '1px solid #e2e8f0', borderRadius: 8, padding: '4px 10px', fontSize: 12, background: 'white', outline: 'none', color: '#262626' }
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      {/* Process tabs */}
-      <div className="px-4 pt-2.5 pb-0 shrink-0 flex items-end gap-1 border-b border-black/5">
-        {[
-          { id: 'all',             label: 'All',             count: cards.length },
-          { id: 'invoice_finance', label: '💼 Invoice Finance', count: invoiceFinanceCount },
-          { id: 'onboarding',      label: '🚀 Onboarding',      count: onboardingCount },
-        ].map(tab => (
-          <button key={tab.id} onClick={() => setProcessFilter(tab.id)} style={{
-            padding: '6px 14px 8px',
-            fontSize: 12, fontWeight: tab.id === processFilter ? 700 : 500,
-            color: tab.id === processFilter ? 'var(--color-primary)' : '#64748b',
-            background: 'none', border: 'none',
-            borderBottom: tab.id === processFilter ? '2.5px solid var(--color-primary)' : '2.5px solid transparent',
-            cursor: 'pointer', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 6,
-          }}>
-            {tab.label}
-            <span style={{
-              fontSize: 10, fontWeight: 600, minWidth: 18, height: 18, borderRadius: 20,
-              padding: '0 5px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-              background: tab.id === processFilter ? 'var(--color-primary)' : '#e5e5e5',
-              color: tab.id === processFilter ? 'white' : '#64748b',
-            }}>{tab.count}</span>
-          </button>
-        ))}
-      </div>
-
       {/* Search + filter bar — Row 1 */}
       <div className="px-4 py-2.5 border-b border-black/5 flex items-center gap-2.5 shrink-0 flex-wrap">
         {/* Search */}
@@ -2378,9 +2444,9 @@ export default function Pipeline({ onNavigate, onBreadcrumb }) {
             </button>
           )}
           <span className="text-[11px] text-slate-400">
-            {searchQuery || activeFilterCount > 0 || processFilter !== 'all'
-              ? <><strong style={{ color: '#262626' }}>{processFiltered.length}</strong> of {cards.length}</>
-              : <>{cards.length} transactions</>
+            {searchQuery || activeFilterCount > 0
+              ? <><strong style={{ color: '#262626' }}>{filteredCards.length}</strong> of {cards.filter(c => c.type === 'onboarding').length}</>
+              : <>{cards.filter(c => c.type === 'onboarding').length} transactions</>
             }
           </span>
         </div>
