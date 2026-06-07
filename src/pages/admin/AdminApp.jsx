@@ -50,7 +50,7 @@ const ALL_NAV = [
   },
   {
     id: 'repayments',
-    label: 'Escalations',
+    label: 'Collections Pipeline',
     roles: ['super', 'collections', 'legal', 'account_mgr'],
     badge: true,
     icon: (

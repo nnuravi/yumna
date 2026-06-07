@@ -20,6 +20,15 @@ const riskColor = (score) => {
   return { bg: '#fee2e2', text: '#b91c1c' }
 }
 
+function SARAmount({ amount }) {
+  const num = new Intl.NumberFormat('en-SA', { minimumFractionDigits: 0 }).format(amount)
+  return (
+    <span>
+      <span style={{ fontSize: '0.72em', color: '#a3a3a3', fontWeight: 500, marginRight: 2, letterSpacing: '0.02em' }}>SAR</span>{num}
+    </span>
+  )
+}
+
 function Field({ label, children }) {
   return (
     <div>
@@ -30,7 +39,7 @@ function Field({ label, children }) {
 }
 
 // ── Shared Yumnai Briefing Block ───────────────────────────────────────────────
-function YumnaiBriefing({ message }) {
+function YumnaiBriefing({ message, nextAction }) {
   if (!message) return null
   return (
     <div style={{ background: 'linear-gradient(135deg, #9084fd 0%, #6a7bff 50%, #3da4ff 100%)', padding: '1.5px', borderRadius: 18 }}>
@@ -41,16 +50,17 @@ function YumnaiBriefing({ message }) {
           <span style={{ width: 6, height: 6, borderRadius: '50%', display: 'inline-block', background: 'rgba(255,255,255,0.7)', flexShrink: 0 }} />
           <span style={{ marginLeft: 'auto', fontSize: 11, color: 'rgba(255,255,255,0.65)', fontWeight: 500 }}>Deal Briefing</span>
         </div>
-        <div style={{ padding: '14px 16px' }}>
-          <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-            <div style={{ width: 28, height: 28, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg, #9084fd 0%, #3da4ff 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 5 }}>
-              <img src="/yumnai.svg" alt="" style={{ width: '100%', height: '100%', filter: 'brightness(0) invert(1)' }} />
-            </div>
-            <div style={{ flex: 1, background: 'linear-gradient(135deg, #efedff 0%, #e9edff 50%, #e6f4ff 100%)', border: '1px solid rgba(144,132,253,0.30)', borderRadius: '4px 16px 16px 16px', padding: '10px 14px' }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-primary)', marginBottom: 4 }}>Yumnai</div>
-              <p style={{ fontSize: 13, color: '#262626', lineHeight: 1.55, margin: 0 }}>{message}</p>
-            </div>
+        <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div>
+            <div style={{ fontSize: 9, fontWeight: 700, color: 'rgba(106,123,255,0.7)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>Current State</div>
+            <p style={{ fontSize: 13, color: '#374151', lineHeight: 1.55, margin: 0 }}>{message}</p>
           </div>
+          {nextAction && (
+            <div style={{ paddingTop: 10, borderTop: '1px solid rgba(144,132,253,0.15)' }}>
+              <div style={{ fontSize: 9, fontWeight: 700, color: 'rgba(106,123,255,0.7)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>Suggested Action</div>
+              <p style={{ fontSize: 13, fontWeight: 600, color: '#4c1d95', lineHeight: 1.5, margin: 0 }}>{nextAction}</p>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -98,6 +108,9 @@ function ChatterPanel({ correspondence, onSend }) {
   }
   return (
     <div className="flex flex-col border-l border-slate-100 bg-white shrink-0" style={{ width: 360 }}>
+      <div style={{ padding: '12px 16px', borderBottom: '1px solid #f1f5f9', flexShrink: 0 }}>
+        <span style={{ fontSize: 11, fontWeight: 700, color: '#a3a3a3', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Activity & Notes</span>
+      </div>
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
         {correspondence.length === 0 && <div className="text-center text-[13px] text-slate-400 py-8">No activity yet.</div>}
         {correspondence.map((entry, i) => {
@@ -146,6 +159,115 @@ function ChatterPanel({ correspondence, onSend }) {
             </div>
           </div>
         )}
+      </div>
+    </div>
+  )
+}
+
+// ── Invoice Viewer Modal ──────────────────────────────────────────────────────
+function InvoiceModal({ card, onClose }) {
+  useEffect(() => {
+    const h = e => e.key === 'Escape' && onClose()
+    document.addEventListener('keydown', h)
+    return () => document.removeEventListener('keydown', h)
+  }, [])
+
+  const isIF = !!card.invoiceNumber
+  const mdrFee = card.amount * (card.mdrRate || 0) / 100
+  const mdrPayerLabel = card.mdrPayer === 'seller_full' ? 'Seller pays' : card.mdrPayer === 'buyer_full' ? 'Buyer pays' : 'Split 50/50'
+  const netToSeller = card.amount - (card.mdrPayer === 'seller_full' ? mdrFee : card.mdrPayer === 'split_50_50' ? mdrFee / 2 : 0)
+  const stageInfo = [...FINANCE_REQUESTS_STAGES, ...INVOICE_FINANCE_STAGES].find(s => s.id === card.stage)
+  const docs = card.documents || []
+  const received = docs.filter(d => d.status === 'received').length
+
+  const termRows = [
+    { label: 'Invoice Amount', value: <span style={{ fontWeight: 800, color: '#0f172a', fontSize: 15 }}><SARAmount amount={card.amount} /></span> },
+    { label: 'MDR Rate', value: `${card.mdrRate}% · ${mdrPayerLabel}` },
+    { label: 'MDR Fee', value: <SARAmount amount={mdrFee} /> },
+    { label: 'Net to Seller', value: <SARAmount amount={netToSeller} /> },
+    { label: 'Tenure', value: `${card.tenure} days · ${card.emiFrequency || 'monthly'}` },
+  ]
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
+      onClick={e => e.target === e.currentTarget && onClose()}>
+      <div style={{ background: 'white', borderRadius: 20, width: '100%', maxWidth: 560, maxHeight: '90vh', overflow: 'auto', padding: 32, boxShadow: '0 25px 60px rgba(0,0,0,0.18)' }}>
+
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20 }}>
+          <div>
+            <div style={{ fontSize: 9, fontWeight: 700, color: '#a3a3a3', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 5 }}>Yumna Finance</div>
+            <div style={{ fontSize: 17, fontWeight: 800, color: '#0f172a', marginBottom: 6 }}>
+              {isIF ? 'Invoice Finance' : 'Finance Request'} · <span style={{ fontFamily: 'monospace' }}>{card.id}</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 9px', borderRadius: 20, background: stageInfo?.color ? `${stageInfo.color}18` : '#f1f5f9', color: stageInfo?.color || '#475569', border: `1px solid ${stageInfo?.color ? `${stageInfo.color}35` : '#e2e8f0'}` }}>
+                {stageInfo?.label || card.stage}
+              </span>
+              {card.daysInStage > 0 && <span style={{ fontSize: 11, color: '#94a3b8' }}>{card.daysInStage}d in stage</span>}
+            </div>
+          </div>
+          <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: 10, border: '1px solid #e2e8f0', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: 13, color: '#64748b', flexShrink: 0 }}>✕</button>
+        </div>
+
+        <div style={{ height: 1, background: '#f1f5f9', marginBottom: 20 }} />
+
+        {/* Parties */}
+        <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
+          <div style={{ flex: 1, padding: '12px 14px', borderRadius: 12, background: '#f8fafc', border: '1px solid #e5e5e5' }}>
+            <div style={{ fontSize: 9, fontWeight: 700, color: '#a3a3a3', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 5 }}>From</div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a', marginBottom: 4 }}>{card.seller}</div>
+            <div style={{ fontSize: 11, color: '#94a3b8' }}>{card.sector}</div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0, padding: '0 2px' }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" strokeWidth="2" strokeLinecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          </div>
+          <div style={{ flex: 1, padding: '12px 14px', borderRadius: 12, background: '#f8fafc', border: '1px solid #e5e5e5' }}>
+            <div style={{ fontSize: 9, fontWeight: 700, color: '#a3a3a3', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 5 }}>To</div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a', marginBottom: 4 }}>{card.buyer || '—'}</div>
+            {card.assignedTo && <div style={{ fontSize: 11, color: '#94a3b8' }}>via {card.assignedTo}</div>}
+          </div>
+        </div>
+
+        {/* Financing Terms */}
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ fontSize: 9, fontWeight: 700, color: '#a3a3a3', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 10 }}>Financing Terms</div>
+          <div style={{ background: '#f8fafc', borderRadius: 12, border: '1px solid #e5e5e5', overflow: 'hidden' }}>
+            {termRows.map((row, i) => (
+              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 14px', borderTop: i > 0 ? '1px solid #f1f5f9' : 'none' }}>
+                <span style={{ fontSize: 12, color: '#64748b' }}>{row.label}</span>
+                <span style={{ fontSize: 12, fontWeight: 600, color: '#262626' }}>{row.value}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Documents */}
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+            <div style={{ fontSize: 9, fontWeight: 700, color: '#a3a3a3', textTransform: 'uppercase', letterSpacing: '0.12em' }}>Documents</div>
+            <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 9px', borderRadius: 20, background: received === docs.length ? '#dcfce7' : '#fff7ed', color: received === docs.length ? '#15803d' : '#c2410c' }}>
+              {received} / {docs.length} received
+            </span>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+            {docs.map((doc, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 10px', borderRadius: 10, background: '#f8fafc', border: '1px solid #e5e5e5', fontSize: 11, overflow: 'hidden' }}>
+                <span style={{ flexShrink: 0 }}>{doc.status === 'received' ? '✅' : doc.discrepancy ? '⚠️' : '⏳'}</span>
+                <span style={{ fontWeight: 500, color: '#262626', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{doc.name}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Footer meta */}
+        <div style={{ padding: '10px 14px', borderRadius: 12, background: '#f8fafc', border: '1px solid #e5e5e5', display: 'flex', flexWrap: 'wrap', gap: 12, fontSize: 11, color: '#64748b' }}>
+          <span>Sector: <strong style={{ color: '#262626' }}>{card.sector}</strong></span>
+          <span>Assigned: <strong style={{ color: '#262626' }}>{card.assignedTo || '—'}</strong></span>
+          {isIF && card.invoiceNumber && <span>Invoice No.: <strong style={{ color: '#262626', fontFamily: 'monospace' }}>{card.invoiceNumber}</strong></span>}
+          {isIF && card.commodityBroker && <span>Broker: <strong style={{ color: '#262626' }}>{card.commodityBroker}</strong></span>}
+          {isIF && card.saleBroker && <span>Sale via: <strong style={{ color: '#262626' }}>{card.saleBroker}</strong></span>}
+        </div>
       </div>
     </div>
   )
@@ -305,7 +427,7 @@ function FRCardDetailPage({ card, onClose, onCardUpdate, onPrev, onNext, current
         <div className="flex gap-2 ml-2 flex-wrap">
           <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-[12px] font-semibold text-slate-600">🏪 {localCard.seller}</span>
           {localCard.buyer && <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-[12px] font-semibold text-slate-600">👤 {localCard.buyer}</span>}
-          <span className="flex items-center px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-[12px] font-bold text-slate-700">{formatSAR(localCard.amount)}</span>
+          <span className="flex items-center px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-[12px] font-bold text-slate-700"><SARAmount amount={localCard.amount} /></span>
           {localCard.riskScore !== null && localCard.riskScore !== undefined && (
             <span className="flex items-center px-3 py-1.5 rounded-lg border text-[11px] font-bold"
               style={{ background: riskColor(localCard.riskScore).bg, borderColor: riskColor(localCard.riskScore).bg, color: riskColor(localCard.riskScore).text }}>
@@ -357,15 +479,22 @@ function FRCardDetailPage({ card, onClose, onCardUpdate, onPrev, onNext, current
       <div className="flex flex-1 overflow-hidden">
         <div className="flex flex-col flex-1 overflow-hidden">
           {/* Tab bar */}
-          <div className="shrink-0 flex items-end gap-0 px-6 pt-2 border-b border-black/5" style={{ background: 'var(--color-page)' }}>
-            {[{ id: 'overview', label: 'Overview' }, { id: 'documents', label: `Documents (${localCard.documents.length})` }].map(tab => (
-              <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{
-                padding: '7px 16px 8px', fontSize: 12, fontWeight: activeTab === tab.id ? 700 : 500,
-                color: activeTab === tab.id ? 'var(--color-primary)' : '#525252', background: 'none', border: 'none',
-                borderBottom: activeTab === tab.id ? '2.5px solid var(--color-primary)' : '2.5px solid transparent',
-                cursor: 'pointer', whiteSpace: 'nowrap',
-              }}>{tab.label}</button>
-            ))}
+          <div className="shrink-0 flex items-center gap-0 px-6 border-b border-black/5" style={{ background: 'var(--color-page)', paddingTop: 0 }}>
+            <div className="flex items-end gap-0 flex-1" style={{ paddingTop: 8 }}>
+              {[{ id: 'overview', label: 'Overview' }, { id: 'documents', label: `Documents (${localCard.documents.length})` }].map(tab => (
+                <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{
+                  padding: '7px 16px 8px', fontSize: 12, fontWeight: activeTab === tab.id ? 700 : 500,
+                  color: activeTab === tab.id ? 'var(--color-primary)' : '#525252', background: 'none', border: 'none',
+                  borderBottom: activeTab === tab.id ? '2.5px solid var(--color-primary)' : '2.5px solid transparent',
+                  cursor: 'pointer', whiteSpace: 'nowrap',
+                }}>{tab.label}</button>
+              ))}
+            </div>
+            <button onClick={() => setShowInvoice(true)}
+              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 11px', borderRadius: 8, border: '1px solid #e2e8f0', background: 'white', fontSize: 11, fontWeight: 600, color: '#475569', cursor: 'pointer', flexShrink: 0, marginLeft: 8 }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+              View Invoice
+            </button>
           </div>
           <div className="flex-1 overflow-y-auto">
 
@@ -377,7 +506,7 @@ function FRCardDetailPage({ card, onClose, onCardUpdate, onPrev, onNext, current
                   <div style={{ fontSize: 11, fontWeight: 700, color: '#a3a3a3', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 14 }}>Finance Request</div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
                     <span style={{ fontSize: 15, fontFamily: 'monospace', fontWeight: 700, color: '#262626' }}>{localCard.id}</span>
-                    <span style={{ fontSize: 16, fontWeight: 800, color: 'var(--color-primary)', marginLeft: 'auto' }}>{formatSAR(localCard.amount)}</span>
+                    <span style={{ fontSize: 16, fontWeight: 800, color: 'var(--color-primary)', marginLeft: 'auto' }}><SARAmount amount={localCard.amount} /></span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 10, background: '#f8fafc', border: '1px solid #e5e5e5', marginBottom: 10 }}>
                     <span style={{ fontSize: 12, fontWeight: 700, color: '#262626' }}>{localCard.seller}</span>
@@ -449,7 +578,7 @@ function FRCardDetailPage({ card, onClose, onCardUpdate, onPrev, onNext, current
                 </div>
               )}
 
-              <YumnaiBriefing message={localCard.yumnaiSuggestion?.message} />
+              <YumnaiBriefing message={localCard.yumnaiSuggestion?.message} nextAction={localCard.yumnaiSuggestion?.nextAction} />
 
               {/* Static info */}
               <div className="bg-white rounded-2xl border border-black/5 p-5">
@@ -466,8 +595,8 @@ function FRCardDetailPage({ card, onClose, onCardUpdate, onPrev, onNext, current
                   {buyerInfo && (
                     <Field label="Buyer Credit">
                       <div style={{ fontSize: 12, color: '#525252', display: 'flex', gap: 8 }}>
-                        <span>Limit: <strong style={{ color: '#262626' }}>{formatSAR(buyerInfo.creditLimit)}</strong></span>
-                        <span>Used: <strong>{formatSAR(buyerInfo.creditUsed)}</strong></span>
+                        <span>Limit: <strong style={{ color: '#262626' }}><SARAmount amount={buyerInfo.creditLimit} /></strong></span>
+                        <span>Used: <strong><SARAmount amount={buyerInfo.creditUsed} /></strong></span>
                       </div>
                     </Field>
                   )}
@@ -485,7 +614,7 @@ function FRCardDetailPage({ card, onClose, onCardUpdate, onPrev, onNext, current
                     <div style={{ fontSize: 11, fontWeight: 600, color: '#525252', marginBottom: 4 }}>Base of Credit (SAR)</div>
                     <input type="number" value={editAmt} onChange={e => { setEditAmt(e.target.value); setTermsDirty(true) }}
                       style={{ width: '100%', border: '1.5px solid #e5e5e5', borderRadius: 8, padding: '6px 10px', fontSize: 13, outline: 'none', color: '#262626' }} />
-                    <div style={{ fontSize: 10, color: '#a3a3a3', marginTop: 3 }}>Original: {formatSAR(card.amount)}</div>
+                    <div style={{ fontSize: 10, color: '#a3a3a3', marginTop: 3 }}>Original: <SARAmount amount={card.amount} /></div>
                   </div>
                   <div>
                     <div style={{ fontSize: 11, fontWeight: 600, color: '#525252', marginBottom: 4 }}>MDR Rate (%)</div>
@@ -510,8 +639,8 @@ function FRCardDetailPage({ card, onClose, onCardUpdate, onPrev, onNext, current
                   </div>
                 </div>
                 <div style={{ padding: '10px 14px', borderRadius: 10, background: '#f8fafc', border: '1px solid #e5e5e5', display: 'flex', gap: 20, fontSize: 12, color: '#475569', marginBottom: termsDirty ? 12 : 0 }}>
-                  <span>MDR Fee: <strong style={{ color: '#262626' }}>{formatSAR(mdrFee)}</strong></span>
-                  <span>Net to Seller: <strong style={{ color: '#262626' }}>{formatSAR(netToSeller)}</strong></span>
+                  <span>MDR Fee: <strong style={{ color: '#262626' }}><SARAmount amount={mdrFee} /></strong></span>
+                  <span>Net to Seller: <strong style={{ color: '#262626' }}><SARAmount amount={netToSeller} /></strong></span>
                 </div>
                 {termsDirty && (
                   <button onClick={handleSaveTerms} style={{ padding: '7px 18px', borderRadius: 20, border: 'none', background: 'linear-gradient(135deg, #9084fd 0%, #6a7bff 50%, #3da4ff 100%)', color: 'white', fontSize: 12, fontWeight: 700, cursor: 'pointer', boxShadow: '0 2px 12px rgba(144,132,253,0.25)' }}>
@@ -533,7 +662,7 @@ function FRCardDetailPage({ card, onClose, onCardUpdate, onPrev, onNext, current
                     <div key={inst.no} style={{ display: 'flex', alignItems: 'center', padding: '8px 12px', borderRadius: 10, background: '#f8fafc', border: '1px solid #e5e5e5', fontSize: 12 }}>
                       <span style={{ width: 22, height: 22, borderRadius: '50%', background: '#e5e5e5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: '#64748b', flexShrink: 0, marginRight: 12 }}>{inst.no}</span>
                       <span style={{ color: '#475569', flex: 1 }}>{inst.dueDate}</span>
-                      <span style={{ fontWeight: 700, color: '#262626' }}>{formatSAR(inst.amount)}</span>
+                      <span style={{ fontWeight: 700, color: '#262626' }}><SARAmount amount={inst.amount} /></span>
                     </div>
                   ))}
                 </div>
@@ -564,8 +693,8 @@ function FRCardDetailPage({ card, onClose, onCardUpdate, onPrev, onNext, current
                           </div>
                           <div style={{ flex: 1, padding: '12px 14px', borderRadius: 12, background: '#f8fafc', border: '1px solid #e5e5e5' }}>
                             <div style={{ fontSize: 10, fontWeight: 600, color: '#a3a3a3', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Available Credit</div>
-                            <div style={{ fontSize: 18, fontWeight: 800, color: '#262626', lineHeight: 1 }}>{formatSAR(available)}</div>
-                            <div style={{ fontSize: 10, color: '#64748b', marginTop: 3 }}>of {formatSAR(buyerInfo.creditLimit)} limit</div>
+                            <div style={{ fontSize: 18, fontWeight: 800, color: '#262626', lineHeight: 1 }}><SARAmount amount={available} /></div>
+                            <div style={{ fontSize: 10, color: '#64748b', marginTop: 3 }}>of <SARAmount amount={buyerInfo.creditLimit} /> limit</div>
                           </div>
                         </div>
                         <div>
@@ -580,7 +709,7 @@ function FRCardDetailPage({ card, onClose, onCardUpdate, onPrev, onNext, current
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 10, background: fits ? '#f0fdf4' : '#fff7ed', border: `1px solid ${fits ? '#bbf7d0' : '#fed7aa'}` }}>
                           <span style={{ fontSize: 15 }}>{fits ? '✅' : '⚠️'}</span>
                           <span style={{ fontSize: 12, fontWeight: 600, color: fits ? '#15803d' : '#c2410c' }}>
-                            Requested {formatSAR(Number(editAmt))} {fits ? 'fits within available credit' : 'exceeds available credit'}
+                            Requested <SARAmount amount={Number(editAmt)} /> {fits ? 'fits within available credit' : 'exceeds available credit'}
                           </span>
                         </div>
                       </div>
@@ -603,7 +732,7 @@ function FRCardDetailPage({ card, onClose, onCardUpdate, onPrev, onNext, current
                     <div style={{ padding: '10px 14px', borderRadius: 10, background: '#f8fafc', border: '1px solid #e5e5e5', display: 'flex', gap: 20, flexWrap: 'wrap', fontSize: 12, color: '#475569' }}>
                       <span style={{ fontSize: 10, fontWeight: 600, color: '#a3a3a3', textTransform: 'uppercase', letterSpacing: '0.06em', width: '100%' }}>Invoice presented for buyer confirmation</span>
                       <span>{localCard.seller} → <strong style={{ color: '#262626' }}>{localCard.buyer}</strong></span>
-                      <span>Amount: <strong style={{ color: '#262626' }}>{formatSAR(Number(editAmt))}</strong></span>
+                      <span>Amount: <strong style={{ color: '#262626' }}><SARAmount amount={Number(editAmt)} /></strong></span>
                       <span>MDR: <strong style={{ color: '#262626' }}>{editMdr}%</strong></span>
                       <span>Tenure: <strong style={{ color: '#262626' }}>{localCard.tenure}d</strong></span>
                     </div>
@@ -745,16 +874,16 @@ function FRCardDetailPage({ card, onClose, onCardUpdate, onPrev, onNext, current
                   <div style={{ border: '1px solid #dcfce7', borderRadius: 12, padding: '14px 16px', background: '#f0fdf4', display: 'flex', flexDirection: 'column', gap: 8 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
                       <span style={{ color: '#64748b' }}>Gross Credit Amount</span>
-                      <span style={{ fontWeight: 700, color: '#262626' }}>{formatSAR(Number(editAmt))}</span>
+                      <span style={{ fontWeight: 700, color: '#262626' }}><SARAmount amount={Number(editAmt)} /></span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
                       <span style={{ color: '#64748b' }}>MDR ({editMdr}% — {editPayer === 'seller_full' ? 'Seller' : editPayer === 'buyer_full' ? 'Buyer' : 'Split'})</span>
-                      <span style={{ fontWeight: 700, color: '#737373' }}>− {formatSAR(mdrFee)}</span>
+                      <span style={{ fontWeight: 700, color: '#737373' }}>− <SARAmount amount={mdrFee} /></span>
                     </div>
                     <div style={{ borderTop: '1px solid #bbf7d0', paddingTop: 8, display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
                       <span style={{ fontWeight: 600, color: '#15803d' }}>Net Credit to Buyer</span>
                       <span style={{ fontWeight: 800, color: '#15803d' }}>
-                        {formatSAR(Number(editAmt) - (editPayer === 'buyer_full' ? 0 : editPayer === 'seller_full' ? mdrFee : mdrFee / 2))}
+                        <SARAmount amount={Number(editAmt) - (editPayer === 'buyer_full' ? 0 : editPayer === 'seller_full' ? mdrFee : mdrFee / 2)} />
                       </span>
                     </div>
                   </div>
@@ -809,7 +938,32 @@ function FRCardDetailPage({ card, onClose, onCardUpdate, onPrev, onNext, current
 }
 
 // ── Invoice Finance card detail ────────────────────────────────────────────────
-function IFCardDetailPage({ card, onClose, onCardUpdate, onPrev, onNext, currentIdx, totalCards }) {
+const IF_NEXT_STAGE = {
+  if_docs: 'if_review',
+  if_review: 'if_risk',
+  if_risk: 'if_offer',
+  if_offer: 'if_accepted',
+  if_accepted: 'if_disbursed',
+  if_disbursed: 'if_closed',
+}
+const IF_ACCEPT_LABEL = {
+  if_docs: 'Send for Credit Review →',
+  if_review: 'Send for Risk Assessment →',
+  if_risk: 'Issue Offer →',
+  if_offer: 'Mark Offer Accepted →',
+  if_accepted: 'Confirm Disbursement →',
+  if_disbursed: 'Close Ticket →',
+}
+const IF_STAGE_HINT = {
+  if_docs:     'Review submitted documents for completeness and authenticity',
+  if_review:   'Assess credit terms — adjust amount, MDR, or tenure if needed',
+  if_risk:     'Complete risk scoring and flag any concerns before issuing an offer',
+  if_offer:    'Issue the Murabaha offer and await borrower acceptance',
+  if_accepted: 'Initiate commodity sale via broker and prepare disbursement',
+  if_disbursed:'Confirm full settlement and close the ticket',
+}
+
+function IFCardDetailPage({ card, onClose, onCardUpdate, onPrev, onNext, currentIdx, totalCards, laneCards, laneIdx, onPrevInLane, onNextInLane }) {
   const { state } = useApp()
   const [localCard, setLocalCard] = useState(card)
   const [activeTab, setActiveTab] = useState('overview')
@@ -819,18 +973,39 @@ function IFCardDetailPage({ card, onClose, onCardUpdate, onPrev, onNext, current
   const [editPayer, setEditPayer] = useState(card.mdrPayer || 'seller_full')
   const [offerIssued, setOfferIssued] = useState(!!card.offerIssuedAt)
   const [accepted, setAccepted]   = useState(!!card.acceptedAt)
+  const [ticketOpen, setTicketOpen] = useState(true)
 
   useEffect(() => { setLocalCard(card) }, [card])
 
-  const buyerInfo = localCard.buyerId ? MOCK_BUYERS.find(b => b.id === localCard.buyerId) || null : null
-  const stageIdx  = INVOICE_FINANCE_STAGES.findIndex(s => s.id === localCard.stage)
+  const buyerInfo  = localCard.buyerId ? MOCK_BUYERS.find(b => b.id === localCard.buyerId) || null : null
+  const stageIdx   = INVOICE_FINANCE_STAGES.findIndex(s => s.id === localCard.stage)
+  const stageLabel = INVOICE_FINANCE_STAGES.find(s => s.id === localCard.stage)?.label || localCard.stage
+  const available  = buyerInfo ? buyerInfo.creditLimit - buyerInfo.creditUsed : null
+  const fitsLimit  = available !== null ? localCard.amount <= available : null
+  const laneTotal  = laneCards?.length ?? 1
 
+  const appendNote = (msg, base = localCard) => {
+    const updated = { ...base, correspondence: [...base.correspondence, {
+      from: state.currentUser?.name || 'You', message: msg,
+      time: new Date().toLocaleString('en-SA', { dateStyle: 'short', timeStyle: 'short' }), autoRead: false,
+    }] }
+    setLocalCard(updated); onCardUpdate?.(updated)
+    return updated
+  }
   const handleStageMove = (newStageId) => {
     const updated = { ...localCard, stage: newStageId, daysInStage: 0 }
     setLocalCard(updated); onCardUpdate?.(updated)
   }
-  const handleSend = (msg) => {
-    const updated = { ...localCard, correspondence: [...localCard.correspondence, { from: state.currentUser?.name || 'You', message: msg, time: new Date().toLocaleString('en-SA', { dateStyle: 'short', timeStyle: 'short' }), autoRead: false }] }
+  const handleSend  = (msg) => appendNote(msg)
+  const handleContinue = () => appendNote('Reviewed — continuing work.')
+  const handleAccept = () => {
+    const next = IF_NEXT_STAGE[localCard.stage]; if (!next) return
+    const nextLabel = INVOICE_FINANCE_STAGES.find(s => s.id === next)?.label || next
+    const noteMsg = `Advanced to: ${nextLabel}.`
+    const updated = { ...localCard, stage: next, daysInStage: 0, correspondence: [...localCard.correspondence, {
+      from: state.currentUser?.name || 'You', message: noteMsg,
+      time: new Date().toLocaleString('en-SA', { dateStyle: 'short', timeStyle: 'short' }), autoRead: true,
+    }] }
     setLocalCard(updated); onCardUpdate?.(updated)
   }
   const handleSaveProposal = () => {
@@ -854,7 +1029,7 @@ function IFCardDetailPage({ card, onClose, onCardUpdate, onPrev, onNext, current
           <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-[12px] font-semibold text-slate-600">🏪 {localCard.seller}</span>
           {localCard.buyer && <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-[12px] font-semibold text-slate-600">👤 {localCard.buyer}</span>}
           {localCard.amount > 0 && (
-            <span className="flex items-center px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-[12px] font-bold text-slate-700">{formatSAR(localCard.amount)}</span>
+            <span className="flex items-center px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-[12px] font-bold text-slate-700"><SARAmount amount={localCard.amount} /></span>
           )}
           {localCard.riskScore !== null && localCard.riskScore !== undefined && (
             <span className="flex items-center px-3 py-1.5 rounded-lg border text-[11px] font-bold"
@@ -909,56 +1084,178 @@ function IFCardDetailPage({ card, onClose, onCardUpdate, onPrev, onNext, current
 
       {/* Main split */}
       <div className="flex flex-1 overflow-hidden">
+        <div className="flex-1 flex flex-col overflow-hidden">
         <div className="flex-1 overflow-y-auto">
+          {/* ── Ticket Details accordion ── */}
+          <div style={{ borderBottom: '1px solid rgba(0,0,0,0.07)', background: 'white' }}>
+            <button
+              onClick={() => setTicketOpen(o => !o)}
+              style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 24px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Ticket Details</span>
+                <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 20, background: '#f1f5f9', color: '#475569' }}>
+                  {stageLabel}
+                </span>
+                {fitsLimit === true && (
+                  <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 20, background: '#dcfce7', color: '#15803d' }}>
+                    ✓ Within Limit
+                  </span>
+                )}
+                {fitsLimit === false && (
+                  <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 20, background: '#fff7ed', color: '#c2410c' }}>
+                    ⚠ Above Limit
+                  </span>
+                )}
+                {!ticketOpen && (
+                  <span style={{ fontSize: 12, color: '#64748b', fontWeight: 500, marginLeft: 4 }}>
+                    {localCard.seller} → {localCard.buyer || '—'} · {localCard.sector}
+                  </span>
+                )}
+              </div>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a3a3a3" strokeWidth="2" strokeLinecap="round"
+                style={{ transform: ticketOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
+                <polyline points="6 9 12 15 18 9"/>
+              </svg>
+            </button>
+            {ticketOpen && (
+              <div style={{ padding: '0 24px 16px' }}>
+                <div style={{ display: 'flex', gap: 10, alignItems: 'stretch', marginBottom: 12 }}>
+                  <div style={{ flex: 1, padding: '10px 12px', borderRadius: 10, background: '#f8fafc', border: '1px solid #e5e5e5' }}>
+                    <div style={{ fontSize: 9, fontWeight: 700, color: '#a3a3a3', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>Raised by (Seller)</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>{localCard.seller}</div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" strokeWidth="2" strokeLinecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                  </div>
+                  <div style={{ flex: 1, padding: '10px 12px', borderRadius: 10, background: '#f8fafc', border: '1px solid #e5e5e5' }}>
+                    <div style={{ fontSize: 9, fontWeight: 700, color: '#a3a3a3', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>Raised for (Buyer)</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>{localCard.buyer || '—'}</div>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, fontSize: 12, color: '#64748b' }}>
+                  <span>Sector: <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 20, background: '#f1f5f9', color: '#475569' }}>{localCard.sector}</span></span>
+                  <span>Assigned: <strong style={{ color: '#262626' }}>{localCard.assignedTo || '—'}</strong></span>
+                  {localCard.submittedAt && <span>Submitted: <strong style={{ color: '#262626' }}>{localCard.submittedAt}</strong></span>}
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Tab bar */}
-          <div className="sticky top-0 z-20 flex items-end gap-0 px-6 pt-2 border-b border-black/5" style={{ background: 'var(--color-page)' }}>
-            {[{ id: 'overview', label: 'Overview' }, { id: 'documents', label: `Documents (${localCard.documents.length})` }].map(tab => (
-              <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{
-                padding: '7px 16px 8px', fontSize: 12, fontWeight: activeTab === tab.id ? 700 : 500,
-                color: activeTab === tab.id ? 'var(--color-primary)' : '#525252', background: 'none', border: 'none',
-                borderBottom: activeTab === tab.id ? '2.5px solid var(--color-primary)' : '2.5px solid transparent',
-                cursor: 'pointer', whiteSpace: 'nowrap',
-              }}>{tab.label}</button>
-            ))}
+          <div className="sticky top-0 z-20 flex items-center gap-0 px-6 border-b border-black/5" style={{ background: 'var(--color-page)', paddingTop: 0 }}>
+            <div className="flex items-end gap-0 flex-1" style={{ paddingTop: 8 }}>
+              {[{ id: 'overview', label: 'Overview' }, { id: 'documents', label: `Documents (${localCard.documents.length})` }].map(tab => (
+                <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{
+                  padding: '7px 16px 8px', fontSize: 12, fontWeight: activeTab === tab.id ? 700 : 500,
+                  color: activeTab === tab.id ? 'var(--color-primary)' : '#525252', background: 'none', border: 'none',
+                  borderBottom: activeTab === tab.id ? '2.5px solid var(--color-primary)' : '2.5px solid transparent',
+                  cursor: 'pointer', whiteSpace: 'nowrap',
+                }}>{tab.label}</button>
+              ))}
+            </div>
+            <button onClick={() => setShowInvoice(true)}
+              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 11px', borderRadius: 8, border: '1px solid #e2e8f0', background: 'white', fontSize: 11, fontWeight: 600, color: '#475569', cursor: 'pointer', flexShrink: 0, marginLeft: 8 }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+              View Invoice
+            </button>
           </div>
 
           {activeTab === 'overview' && (
             <div className="p-6 space-y-6">
               {/* Yumnai briefing */}
-              <YumnaiBriefing message={localCard.yumnaiSuggestion?.message} />
+              <YumnaiBriefing message={localCard.yumnaiSuggestion?.message} nextAction={localCard.yumnaiSuggestion?.nextAction} />
 
-              {/* Customer + deal info */}
+
+              {/* ── Card 2: Finance Details ── */}
               <div className="bg-white rounded-2xl border border-black/5 p-5">
-                <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-                  <Field label="Seller (Merchant)"><span className="text-[13px] font-semibold" style={{ color: 'var(--color-primary)' }}>{localCard.seller}</span></Field>
-                  {localCard.buyer && <Field label="Buyer (Borrower)"><span className="text-[13px] font-semibold" style={{ color: 'var(--color-primary)' }}>{localCard.buyer}</span></Field>}
-                  <Field label="Invoice Amount"><span className="text-[15px] font-bold text-slate-900">{formatSAR(localCard.amount)}</span></Field>
-                  <Field label="MDR Rate"><span className="text-[13px] text-slate-700">{localCard.mdrRate}%</span></Field>
-                  <Field label="Tenure"><span className="text-[13px] text-slate-700">{localCard.tenure} days</span></Field>
-                  <Field label="EMI Frequency"><span className="text-[13px] text-slate-700 capitalize">{localCard.emiFrequency}</span></Field>
-                  <Field label="Invoice No."><span className="text-[13px] font-mono text-slate-600">{localCard.invoiceNumber}</span></Field>
-                  <Field label="Commodity Broker"><span className="text-[13px] text-slate-700">{localCard.commodityBroker}</span></Field>
-                  {localCard.saleBroker && <Field label="Sale Broker"><span className="text-[13px] text-slate-700">{localCard.saleBroker}</span></Field>}
-                  <Field label="Sector"><span className="text-[13px] text-slate-700">{localCard.sector}</span></Field>
-                  <Field label="Assigned To"><span className="text-[13px] text-slate-700">{localCard.assignedTo || '—'}</span></Field>
-                  {localCard.riskScore !== null && (
-                    <Field label="Risk Score">
-                      <span className="text-[12px] font-bold px-2 py-0.5 rounded-full" style={{ background: riskColor(localCard.riskScore).bg, color: riskColor(localCard.riskScore).text }}>{localCard.riskScore}</span>
-                    </Field>
-                  )}
-                  {buyerInfo && (
-                    <Field label="Buyer Credit">
-                      <div style={{ fontSize: 12, color: '#525252', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                        <span>Limit: <strong style={{ color: '#262626' }}>{formatSAR(buyerInfo.creditLimit)}</strong></span>
-                        <span>Used: <strong>{formatSAR(buyerInfo.creditUsed)}</strong></span>
-                        {localCard.aboveLimit && <span style={{ fontSize: 10, fontWeight: 700, color: '#c2410c', background: '#fff7ed', padding: '1px 6px', borderRadius: 8 }}>⚠️ Exceeds limit</span>}
+                <div style={{ fontSize: 10, fontWeight: 700, color: '#a3a3a3', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 14 }}>Finance Details</div>
+                <div style={{ fontSize: 24, fontWeight: 800, color: '#0f172a', marginBottom: 3 }}><SARAmount amount={localCard.amount} /></div>
+                <div style={{ fontSize: 12, color: '#64748b', marginBottom: 14 }}>Invoice amount requested</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 14 }}>
+                  <div style={{ padding: '6px 12px', borderRadius: 20, background: '#f8fafc', border: '1px solid #e5e5e5', fontSize: 12, color: '#475569' }}>
+                    MDR <strong style={{ color: '#262626' }}>{localCard.mdrRate}%</strong>
+                    <span style={{ marginLeft: 4, color: localCard.mdrPayer === 'seller_full' ? '#0369a1' : '#475569', fontWeight: 600 }}>
+                      · {localCard.mdrPayer === 'seller_full' ? 'Seller pays' : localCard.mdrPayer === 'buyer_full' ? 'Buyer pays' : 'Split 50/50'}
+                    </span>
+                  </div>
+                  <div style={{ padding: '6px 12px', borderRadius: 20, background: '#f8fafc', border: '1px solid #e5e5e5', fontSize: 12, color: '#475569' }}>
+                    <strong style={{ color: '#262626' }}>{localCard.tenure}</strong> days
+                  </div>
+                  <div style={{ padding: '6px 12px', borderRadius: 20, background: '#f8fafc', border: '1px solid #e5e5e5', fontSize: 12, color: '#475569', textTransform: 'capitalize' }}>
+                    {localCard.emiFrequency} EMI
+                  </div>
+                </div>
+                <div style={{ padding: '10px 14px', borderRadius: 10, background: '#f8fafc', border: '1px solid #e5e5e5', display: 'flex', gap: 20, fontSize: 12, color: '#475569', marginBottom: buyerInfo ? 14 : 0 }}>
+                  <span>MDR Fee: <strong style={{ color: '#262626' }}><SARAmount amount={mdrFee} /></strong></span>
+                  <span>Net to Seller: <strong style={{ color: '#262626' }}><SARAmount amount={netToSeller} /></strong></span>
+                </div>
+                {buyerInfo && (() => {
+                  const available = buyerInfo.creditLimit - buyerInfo.creditUsed
+                  const excess = localCard.amount - available
+                  const fits = excess <= 0
+                  const util = buyerInfo.creditUsed / buyerInfo.creditLimit
+                  const barColor = util > 0.85 ? '#b91c1c' : util > 0.6 ? '#a16207' : '#16a34a'
+                  return (
+                    <>
+                      <div style={{ marginBottom: 10 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, fontWeight: 600, color: '#64748b', marginBottom: 4 }}>
+                          <span>Buyer credit · <SARAmount amount={buyerInfo.creditUsed} /> used of <SARAmount amount={buyerInfo.creditLimit} /></span>
+                          <span style={{ color: barColor }}>{Math.round(util * 100)}%</span>
+                        </div>
+                        <div style={{ height: 5, borderRadius: 20, background: '#f1f5f9', overflow: 'hidden', marginBottom: 3 }}>
+                          <div style={{ height: '100%', borderRadius: 20, width: `${Math.min(util * 100, 100)}%`, background: barColor }} />
+                        </div>
+                        <div style={{ fontSize: 11, color: '#64748b' }}>Available: <strong style={{ color: '#262626' }}><SARAmount amount={Math.max(available, 0)} /></strong></div>
                       </div>
-                    </Field>
-                  )}
+                      {fits ? (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', borderRadius: 10, background: '#f0fdf4', border: '1px solid #bbf7d0' }}>
+                          <span>✅</span>
+                          <div>
+                            <div style={{ fontSize: 11, fontWeight: 700, color: '#15803d' }}>Within credit limit — auto-approval eligible</div>
+                            <div style={{ fontSize: 11, color: '#64748b' }}>Request <strong><SARAmount amount={localCard.amount} /></strong> fits available <strong><SARAmount amount={available} /></strong></div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', borderRadius: 10, background: '#fff7ed', border: '1px solid #fed7aa' }}>
+                          <span>⚠️</span>
+                          <div>
+                            <div style={{ fontSize: 11, fontWeight: 700, color: '#c2410c' }}>Exceeds credit limit — manual review required</div>
+                            <div style={{ fontSize: 11, color: '#64748b' }}>Exceeds available <strong><SARAmount amount={available} /></strong> by <strong style={{ color: '#c2410c' }}><SARAmount amount={excess} /></strong></div>
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )
+                })()}
+                {localCard.acceptedAt && (() => {
+                  const startDate = localCard.acceptedAt.split(' ')[0]
+                  const d = new Date(startDate)
+                  d.setDate(d.getDate() + (localCard.tenure || 0))
+                  const endDate = d.toISOString().split('T')[0]
+                  return (
+                    <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid #f1f5f9', display: 'flex', gap: 20, flexWrap: 'wrap', fontSize: 12, color: '#64748b' }}>
+                      <span>Repayment Start: <strong style={{ color: '#262626' }}>{startDate}</strong></span>
+                      <span>Repayment End: <strong style={{ color: '#262626' }}>{endDate}</strong></span>
+                    </div>
+                  )
+                })()}
+              </div>
+
+              {/* ── Card 3: Invoice ── */}
+              <div className="bg-white rounded-2xl border border-black/5 p-5">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: '#a3a3a3', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Invoice</div>
+                    <div style={{ fontSize: 16, fontWeight: 800, color: '#0f172a', fontFamily: 'monospace', marginBottom: 8 }}>{localCard.invoiceNumber}</div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, fontSize: 12, color: '#64748b' }}>
+                      {localCard.commodityBroker && <span>Commodity: <strong style={{ color: '#262626' }}>{localCard.commodityBroker}</strong></span>}
+                      {localCard.saleBroker && <span>Sale via: <strong style={{ color: '#262626' }}>{localCard.saleBroker}</strong></span>}
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              {/* Stage-specific panel */}
               {localCard.stage === 'if_review' && (
                 <div className="bg-white rounded-2xl border border-black/5 p-5">
                   <div style={{ fontSize: 11, fontWeight: 700, color: '#a3a3a3', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 14 }}>Adjust Terms (Above-Limit Review)</div>
@@ -967,7 +1264,7 @@ function IFCardDetailPage({ card, onClose, onCardUpdate, onPrev, onNext, current
                       <div style={{ fontSize: 11, fontWeight: 600, color: '#525252', marginBottom: 4 }}>Adjusted Amount</div>
                       <input type="number" value={editAmt} onChange={e => setEditAmt(e.target.value)}
                         style={{ width: '100%', border: '1.5px solid #e5e5e5', borderRadius: 8, padding: '6px 10px', fontSize: 13, outline: 'none', color: '#262626' }} />
-                      <div style={{ fontSize: 10, color: '#a3a3a3', marginTop: 3 }}>Original: {formatSAR(localCard.amount)}</div>
+                      <div style={{ fontSize: 10, color: '#a3a3a3', marginTop: 3 }}>Original: <SARAmount amount={localCard.amount} /></div>
                     </div>
                     <div>
                       <div style={{ fontSize: 11, fontWeight: 600, color: '#525252', marginBottom: 4 }}>Adjusted MDR Rate (%)</div>
@@ -992,8 +1289,8 @@ function IFCardDetailPage({ card, onClose, onCardUpdate, onPrev, onNext, current
                     </div>
                   </div>
                   <div style={{ padding: '10px 14px', borderRadius: 10, background: '#f8fafc', border: '1px solid #e5e5e5', marginBottom: 14, display: 'flex', gap: 16, fontSize: 12, color: '#475569' }}>
-                    <span>MDR Fee: <strong style={{ color: '#262626' }}>{formatSAR(mdrFee)}</strong></span>
-                    <span>Net to Seller: <strong style={{ color: '#262626' }}>{formatSAR(netToSeller)}</strong></span>
+                    <span>MDR Fee: <strong style={{ color: '#262626' }}><SARAmount amount={mdrFee} /></strong></span>
+                    <span>Net to Seller: <strong style={{ color: '#262626' }}><SARAmount amount={netToSeller} /></strong></span>
                   </div>
                   <button onClick={handleSaveProposal}
                     style={{ padding: '8px 20px', borderRadius: 20, border: 'none', background: 'linear-gradient(135deg, #9084fd 0%, #6a7bff 50%, #3da4ff 100%)', color: 'white', fontSize: 12, fontWeight: 700, cursor: 'pointer', boxShadow: '0 2px 12px rgba(144,132,253,0.35)' }}>
@@ -1012,15 +1309,15 @@ function IFCardDetailPage({ card, onClose, onCardUpdate, onPrev, onNext, current
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
                       <span style={{ color: '#64748b' }}>Principal (Cost Price)</span>
-                      <span style={{ fontWeight: 700, color: '#262626' }}>{formatSAR(localCard.amount)}</span>
+                      <span style={{ fontWeight: 700, color: '#262626' }}><SARAmount amount={localCard.amount} /></span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
                       <span style={{ color: '#64748b' }}>Murabaha Profit (MDR {localCard.mdrRate}%)</span>
-                      <span style={{ fontWeight: 700, color: '#262626' }}>{formatSAR(localCard.amount * localCard.mdrRate / 100)}</span>
+                      <span style={{ fontWeight: 700, color: '#262626' }}><SARAmount amount={localCard.amount * localCard.mdrRate / 100} /></span>
                     </div>
                     <div style={{ borderTop: '1px solid #e5e5e5', paddingTop: 8, display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
                       <span style={{ fontWeight: 600, color: '#334155' }}>Total Deferred Payment</span>
-                      <span style={{ fontWeight: 800, color: '#0f172a' }}>{formatSAR(localCard.amount + localCard.amount * localCard.mdrRate / 100)}</span>
+                      <span style={{ fontWeight: 800, color: '#0f172a' }}><SARAmount amount={localCard.amount + localCard.amount * localCard.mdrRate / 100} /></span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
                       <span style={{ color: '#64748b' }}>Payment Tenure</span>
@@ -1072,21 +1369,21 @@ function IFCardDetailPage({ card, onClose, onCardUpdate, onPrev, onNext, current
                   <div style={{ border: '1px solid #dcfce7', borderRadius: 12, padding: '14px 16px', background: '#f0fdf4', display: 'flex', flexDirection: 'column', gap: 8 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
                       <span style={{ color: '#64748b' }}>Gross Proceeds</span>
-                      <span style={{ fontWeight: 700, color: '#262626' }}>{formatSAR(localCard.amount)}</span>
+                      <span style={{ fontWeight: 700, color: '#262626' }}><SARAmount amount={localCard.amount} /></span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
                       <span style={{ color: '#64748b' }}>MDR ({localCard.mdrRate}% — {localCard.mdrPayer === 'seller_full' ? 'Seller' : localCard.mdrPayer === 'buyer_full' ? 'Buyer' : 'Split'})</span>
-                      <span style={{ fontWeight: 700, color: '#737373' }}>− {formatSAR(localCard.amount * localCard.mdrRate / 100)}</span>
+                      <span style={{ fontWeight: 700, color: '#737373' }}>− <SARAmount amount={localCard.amount * localCard.mdrRate / 100} /></span>
                     </div>
                     {localCard.mdrPayer === 'split_50_50' && (
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#a3a3a3', paddingLeft: 8 }}>
-                        <span>Seller share</span><span>− {formatSAR(localCard.amount * localCard.mdrRate / 200)}</span>
+                        <span>Seller share</span><span>− <SARAmount amount={localCard.amount * localCard.mdrRate / 200} /></span>
                       </div>
                     )}
                     <div style={{ borderTop: '1px solid #bbf7d0', paddingTop: 8, display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
                       <span style={{ fontWeight: 600, color: '#15803d' }}>Net Disbursed to Borrower</span>
                       <span style={{ fontWeight: 800, color: '#15803d' }}>
-                        {formatSAR(localCard.amount - (localCard.mdrPayer === 'buyer_full' ? 0 : localCard.mdrPayer === 'seller_full' ? localCard.amount * localCard.mdrRate / 100 : localCard.amount * localCard.mdrRate / 200))}
+                        <SARAmount amount={localCard.amount - (localCard.mdrPayer === 'buyer_full' ? 0 : localCard.mdrPayer === 'seller_full' ? localCard.amount * localCard.mdrRate / 100 : localCard.amount * localCard.mdrRate / 200)} />
                       </span>
                     </div>
                   </div>
@@ -1097,7 +1394,47 @@ function IFCardDetailPage({ card, onClose, onCardUpdate, onPrev, onNext, current
           )}
           {activeTab === 'documents' && <div className="p-6"><DocumentsTab documents={localCard.documents} /></div>}
         </div>
+        </div>
         <ChatterPanel correspondence={localCard.correspondence} onSend={handleSend} />
+      </div>
+
+      {/* ── Action bar — full width, above nothing, below both panels ── */}
+      <div className="shrink-0" style={{ background: 'rgba(248,250,252,0.97)', backdropFilter: 'blur(8px)', borderTop: '1px solid #e2e8f0', padding: '10px 24px', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+        {/* Lane navigation */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <button onClick={onPrevInLane} disabled={!laneIdx || laneIdx <= 0}
+            className="w-7 h-7 rounded-lg border border-slate-200 bg-white flex items-center justify-center text-slate-500 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <span style={{ fontSize: 11, color: '#525252', whiteSpace: 'nowrap' }}>
+            {laneTotal === 1
+              ? <span>Only ticket in <strong style={{ color: '#262626' }}>{stageLabel}</strong></span>
+              : <><strong style={{ color: '#262626' }}>{(laneIdx ?? 0) + 1}</strong> / {laneTotal} in <strong style={{ color: '#262626' }}>{stageLabel}</strong></>}
+          </span>
+          <button onClick={onNextInLane} disabled={(laneIdx ?? 0) >= laneTotal - 1}
+            className="w-7 h-7 rounded-lg border border-slate-200 bg-white flex items-center justify-center text-slate-500 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
+        </div>
+        <span style={{ width: 1, height: 18, background: '#e5e5e5', flexShrink: 0 }} />
+        {/* Stage hint */}
+        {IF_STAGE_HINT[localCard.stage] && (
+          <span style={{ fontSize: 11, color: '#94a3b8', fontStyle: 'italic' }}>{IF_STAGE_HINT[localCard.stage]}</span>
+        )}
+        <div style={{ flex: 1 }} />
+        {/* Primary CTA */}
+        {localCard.stage !== 'if_closed' && (
+          <button onClick={handleAccept} style={{ padding: '7px 18px', borderRadius: 20, border: 'none', background: 'linear-gradient(135deg, #9084fd 0%, #6a7bff 50%, #3da4ff 100%)', fontSize: 13, fontWeight: 700, color: 'white', cursor: 'pointer', boxShadow: '0 2px 8px rgba(144,132,253,0.4)' }}>
+            {IF_ACCEPT_LABEL[localCard.stage] || 'Advance →'}
+          </button>
+        )}
+        {localCard.stage === 'if_closed' && (
+          <span style={{ fontSize: 12, fontWeight: 700, color: '#15803d' }}>✅ Closed — fully disbursed</span>
+        )}
+        {/* Assigned to */}
+        <span style={{ fontSize: 11, color: '#a3a3a3' }}>
+          Assigned: <strong style={{ color: '#404040' }}>{localCard.assignedTo || '—'}</strong>
+        </span>
       </div>
     </div>
   )
@@ -1194,7 +1531,7 @@ function KanbanBoard({ stages, filteredCards, onCardClick, showAboveLimit }) {
                       </div>
                       <div className="text-[13px] font-semibold text-slate-800 leading-tight mb-0.5 truncate">{card.seller}</div>
                       {card.buyer && <div className="text-[11px] text-slate-400 mb-2">→ {card.buyer}</div>}
-                      <div className="text-[14px] font-bold tabular-nums text-slate-900 mb-2">{formatSAR(card.amount)}</div>
+                      <div className="text-[14px] font-bold tabular-nums text-slate-900 mb-2"><SARAmount amount={card.amount} /></div>
                       <div className="flex items-center gap-1.5 flex-wrap">
                         {card.aboveLimit && <span className="text-[10px] px-2 py-0.5 rounded-full font-bold" style={{ background: '#fff7ed', color: '#c2410c' }}>⚠️ Above Limit</span>}
                         {card.daysInStage > 0 && <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-50 text-slate-500 font-medium">{card.daysInStage}d here</span>}
@@ -1254,7 +1591,9 @@ export default function FinanceRequestsPipeline({ onBreadcrumb }) {
 
   // IF handlers
   const handleIfUpdate = (updated) => { setIfCards(prev => prev.map(c => c.id === updated.id ? updated : c)); setSelectedIfCard(updated) }
-  const ifIdx = selectedIfCard ? ifCards.findIndex(c => c.id === selectedIfCard.id) : -1
+  const ifIdx      = selectedIfCard ? ifCards.findIndex(c => c.id === selectedIfCard.id) : -1
+  const ifLaneCards = selectedIfCard ? ifCards.filter(c => c.stage === selectedIfCard.stage) : []
+  const ifLaneIdx   = selectedIfCard ? ifLaneCards.findIndex(c => c.id === selectedIfCard.id) : 0
 
   // Card detail overlays
   if (selectedFrCard) return (
@@ -1272,6 +1611,9 @@ export default function FinanceRequestsPipeline({ onBreadcrumb }) {
       onClose={() => setSelectedIfCard(null)}
       onPrev={() => ifIdx > 0 && setSelectedIfCard(ifCards[ifIdx - 1])}
       onNext={() => ifIdx < ifCards.length - 1 && setSelectedIfCard(ifCards[ifIdx + 1])}
+      laneCards={ifLaneCards} laneIdx={ifLaneIdx}
+      onPrevInLane={() => ifLaneIdx > 0 && setSelectedIfCard(ifLaneCards[ifLaneIdx - 1])}
+      onNextInLane={() => ifLaneIdx < ifLaneCards.length - 1 && setSelectedIfCard(ifLaneCards[ifLaneIdx + 1])}
       onCardUpdate={handleIfUpdate} />
   )
 

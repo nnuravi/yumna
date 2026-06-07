@@ -69,6 +69,15 @@ function buildTimeline(card) {
   return entries.sort((a, b) => a.date.localeCompare(b.date))
 }
 
+function SARAmount({ amount }) {
+  const num = new Intl.NumberFormat('en-SA', { minimumFractionDigits: 0 }).format(amount)
+  return (
+    <span>
+      <span style={{ fontSize: '0.72em', color: '#a3a3a3', fontWeight: 500, marginRight: 2, letterSpacing: '0.02em' }}>SAR</span>{num}
+    </span>
+  )
+}
+
 // ── UI Primitives ─────────────────────────────────────────────────────────────
 
 function Section({ title, children, badge, badgeColor }) {
@@ -159,7 +168,7 @@ function KanbanCard({ card, onClick, dimmed }) {
       </div>
       <div className="text-[12px] font-semibold text-slate-800 leading-tight mb-0.5 truncate">{card.buyer}</div>
       <div className="text-[10px] text-slate-400 mb-2 truncate">{card.merchant}</div>
-      <div className="text-[13px] font-bold text-slate-800 mb-2">{formatSAR(card.totalOutstanding)}</div>
+      <div className="text-[13px] font-bold text-slate-800 mb-2"><SARAmount amount={card.totalOutstanding} /></div>
       <div className="flex items-center gap-1.5">
         <div className="flex-1 h-1.5 rounded-full bg-slate-100 overflow-hidden">
           <div className="h-full rounded-full transition-all" style={{ width: `${progress}%`, background: '#404040' }} />
@@ -172,7 +181,28 @@ function KanbanCard({ card, onClick, dimmed }) {
 
 // ── Board View ────────────────────────────────────────────────────────────────
 
-function BoardView({ cards, adminRole, onSelect, search, setSearch }) {
+function ViewToggle({ viewMode, setViewMode }) {
+  return (
+    <div style={{ display: 'flex', gap: 2, marginLeft: 'auto' }}>
+      <button onClick={() => setViewMode('kanban')}
+        className="w-7 h-7 rounded-lg flex items-center justify-center transition-all"
+        style={{ background: viewMode === 'kanban' ? '#f1f5f9' : 'transparent', border: viewMode === 'kanban' ? '1px solid #e2e8f0' : '1px solid transparent', color: viewMode === 'kanban' ? '#262626' : '#a3a3a3' }}>
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+          <rect x="1" y="2" width="4" height="12" rx="0.8"/><rect x="6" y="2" width="4" height="12" rx="0.8"/><rect x="11" y="2" width="4" height="12" rx="0.8"/>
+        </svg>
+      </button>
+      <button onClick={() => setViewMode('list')}
+        className="w-7 h-7 rounded-lg flex items-center justify-center transition-all"
+        style={{ background: viewMode === 'list' ? '#f1f5f9' : 'transparent', border: viewMode === 'list' ? '1px solid #e2e8f0' : '1px solid transparent', color: viewMode === 'list' ? '#262626' : '#a3a3a3' }}>
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+          <line x1="2" y1="4" x2="14" y2="4"/><line x1="2" y1="8" x2="14" y2="8"/><line x1="2" y1="12" x2="14" y2="12"/>
+        </svg>
+      </button>
+    </div>
+  )
+}
+
+function BoardView({ cards, adminRole, onSelect, search, setSearch, viewMode, setViewMode }) {
   const myStages = ROLE_STAGE_MAP[adminRole]
   const boardStages = REPAYMENTS_STAGES.filter(s => !s.terminal)
 
@@ -197,6 +227,7 @@ function BoardView({ cards, adminRole, onSelect, search, setSearch }) {
             style={{ borderColor: '#e5e5e5' }} />
         </div>
         <span className="text-[11px] text-slate-400">{filtered.filter(c => c.stage !== 'rp_closed').length} active</span>
+        <ViewToggle viewMode={viewMode} setViewMode={setViewMode} />
       </div>
 
       {/* Columns */}
@@ -232,6 +263,138 @@ function BoardView({ cards, adminRole, onSelect, search, setSearch }) {
               </div>
             )
           })}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── List View ─────────────────────────────────────────────────────────────────
+
+function ListView({ cards, adminRole, onSelect, search, setSearch, viewMode, setViewMode }) {
+  const [sortCol, setSortCol] = useState('daysInStage')
+  const [sortDir, setSortDir] = useState('desc')
+
+  const filtered = cards.filter(c => c.stage !== 'rp_closed').filter(c => {
+    const q = search.toLowerCase()
+    return !q || c.buyer.toLowerCase().includes(q) || c.merchant.toLowerCase().includes(q) || c.id.toLowerCase().includes(q)
+  })
+
+  const escLevel = (card) => card.stage === 'rp_escalation_l1' ? 'L1' : card.stage === 'rp_escalation_l2' ? 'L2' : card.stage === 'rp_escalation_l3' ? 'L3' : null
+
+  const sortedCards = [...filtered].sort((a, b) => {
+    let av = 0, bv = 0
+    if (sortCol === 'outstanding') { av = a.totalOutstanding; bv = b.totalOutstanding }
+    else if (sortCol === 'dpd') { av = dpd(a); bv = dpd(b) }
+    else if (sortCol === 'daysInStage') { av = a.daysInStage; bv = b.daysInStage }
+    else if (sortCol === 'progress') {
+      const pct = c => c.installmentSchedule.length ? c.installmentSchedule.filter(i => i.status === 'paid').length / c.installmentSchedule.length : 0
+      av = pct(a); bv = pct(b)
+    }
+    return sortDir === 'asc' ? av - bv : bv - av
+  })
+
+  const toggleSort = (col) => {
+    if (sortCol === col) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
+    else { setSortCol(col); setSortDir('desc') }
+  }
+
+  const COLS = [
+    { key: 'id',          label: 'ID',           sortable: false },
+    { key: 'buyer',       label: 'Buyer',         sortable: false },
+    { key: 'merchant',    label: 'Merchant',      sortable: false },
+    { key: 'outstanding', label: 'Outstanding',   sortable: true  },
+    { key: 'stage',       label: 'Stage',         sortable: false },
+    { key: 'dpd',         label: 'DPD',           sortable: true  },
+    { key: 'progress',    label: 'Progress',      sortable: true  },
+    { key: 'daysInStage', label: 'Days in Stage', sortable: true  },
+  ]
+
+  return (
+    <div className="flex flex-col h-full">
+      {/* Toolbar */}
+      <div className="px-6 py-3 border-b border-black/5 flex items-center gap-3 shrink-0">
+        <div className="relative flex-1 max-w-xs">
+          <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <input value={search} onChange={e => setSearch(e.target.value)}
+            placeholder="Search buyer, merchant or ID…"
+            className="w-full pl-8 pr-3 py-1.5 rounded-xl border text-[12px] outline-none bg-white/70 backdrop-blur-sm focus:bg-white"
+            style={{ borderColor: '#e5e5e5' }} />
+        </div>
+        <span className="text-[11px] text-slate-400">{filtered.length} active</span>
+        <ViewToggle viewMode={viewMode} setViewMode={setViewMode} />
+      </div>
+
+      {/* Table */}
+      <div className="flex-1 overflow-auto px-6 py-4">
+        <div className="rounded-xl overflow-hidden border border-black/5">
+          <table className="w-full text-[12px]">
+            <thead className="sticky top-0 bg-slate-50">
+              <tr>
+                {COLS.map(col => (
+                  <th key={col.key}
+                    onClick={() => col.sortable && toggleSort(col.key)}
+                    className="text-start px-4 py-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wide whitespace-nowrap"
+                    style={{ cursor: col.sortable ? 'pointer' : 'default', userSelect: 'none' }}>
+                    {col.label}
+                    {col.sortable && sortCol === col.key && (
+                      <span style={{ marginLeft: 4 }}>{sortDir === 'asc' ? '↑' : '↓'}</span>
+                    )}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {sortedCards.map(card => {
+                const paid = card.installmentSchedule.filter(i => i.status === 'paid').length
+                const tot = card.installmentSchedule.length
+                const pct = tot ? Math.round(paid / tot * 100) : 0
+                const esc = escLevel(card)
+                const daysOverdue = dpd(card)
+                const stg = REPAYMENTS_STAGES.find(s => s.id === card.stage)
+                return (
+                  <tr key={card.id}
+                    onClick={() => onSelect(card)}
+                    className="border-t border-slate-50 hover:bg-slate-50 cursor-pointer transition-colors">
+                    <td className="px-4 py-2.5 font-mono text-[11px] text-slate-400">{card.id}</td>
+                    <td className="px-4 py-2.5 font-semibold text-slate-800">{card.buyer}</td>
+                    <td className="px-4 py-2.5 text-slate-500">{card.merchant}</td>
+                    <td className="px-4 py-2.5 font-bold tabular-nums text-slate-900"><SARAmount amount={card.totalOutstanding} /></td>
+                    <td className="px-4 py-2.5">
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold text-white"
+                          style={{ background: stg?.color || '#525252' }}>
+                          {stg?.label || card.stage}
+                        </span>
+                        {esc && (
+                          <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold text-white" style={{ background: '#404040' }}>{esc}</span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-4 py-2.5">
+                      {daysOverdue > 0
+                        ? <span className="font-semibold tabular-nums" style={{ color: daysOverdue > 30 ? '#b91c1c' : '#c2410c' }}>{daysOverdue}d</span>
+                        : <span className="text-slate-300">—</span>}
+                    </td>
+                    <td className="px-4 py-2.5">
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <div style={{ width: 60, height: 4, borderRadius: 20, background: '#f1f5f9', overflow: 'hidden' }}>
+                          <div style={{ height: '100%', width: `${pct}%`, borderRadius: 20, background: '#404040' }} />
+                        </div>
+                        <span className="text-slate-400 tabular-nums text-[11px]">{paid}/{tot}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-2.5 text-slate-500 tabular-nums">{card.daysInStage}d</td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+          {sortedCards.length === 0 && (
+            <div className="text-center text-[12px] text-slate-400 py-10">No records match your search.</div>
+          )}
         </div>
       </div>
     </div>
@@ -305,10 +468,10 @@ function InstallmentTable({ schedule }) {
               <tr key={ins.no} className="border-t border-black/5">
                 <td className="px-3 py-2 text-slate-500">{ins.no}</td>
                 <td className="px-3 py-2 text-slate-700 font-mono">{ins.dueDate}</td>
-                <td className="px-3 py-2 text-right font-semibold text-slate-800">{formatSAR(ins.amount)}</td>
+                <td className="px-3 py-2 text-right font-semibold text-slate-800"><SARAmount amount={ins.amount} /></td>
                 <td className="px-3 py-2 text-center"><StatusBadge status={ins.status} /></td>
                 <td className="px-3 py-2 text-right" style={{ color: ins.lateFee > 0 ? '#525252' : '#a3a3a3' }}>
-                  {ins.lateFee > 0 ? formatSAR(ins.lateFee) : '—'}
+                  {ins.lateFee > 0 ? <SARAmount amount={ins.lateFee} /> : '—'}
                 </td>
               </tr>
             ))}
@@ -354,7 +517,7 @@ function ActivePanel({ card, onUpdate, addToast }) {
           <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Next Instalment Due</div>
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-[18px] font-bold text-slate-800">{formatSAR(nextDue.amount)}</div>
+              <div className="text-[18px] font-bold text-slate-800"><SARAmount amount={nextDue.amount} /></div>
               <div className="text-[11px] text-slate-500 mt-0.5">#{nextDue.no} · Due {nextDue.dueDate}</div>
             </div>
             {duesSoon && <span className="text-[10px] font-bold px-2 py-1 rounded-full" style={{ background: '#e5e5e5', color: '#525252' }}>Due soon</span>}
@@ -407,7 +570,7 @@ function OverduePanel({ card, onUpdate, addToast }) {
           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Days Past Due</span>
           <span className="text-[24px] font-black text-slate-800">{dpdDays}</span>
         </div>
-        <div className="text-[11px] text-slate-500">Outstanding: <span className="font-semibold text-slate-800">{formatSAR(card.balanceDue)}</span></div>
+        <div className="text-[11px] text-slate-500">Outstanding: <span className="font-semibold text-slate-800"><SARAmount amount={card.balanceDue} /></span></div>
       </div>
 
       <Section title="Collections Note">
@@ -474,7 +637,7 @@ function EscalationL1Panel({ card, onUpdate, addToast }) {
           <span className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white" style={{ background: '#404040' }}>L1</span>
           <span className="text-[11px] text-slate-600">Collections escalation</span>
         </div>
-        <div className="text-[11px] text-slate-500">DPD: <span className="font-semibold">{dpd(card)}</span> · Balance: <span className="font-semibold">{formatSAR(card.balanceDue)}</span></div>
+        <div className="text-[11px] text-slate-500">DPD: <span className="font-semibold">{dpd(card)}</span> · Balance: <span className="font-semibold"><SARAmount amount={card.balanceDue} /></span></div>
       </div>
 
       <Section title={`Call Log (${l1Entries.length})`}>
@@ -587,7 +750,7 @@ function EscalationL2Panel({ card, onUpdate, addToast }) {
           <span className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white" style={{ background: '#262626' }}>L2</span>
           <span className="text-[11px] text-slate-600">Legal escalation</span>
         </div>
-        <div className="text-[11px] text-slate-500">Balance due: <span className="font-semibold">{formatSAR(card.balanceDue)}</span></div>
+        <div className="text-[11px] text-slate-500">Balance due: <span className="font-semibold"><SARAmount amount={card.balanceDue} /></span></div>
       </div>
 
       {l1Entries.length > 0 && (
@@ -710,7 +873,7 @@ function EscalationL3Panel({ card, onUpdate, addToast }) {
           <span className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white" style={{ background: '#171717' }}>L3</span>
           <span className="text-[11px] text-slate-600">Lawyer engagement</span>
         </div>
-        <div className="text-[11px] text-slate-500">Balance due: <span className="font-semibold">{formatSAR(card.balanceDue)}</span></div>
+        <div className="text-[11px] text-slate-500">Balance due: <span className="font-semibold"><SARAmount amount={card.balanceDue} /></span></div>
       </div>
 
       {l1Entries.length > 0 && (
@@ -765,7 +928,7 @@ function EscalationL3Panel({ card, onUpdate, addToast }) {
         <div className="rounded-xl border p-3" style={{ background: '#fafafa', borderColor: '#f0f0f0' }}>
           <div className="text-[11px] text-slate-500 leading-relaxed">
             Promissory note on file for <span className="font-semibold text-slate-700">{card.buyer}</span>.
-            Amount: <span className="font-semibold text-slate-700">{formatSAR(card.totalOutstanding)}</span>.
+            Amount: <span className="font-semibold text-slate-700"><SARAmount amount={card.totalOutstanding} /></span>.
             Document is under legal enforcement by assigned lawyer.
           </div>
         </div>
@@ -832,15 +995,15 @@ function ClosedPanel({ card }) {
           </div>
           <div>
             <div className="text-slate-400 mb-0.5">Total amount</div>
-            <div className="font-semibold text-slate-700">{formatSAR(card.totalAmount)}</div>
+            <div className="font-semibold text-slate-700"><SARAmount amount={card.totalAmount} /></div>
           </div>
           <div>
             <div className="text-slate-400 mb-0.5">Repaid</div>
-            <div className="font-semibold text-slate-700">{formatSAR(card.repaidAmount)}</div>
+            <div className="font-semibold text-slate-700"><SARAmount amount={card.repaidAmount} /></div>
           </div>
           <div>
             <div className="text-slate-400 mb-0.5">Outstanding</div>
-            <div className="font-semibold" style={{ color: card.totalOutstanding > 0 ? '#525252' : '#262626' }}>{formatSAR(card.totalOutstanding)}</div>
+            <div className="font-semibold" style={{ color: card.totalOutstanding > 0 ? '#525252' : '#262626' }}><SARAmount amount={card.totalOutstanding} /></div>
           </div>
         </div>
       </div>
@@ -1007,22 +1170,22 @@ function DetailView({ card, adminRole, onBack, onUpdate, cards, addToast }) {
                 <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ background: '#f0f0f0', color: '#525252' }}>{feeModelLabel(card.feeModel)}</span>
               </Field>
               <Field label="Credit Limit">
-                <div className="text-[13px] font-semibold text-slate-800">{formatSAR(card.totalCreditLimit)}</div>
+                <div className="text-[13px] font-semibold text-slate-800"><SARAmount amount={card.totalCreditLimit} /></div>
               </Field>
               <Field label="Available Credit">
-                <div className="text-[13px] font-semibold text-slate-800">{formatSAR(card.availableCredit)}</div>
+                <div className="text-[13px] font-semibold text-slate-800"><SARAmount amount={card.availableCredit} /></div>
               </Field>
               <Field label="Total Amount">
-                <div className="text-[13px] font-semibold text-slate-800">{formatSAR(card.totalAmount)}</div>
+                <div className="text-[13px] font-semibold text-slate-800"><SARAmount amount={card.totalAmount} /></div>
               </Field>
               <Field label="Repaid">
-                <div className="text-[13px] font-semibold text-slate-800">{formatSAR(card.repaidAmount)}</div>
+                <div className="text-[13px] font-semibold text-slate-800"><SARAmount amount={card.repaidAmount} /></div>
               </Field>
               <Field label="Outstanding">
-                <div className="text-[13px] font-bold" style={{ color: card.totalOutstanding > 0 ? '#262626' : '#a3a3a3' }}>{formatSAR(card.totalOutstanding)}</div>
+                <div className="text-[13px] font-bold" style={{ color: card.totalOutstanding > 0 ? '#262626' : '#a3a3a3' }}><SARAmount amount={card.totalOutstanding} /></div>
               </Field>
               <Field label="Balance Due">
-                <div className="text-[13px] font-bold" style={{ color: card.balanceDue > 0 ? '#404040' : '#a3a3a3' }}>{formatSAR(card.balanceDue)}</div>
+                <div className="text-[13px] font-bold" style={{ color: card.balanceDue > 0 ? '#404040' : '#a3a3a3' }}><SARAmount amount={card.balanceDue} /></div>
               </Field>
             </div>
           </Section>
@@ -1031,13 +1194,13 @@ function DetailView({ card, adminRole, onBack, onUpdate, cards, addToast }) {
           <Section title="Fee Breakdown">
             <div className="grid grid-cols-3 gap-3">
               <Field label="Buyer Fees">
-                <div className="text-[12px] font-semibold text-slate-700">{formatSAR(card.buyerFees)}</div>
+                <div className="text-[12px] font-semibold text-slate-700"><SARAmount amount={card.buyerFees} /></div>
               </Field>
               <Field label="Merchant Fees">
-                <div className="text-[12px] font-semibold text-slate-700">{formatSAR(card.merchantFees)}</div>
+                <div className="text-[12px] font-semibold text-slate-700"><SARAmount amount={card.merchantFees} /></div>
               </Field>
               <Field label="Yumna Income">
-                <div className="text-[12px] font-semibold text-slate-700">{formatSAR(card.yumnaIncome)}</div>
+                <div className="text-[12px] font-semibold text-slate-700"><SARAmount amount={card.yumnaIncome} /></div>
               </Field>
             </div>
           </Section>
@@ -1064,6 +1227,7 @@ export default function RepaymentsPipeline({ onBreadcrumb }) {
   const [cards, setCards] = useState(REPAYMENTS_CARDS)
   const [selected, setSelected] = useState(null)
   const [search, setSearch] = useState('')
+  const [viewMode, setViewMode] = useState('kanban')
 
   useEffect(() => {
     onBreadcrumb?.(selected ? { label: selected.buyer, id: selected.id, onHome: () => setSelected(null) } : null)
@@ -1094,15 +1258,14 @@ export default function RepaymentsPipeline({ onBreadcrumb }) {
     )
   }
 
+  const viewProps = { cards, adminRole, onSelect: setSelected, search, setSearch, viewMode, setViewMode }
+
   return (
     <div className="h-full overflow-hidden">
-      <BoardView
-        cards={cards}
-        adminRole={adminRole}
-        onSelect={setSelected}
-        search={search}
-        setSearch={setSearch}
-      />
+      {viewMode === 'kanban'
+        ? <BoardView {...viewProps} />
+        : <ListView {...viewProps} />
+      }
     </div>
   )
 }

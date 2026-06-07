@@ -657,12 +657,24 @@ function DrillDownDrawer({ target, onClose, onRowDetail }) {
 
 // ── KPI card with drill-down trigger ─────────────────────────────────────────
 
+function renderSARValue(value) {
+  if (typeof value === 'string' && value.startsWith('SAR ')) {
+    return (
+      <span>
+        <span style={{ fontSize: '0.6em', color: '#a3a3a3', fontWeight: 500, marginRight: 3, letterSpacing: '0.02em' }}>SAR</span>
+        {value.slice(4)}
+      </span>
+    )
+  }
+  return value
+}
+
 function KpiCard({ label, value, sub, subColor, drillData, onDrill }) {
   return (
     <div className="bg-white rounded-2xl border border-black/5 p-5 group relative cursor-pointer hover:shadow-md transition-shadow"
       onClick={drillData ? () => onDrill(drillData) : undefined}>
       <div className="text-[11px] font-medium text-slate-400 uppercase tracking-wide mb-2">{label}</div>
-      <div className="text-2xl font-bold tabular-nums text-slate-900 leading-tight">{value}</div>
+      <div className="text-2xl font-bold tabular-nums text-slate-900 leading-tight">{renderSARValue(value)}</div>
       {sub && <div className="text-[11px] mt-1" style={{ color: subColor || '#a3a3a3' }}>{sub}</div>}
       {drillData && (
         <div className="absolute top-4 right-4 w-7 h-7 rounded-lg bg-slate-100 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
@@ -824,7 +836,7 @@ function StatCard({ label, value, sub, subColor }) {
   return (
     <div className="bg-white rounded-2xl border border-black/5 p-5">
       <div className="text-[11px] font-medium text-slate-400 uppercase tracking-wide mb-2">{label}</div>
-      <div className="text-2xl font-bold tabular-nums text-slate-900 leading-tight">{value}</div>
+      <div className="text-2xl font-bold tabular-nums text-slate-900 leading-tight">{renderSARValue(value)}</div>
       {sub && <div className="text-[11px] mt-1" style={{ color: subColor || '#a3a3a3' }}>{sub}</div>}
     </div>
   )

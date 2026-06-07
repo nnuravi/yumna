@@ -1327,7 +1327,7 @@ export const INVOICE_FINANCE_CARDS = [
     mdrPayer: 'seller_full',
     proposedAmount: null, proposedMdrRate: null, proposedTenure: null,
     commodityBroker: 'DDCap', saleBroker: null,
-    offerIssuedAt: null, acceptedAt: null,
+    offerIssuedAt: null, acceptedAt: null, submittedAt: '2026-06-07',
     stage: 'if_docs', daysInStage: 1, riskScore: null,
     assignedTo: 'Sara Al-Ghamdi', sector: 'ICT', tenure: 30, emiFrequency: 'monthly',
     documents: [
@@ -1342,6 +1342,7 @@ export const INVOICE_FINANCE_CARDS = [
     yumnaiSuggestion: {
       action: 'request_document',
       message: 'Invoice Copy and Delivery Order are missing. This is a within-limit application (SAR 95,000 vs SAR 150,000 limit). I can send a document request to Khalid Group to unblock processing.',
+      nextAction: 'Send a document request to Khalid Group for Invoice Copy and Delivery Order',
       draftText: 'Dear Khalid Group,\n\nTo proceed with your Murabaha finance application INV-001 (SAR 95,000), please upload:\n\n1. Invoice Copy\n2. Delivery Order\n\nYumna Finance Team',
     },
   },
@@ -1356,7 +1357,7 @@ export const INVOICE_FINANCE_CARDS = [
     mdrPayer: 'seller_full',
     proposedAmount: 350000, proposedMdrRate: 2.5, proposedTenure: 60,
     commodityBroker: 'DDCap', saleBroker: null,
-    offerIssuedAt: null, acceptedAt: null,
+    offerIssuedAt: null, acceptedAt: null, submittedAt: '2026-06-05',
     stage: 'if_review', daysInStage: 2, riskScore: 55,
     assignedTo: 'Faisal Al-Dosari', sector: 'Consumer Staples', tenure: 90, emiFrequency: 'monthly',
     documents: [
@@ -1373,6 +1374,7 @@ export const INVOICE_FINANCE_CARDS = [
     yumnaiSuggestion: {
       action: 'score',
       message: 'This application exceeds the buyer\'s credit limit by SAR 100,000. I\'ve prepared a suggested counter-proposal: reduce to SAR 350,000 with an adjusted MDR of 2.5% and 60-day tenure. Awaiting your review.',
+      nextAction: 'Review the adjusted counter-proposal (SAR 350,000 · 2.5% MDR · 60 days) and approve or modify terms',
       draftText: '',
     },
   },
@@ -1387,7 +1389,7 @@ export const INVOICE_FINANCE_CARDS = [
     mdrPayer: 'split_50_50',
     proposedAmount: 200000, proposedMdrRate: 2.5, proposedTenure: 45,
     commodityBroker: 'DDCap', saleBroker: null,
-    offerIssuedAt: null, acceptedAt: null,
+    offerIssuedAt: null, acceptedAt: null, submittedAt: '2026-06-06',
     stage: 'if_risk', daysInStage: 1, riskScore: 63,
     assignedTo: 'Noura Al-Shehri', sector: 'Manufacturing', tenure: 45, emiFrequency: 'bimonthly',
     documents: [
@@ -1403,6 +1405,7 @@ export const INVOICE_FINANCE_CARDS = [
     yumnaiSuggestion: {
       action: 'escalate',
       message: 'Bank statement flagged a cashflow inconsistency in months 18–22. Risk score is 63 (medium-high). I recommend a conditional approval with a lower limit or additional collateral.',
+      nextAction: 'Approve conditionally with a reduced limit, or request additional collateral before advancing to offer',
       draftText: '',
     },
   },
@@ -1417,7 +1420,7 @@ export const INVOICE_FINANCE_CARDS = [
     mdrPayer: 'seller_full',
     proposedAmount: null, proposedMdrRate: null, proposedTenure: null,
     commodityBroker: 'DDCap', saleBroker: 'AlJazira Capital',
-    offerIssuedAt: '2026-06-06 11:30', acceptedAt: null,
+    offerIssuedAt: '2026-06-06 11:30', acceptedAt: null, submittedAt: '2026-06-04',
     stage: 'if_offer', daysInStage: 0, riskScore: 38,
     assignedTo: 'Rania Al-Sabban', sector: 'ICT', tenure: 30, emiFrequency: 'monthly',
     documents: [
@@ -1432,6 +1435,7 @@ export const INVOICE_FINANCE_CARDS = [
     yumnaiSuggestion: {
       action: 'monitor',
       message: 'Murabaha offer has been issued. Commodity purchase via DDCap is confirmed (SAR 140,000 equivalent). Awaiting borrower acceptance — offer is valid for this trading session only.',
+      nextAction: 'Monitor for borrower acceptance — offer expires at end of this trading session',
       draftText: '',
     },
   },
@@ -1446,7 +1450,7 @@ export const INVOICE_FINANCE_CARDS = [
     mdrPayer: 'seller_full',
     proposedAmount: null, proposedMdrRate: null, proposedTenure: null,
     commodityBroker: 'DDCap', saleBroker: 'Derayah Financial',
-    offerIssuedAt: '2026-06-05 14:00', acceptedAt: '2026-06-05 14:22',
+    offerIssuedAt: '2026-06-05 14:00', acceptedAt: '2026-06-05 14:22', submittedAt: '2026-06-01',
     stage: 'if_accepted', daysInStage: 1, riskScore: 29,
     assignedTo: 'Rania Al-Sabban', sector: 'Consumer Staples', tenure: 30, emiFrequency: 'weekly',
     documents: [
@@ -1462,6 +1466,7 @@ export const INVOICE_FINANCE_CARDS = [
     yumnaiSuggestion: {
       action: 'generate_invoice',
       message: 'Murabaha accepted and commodity transfer confirmed. Sale order placed with Derayah Financial. Net proceeds of SAR 76,050 (SAR 78,000 − SAR 1,950 MDR) are being prepared for transfer to Al-Noor Trading.',
+      nextAction: 'Confirm disbursement — net proceeds are ready for transfer to Al-Noor Trading',
       draftText: '',
     },
   },
@@ -1476,7 +1481,7 @@ export const INVOICE_FINANCE_CARDS = [
     mdrPayer: 'buyer_full',
     proposedAmount: 155000, proposedMdrRate: 2.0, proposedTenure: 45,
     commodityBroker: 'DDCap', saleBroker: 'AlJazira Capital',
-    offerIssuedAt: '2026-06-04 10:15', acceptedAt: '2026-06-04 10:38',
+    offerIssuedAt: '2026-06-04 10:15', acceptedAt: '2026-06-04 10:38', submittedAt: '2026-05-28',
     stage: 'if_disbursed', daysInStage: 2, riskScore: 42,
     assignedTo: 'Rania Al-Sabban', sector: 'Consumer Staples', tenure: 45, emiFrequency: 'bimonthly',
     documents: [
@@ -1494,6 +1499,7 @@ export const INVOICE_FINANCE_CARDS = [
     yumnaiSuggestion: {
       action: 'monitor',
       message: 'Disbursement of SAR 156,800 has been initiated. Repayment of SAR 160,000 in 3 bimonthly instalments begins 2026-07-19. I will send reminders automatically.',
+      nextAction: 'Confirm settlement with AlJazira Capital and close the ticket',
       draftText: '',
     },
   },
