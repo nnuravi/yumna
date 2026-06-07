@@ -7,12 +7,13 @@ import LanguageToggle from '../../components/LanguageToggle'
 import BizOverview from './BizOverview'
 import Pipeline from './Pipeline'
 import RepaymentsPipeline from './RepaymentsPipeline'
+import FinanceRequestsPipeline from './FinanceRequestsPipeline'
 import SellersSection from './SellersSection'
 import BuyersSection from './BuyersSection'
 import TaskManager from './TaskManager'
 import Templates from './Templates'
 import YumnaiPanel from './YumnaiPanel'
-import { PIPELINE_CARDS, REPAYMENTS_CARDS, TASKS } from '../../data/mockData'
+import { PIPELINE_CARDS, REPAYMENTS_CARDS, FINANCE_REQUEST_CARDS, INVOICE_FINANCE_CARDS, TASKS } from '../../data/mockData'
 
 const ALL_NAV = [
   {
@@ -27,7 +28,7 @@ const ALL_NAV = [
   },
   {
     id: 'pipeline',
-    label: 'Pipeline',
+    label: 'Onboarding Pipeline',
     roles: null,
     badge: true,
     icon: (
@@ -37,13 +38,24 @@ const ALL_NAV = [
     ),
   },
   {
+    id: 'finance_requests',
+    label: 'Finance Requests',
+    roles: null,
+    badge: true,
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/>
+      </svg>
+    ),
+  },
+  {
     id: 'repayments',
-    label: 'Repayments',
+    label: 'Escalations',
     roles: ['super', 'collections', 'legal', 'account_mgr'],
     badge: true,
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/>
+        <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
       </svg>
     ),
   },
@@ -126,25 +138,30 @@ export default function AdminApp() {
         return myStages.includes(c.stage)
       }).length
 
+  const financeRequestsBadge =
+    (FINANCE_REQUEST_CARDS  || []).filter(c => c.stage !== 'fr_closed').length +
+    (INVOICE_FINANCE_CARDS  || []).filter(c => c.stage !== 'if_closed').length
+
   const myTaskCount = TASKS.filter(t => t.assignedTo === user.name && t.status !== 'done').length
 
   const navItems = ALL_NAV.filter(item => !item.roles || item.roles.includes(adminRole))
 
   const renderSection = () => {
     switch (activeSection) {
-      case 'overview':    return <BizOverview />
-      case 'pipeline':    return <Pipeline onNavigate={setActiveSection} onBreadcrumb={setBreadcrumb} />
-      case 'repayments':  return <RepaymentsPipeline onBreadcrumb={setBreadcrumb} />
-      case 'sellers':     return <SellersSection onBreadcrumb={setBreadcrumb} />
-      case 'buyers':      return <BuyersSection onBreadcrumb={setBreadcrumb} />
-      case 'tasks':       return <TaskManager />
-      case 'templates':   return <Templates />
-      default:            return <BizOverview />
+      case 'overview':          return <BizOverview />
+      case 'pipeline':          return <Pipeline onNavigate={setActiveSection} onBreadcrumb={setBreadcrumb} />
+      case 'finance_requests':  return <FinanceRequestsPipeline onBreadcrumb={setBreadcrumb} />
+      case 'repayments':        return <RepaymentsPipeline onBreadcrumb={setBreadcrumb} />
+      case 'sellers':           return <SellersSection onBreadcrumb={setBreadcrumb} />
+      case 'buyers':            return <BuyersSection onBreadcrumb={setBreadcrumb} />
+      case 'tasks':             return <TaskManager />
+      case 'templates':         return <Templates />
+      default:                  return <BizOverview />
     }
   }
 
   const sectionLabel = navItems.find(n => n.id === activeSection)?.label || 'Overview'
-  const isPipelineFullHeight = activeSection === 'pipeline' || activeSection === 'repayments'
+  const isPipelineFullHeight = activeSection === 'pipeline' || activeSection === 'repayments' || activeSection === 'finance_requests'
 
   return (
     <div className="app-bg flex flex-col h-dvh overflow-hidden">
@@ -224,7 +241,7 @@ export default function AdminApp() {
             <nav className="flex-1 overflow-y-auto px-3 pt-4 pb-2 flex flex-col gap-1.5">
               {navItems.map(item => {
                 const active = activeSection === item.id
-                const badge = item.id === 'pipeline' ? pipelineBadge : item.id === 'repayments' ? repaymentsBadge : item.id === 'tasks' ? myTaskCount : 0
+                const badge = item.id === 'pipeline' ? pipelineBadge : item.id === 'finance_requests' ? financeRequestsBadge : item.id === 'repayments' ? repaymentsBadge : item.id === 'tasks' ? myTaskCount : 0
                 return (
                   <button key={item.id} onClick={() => { setBreadcrumb(null); setActiveSection(item.id) }} title={item.label}
                     className="group relative flex items-center h-12 w-full rounded-2xl transition-colors"
