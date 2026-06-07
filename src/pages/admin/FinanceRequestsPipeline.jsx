@@ -351,9 +351,9 @@ function FRCardDetailPage({ card, onClose, onCardUpdate, onPrev, onNext, current
 
       {/* ── Main split ── */}
       <div className="flex flex-1 overflow-hidden">
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex flex-col flex-1 overflow-hidden">
           {/* Tab bar */}
-          <div className="sticky top-0 z-20 flex items-end gap-0 px-6 pt-2 border-b border-black/5" style={{ background: 'var(--color-page)' }}>
+          <div className="shrink-0 flex items-end gap-0 px-6 pt-2 border-b border-black/5" style={{ background: 'var(--color-page)' }}>
             {[{ id: 'overview', label: 'Overview' }, { id: 'documents', label: `Documents (${localCard.documents.length})` }].map(tab => (
               <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{
                 padding: '7px 16px 8px', fontSize: 12, fontWeight: activeTab === tab.id ? 700 : 500,
@@ -363,9 +363,88 @@ function FRCardDetailPage({ card, onClose, onCardUpdate, onPrev, onNext, current
               }}>{tab.label}</button>
             ))}
           </div>
+          <div className="flex-1 overflow-y-auto">
 
           {activeTab === 'overview' && (
             <div className="p-6 space-y-6">
+              {/* fr_checking: Request summary at top */}
+              {localCard.stage === 'fr_checking' && (
+                <div className="bg-white rounded-2xl border border-black/5 p-5">
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#a3a3a3', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 14 }}>Finance Request</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+                    <span style={{ fontSize: 15, fontFamily: 'monospace', fontWeight: 700, color: '#262626' }}>{localCard.id}</span>
+                    <span style={{ fontSize: 16, fontWeight: 800, color: 'var(--color-primary)', marginLeft: 'auto' }}>{formatSAR(localCard.amount)}</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 10, background: '#f8fafc', border: '1px solid #e5e5e5', marginBottom: 10 }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: '#262626' }}>{localCard.seller}</span>
+                    <span style={{ fontSize: 12, color: '#a3a3a3' }}>→</span>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: '#262626' }}>{localCard.buyer || '—'}</span>
+                  </div>
+                  <div style={{ display: 'flex', gap: 16, fontSize: 11, color: '#64748b', flexWrap: 'wrap' }}>
+                    <span>Sector: <strong style={{ color: '#262626' }}>{localCard.sector}</strong></span>
+                    <span>MDR: <strong style={{ color: '#262626' }}>{localCard.mdrRate}%</strong></span>
+                    <span>Tenure: <strong style={{ color: '#262626' }}>{localCard.tenure}d</strong></span>
+                    {localCard.daysInStage > 0 && <span style={{ marginLeft: 'auto', color: '#c2410c', fontWeight: 600 }}>⏱ {localCard.daysInStage}d in stage</span>}
+                  </div>
+                </div>
+              )}
+
+              {/* fr_checking: Doc checklist moved to top */}
+              {localCard.stage === 'fr_checking' && (
+                <div className="bg-white rounded-2xl border border-black/5 p-5">
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: '#a3a3a3', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Doc Checking</div>
+                    <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 9px', borderRadius: 20,
+                      background: pendingDocs > 0 ? '#fff7ed' : '#dcfce7',
+                      color: pendingDocs > 0 ? '#c2410c' : '#15803d' }}>
+                      {receivedDocs}/{totalDocs} received
+                    </span>
+                  </div>
+                  <div style={{ fontSize: 13, color: '#64748b', marginBottom: 14 }}>Do we have enough documents to send this for Credit Review?</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}>
+                    {localCard.documents.map((doc, i) => {
+                      const isPending = doc.status !== 'received'
+                      const sc = doc.status === 'received' ? '#15803d' : doc.status === 'missing' ? '#b91c1c' : '#a16207'
+                      const sb = doc.status === 'received' ? '#dcfce7'  : doc.status === 'missing' ? '#fee2e2'  : '#fef9c3'
+                      return (
+                        <div key={i} style={{
+                          display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 10,
+                          background: isPending ? '#fffbf5' : '#f8fafc',
+                          border: `1px solid ${isPending ? '#fed7aa' : '#e5e5e5'}`,
+                        }}>
+                          <span style={{ fontSize: 14, flexShrink: 0 }}>{doc.status === 'received' ? '✅' : doc.status === 'missing' ? '❌' : '⏳'}</span>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: 12, fontWeight: 600, color: '#262626' }}>{doc.name}</div>
+                            {doc.discrepancy && <div style={{ fontSize: 10, color: '#b91c1c', marginTop: 1 }}>⚠️ {doc.discrepancy}</div>}
+                          </div>
+                          {doc.aiCheck && (
+                            <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 20, background: doc.aiCheck === 'pass' ? '#dcfce7' : '#fee2e2', color: doc.aiCheck === 'pass' ? '#15803d' : '#b91c1c' }}>
+                              AI: {doc.aiCheck}
+                            </span>
+                          )}
+                          <span style={{ fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 20, background: sb, color: sc, textTransform: 'capitalize' }}>{doc.status}</span>
+                          {isPending && (
+                            <button onClick={() => handleMarkDocReceived(i)}
+                              style={{ padding: '4px 12px', borderRadius: 20, border: 'none', background: 'var(--color-primary)', color: 'white', fontSize: 11, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>
+                              Mark Received
+                            </button>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 14px', borderRadius: 10, background: pendingDocs > 0 ? '#fff7ed' : '#f0fdf4', border: `1px solid ${pendingDocs > 0 ? '#fed7aa' : '#bbf7d0'}` }}>
+                    <span style={{ fontSize: 15, marginTop: 1 }}>{pendingDocs > 0 ? '⚠️' : '✅'}</span>
+                    <div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: pendingDocs > 0 ? '#c2410c' : '#15803d' }}>{receivedDocs} of {totalDocs} documents received</div>
+                      {pendingDocs > 0
+                        ? <div style={{ fontSize: 11, color: '#a16207', marginTop: 2 }}>{pendingDocs} document{pendingDocs > 1 ? 's' : ''} still pending — mark as received or flag and proceed.</div>
+                        : <div style={{ fontSize: 11, color: '#15803d', marginTop: 2 }}>All documents received. Ready to send for Credit Review.</div>}
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <YumnaiBriefing message={localCard.yumnaiSuggestion?.message} />
 
               {/* Static info */}
@@ -457,61 +536,6 @@ function FRCardDetailPage({ card, onClose, onCardUpdate, onPrev, onNext, current
               </div>
 
               {/* ── Stage-Specific Panel ── */}
-
-              {localCard.stage === 'fr_checking' && (
-                <div className="bg-white rounded-2xl border border-black/5 p-5">
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: '#a3a3a3', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Doc Checking</div>
-                    <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 9px', borderRadius: 20,
-                      background: pendingDocs > 0 ? '#fff7ed' : '#dcfce7',
-                      color: pendingDocs > 0 ? '#c2410c' : '#15803d' }}>
-                      {receivedDocs}/{totalDocs} received
-                    </span>
-                  </div>
-                  <div style={{ fontSize: 13, color: '#64748b', marginBottom: 14 }}>Do we have enough documents to send this for Credit Review?</div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}>
-                    {localCard.documents.map((doc, i) => {
-                      const isPending = doc.status !== 'received'
-                      const sc = doc.status === 'received' ? '#15803d' : doc.status === 'missing' ? '#b91c1c' : '#a16207'
-                      const sb = doc.status === 'received' ? '#dcfce7'  : doc.status === 'missing' ? '#fee2e2'  : '#fef9c3'
-                      return (
-                        <div key={i} style={{
-                          display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 10,
-                          background: isPending ? '#fffbf5' : '#f8fafc',
-                          border: `1px solid ${isPending ? '#fed7aa' : '#e5e5e5'}`,
-                        }}>
-                          <span style={{ fontSize: 14, flexShrink: 0 }}>{doc.status === 'received' ? '✅' : doc.status === 'missing' ? '❌' : '⏳'}</span>
-                          <div style={{ flex: 1 }}>
-                            <div style={{ fontSize: 12, fontWeight: 600, color: '#262626' }}>{doc.name}</div>
-                            {doc.discrepancy && <div style={{ fontSize: 10, color: '#b91c1c', marginTop: 1 }}>⚠️ {doc.discrepancy}</div>}
-                          </div>
-                          {doc.aiCheck && (
-                            <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 20, background: doc.aiCheck === 'pass' ? '#dcfce7' : '#fee2e2', color: doc.aiCheck === 'pass' ? '#15803d' : '#b91c1c' }}>
-                              AI: {doc.aiCheck}
-                            </span>
-                          )}
-                          <span style={{ fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 20, background: sb, color: sc, textTransform: 'capitalize' }}>{doc.status}</span>
-                          {isPending && (
-                            <button onClick={() => handleMarkDocReceived(i)}
-                              style={{ padding: '4px 12px', borderRadius: 20, border: 'none', background: 'var(--color-primary)', color: 'white', fontSize: 11, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>
-                              Mark Received
-                            </button>
-                          )}
-                        </div>
-                      )
-                    })}
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 14px', borderRadius: 10, background: pendingDocs > 0 ? '#fff7ed' : '#f0fdf4', border: `1px solid ${pendingDocs > 0 ? '#fed7aa' : '#bbf7d0'}` }}>
-                    <span style={{ fontSize: 15, marginTop: 1 }}>{pendingDocs > 0 ? '⚠️' : '✅'}</span>
-                    <div>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: pendingDocs > 0 ? '#c2410c' : '#15803d' }}>{receivedDocs} of {totalDocs} documents received</div>
-                      {pendingDocs > 0
-                        ? <div style={{ fontSize: 11, color: '#a16207', marginTop: 2 }}>{pendingDocs} document{pendingDocs > 1 ? 's' : ''} still pending — mark as received or flag and proceed.</div>
-                        : <div style={{ fontSize: 11, color: '#15803d', marginTop: 2 }}>All documents received. Ready to send for Credit Review.</div>}
-                    </div>
-                  </div>
-                </div>
-              )}
 
               {localCard.stage === 'fr_credit' && (() => {
                 const util      = buyerInfo ? buyerInfo.creditUsed / buyerInfo.creditLimit : 0
@@ -733,34 +757,34 @@ function FRCardDetailPage({ card, onClose, onCardUpdate, onPrev, onNext, current
                 </div>
               )}
 
-              {/* Action Bar */}
-              {localCard.stage !== 'fr_closed' ? (
-                <div style={{ display: 'flex', gap: 10, paddingBottom: 8 }}>
-                  <button onClick={handleContinue}
-                    style={{ padding: '9px 20px', borderRadius: 20, border: '1.5px solid #e5e5e5', background: 'white', fontSize: 12, fontWeight: 600, color: '#525252', cursor: 'pointer' }}>
-                    Continue
-                  </button>
-                  <button onClick={handleSuggest}
-                    style={{ padding: '9px 20px', borderRadius: 20, border: '1.5px solid rgba(144,132,253,0.3)', background: 'rgba(144,132,253,0.06)', fontSize: 12, fontWeight: 600, color: 'var(--color-primary)', cursor: 'pointer' }}>
-                    Suggest
-                  </button>
-                  <button onClick={handleAccept}
-                    style={{ marginLeft: 'auto', padding: '9px 24px', borderRadius: 20, border: 'none', background: 'linear-gradient(135deg, #9084fd 0%, #6a7bff 50%, #3da4ff 100%)', color: 'white', fontSize: 12, fontWeight: 700, cursor: 'pointer', boxShadow: '0 2px 12px rgba(144,132,253,0.35)' }}>
-                    {FR_ACCEPT_LABEL[localCard.stage] || 'Accept →'}
-                  </button>
-                </div>
-              ) : (
-                <div style={{ padding: '12px 16px', borderRadius: 12, background: '#f0fdf4', border: '1px solid #bbf7d0', display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontSize: 16 }}>✅</span>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: '#15803d' }}>This request has been closed and credit disbursed.</span>
-                </div>
-              )}
             </div>
           )}
           {activeTab === 'documents' && <div className="p-6"><DocumentsTab documents={localCard.documents} /></div>}
         </div>
-        <ChatterPanel correspondence={localCard.correspondence} onSend={handleSend} />
+        {localCard.stage !== 'fr_closed' ? (
+          <div className="shrink-0 border-t border-black/5 bg-white px-6 py-3.5 flex items-center gap-3">
+            <button onClick={handleContinue}
+              style={{ padding: '9px 20px', borderRadius: 20, border: '1.5px solid #e5e5e5', background: 'white', fontSize: 12, fontWeight: 600, color: '#525252', cursor: 'pointer' }}>
+              Continue
+            </button>
+            <button onClick={handleSuggest}
+              style={{ padding: '9px 20px', borderRadius: 20, border: '1.5px solid rgba(144,132,253,0.3)', background: 'rgba(144,132,253,0.06)', fontSize: 12, fontWeight: 600, color: 'var(--color-primary)', cursor: 'pointer' }}>
+              Suggest
+            </button>
+            <button onClick={handleAccept}
+              style={{ marginLeft: 'auto', padding: '9px 24px', borderRadius: 20, border: 'none', background: 'linear-gradient(135deg, #9084fd 0%, #6a7bff 50%, #3da4ff 100%)', color: 'white', fontSize: 12, fontWeight: 700, cursor: 'pointer', boxShadow: '0 2px 12px rgba(144,132,253,0.35)' }}>
+              {FR_ACCEPT_LABEL[localCard.stage] || 'Accept →'}
+            </button>
+          </div>
+        ) : (
+          <div className="shrink-0 border-t border-black/5 bg-white px-6 py-3.5 flex items-center gap-8">
+            <span style={{ fontSize: 16 }}>✅</span>
+            <span style={{ fontSize: 13, fontWeight: 700, color: '#15803d' }}>This request has been closed and credit disbursed.</span>
+          </div>
+        )}
       </div>
+      <ChatterPanel correspondence={localCard.correspondence} onSend={handleSend} />
+    </div>
     </div>
   )
 }
