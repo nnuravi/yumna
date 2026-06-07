@@ -4,8 +4,8 @@ name: Deploy to S3
 on:
   push:
     branches:
-      # - main   # original
-      - react    # deploy on pushes to the react branch
+      - main   # original
+      # - react    # deploy on pushes to the react branch
 
 jobs:
   deploy:
