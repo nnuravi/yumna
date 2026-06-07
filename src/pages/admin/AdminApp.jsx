@@ -170,9 +170,12 @@ export default function AdminApp() {
         {/* Logo zone — sits above the sidebar, width tracks the rail */}
         <div className="shrink-0 flex items-center h-full ps-6 overflow-hidden ease-entrance"
           style={{ width: sidebarOpen ? '248px' : '92px', transition: 'width 0.32s var(--ease-entrance)' }}>
-          <img src="/logo-mark.svg" alt="Yumna" className="h-8 w-auto shrink-0" />
-          <img src="/assets/logotype.svg" alt="Yumna" className="h-8 w-auto shrink-0 ms-2"
-            style={{ opacity: sidebarOpen ? 1 : 0, maxWidth: sidebarOpen ? '120px' : '0px', transition: 'opacity 0.25s var(--ease-entrance), max-width 0.32s var(--ease-entrance)' }} />
+          {/* Lockup forced LTR so the mark + wordmark keep their order under RTL */}
+          <div dir="ltr" className="flex items-center">
+            <img src="/logo-mark.svg" alt="Yumna" className="h-8 w-auto shrink-0" />
+            <img src="/assets/logotype.svg" alt="Yumna" className="h-8 w-auto shrink-0 ms-2"
+              style={{ opacity: sidebarOpen ? 1 : 0, maxWidth: sidebarOpen ? '120px' : '0px', transition: 'opacity 0.25s var(--ease-entrance), max-width 0.32s var(--ease-entrance)' }} />
+          </div>
         </div>
 
         {/* Right block — section heading + controls */}
@@ -229,7 +232,7 @@ export default function AdminApp() {
         {/* Sidebar — floating pill rail */}
         <aside className="shrink-0 pb-3 ps-3 overflow-hidden"
           style={{ width: sidebarOpen ? '248px' : '92px', transition: 'width 0.32s var(--ease-entrance)' }}>
-          <div className="flex h-full flex-col rounded-3xl bg-white border border-[var(--color-line)] overflow-hidden"
+          <div className={`flex h-full flex-col bg-white border border-[var(--color-line)] overflow-hidden ${sidebarOpen ? 'rounded-3xl' : 'rounded-full'}`}
             style={{ boxShadow: 'var(--shadow-rail)' }}>
             {/* Nav */}
             <nav className="flex-1 overflow-y-auto px-3 pt-4 pb-2 flex flex-col gap-1.5">
@@ -238,8 +241,11 @@ export default function AdminApp() {
                 const badge = item.id === 'pipeline' ? pipelineBadge : item.id === 'finance_requests' ? financeRequestsBadge : item.id === 'repayments' ? repaymentsBadge : item.id === 'tasks' ? myTaskCount : 0
                 return (
                   <button key={item.id} onClick={() => { setBreadcrumb(null); setActiveSection(item.id) }} title={item.label}
-                    className="group relative flex items-center h-12 w-full rounded-2xl transition-colors"
+                    className="group relative flex items-center h-12 self-center transition-colors"
                     style={{
+                      width: sidebarOpen ? '100%' : '48px',
+                      borderRadius: sidebarOpen ? '14px' : '9999px',
+                      transition: 'width 0.32s var(--ease-entrance)',
                       background: active ? 'var(--color-primary)' : 'transparent',
                       color: active ? '#fff' : 'var(--color-ink-soft)',
                     }}
