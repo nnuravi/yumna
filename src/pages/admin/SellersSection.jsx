@@ -83,11 +83,11 @@ export default function SellersSection({ onBreadcrumb }) {
   ]
 
   return (
-    <div className="flex gap-5">
+    <div className="flex gap-5 h-full">
 
       {/* List — always 320 px */}
-      <div className="w-80 shrink-0">
-        <div className="bg-white rounded-2xl border border-black/5 overflow-hidden">
+      <div className="w-80 shrink-0 flex flex-col min-h-0">
+        <div className="bg-white rounded-2xl border border-black/5 overflow-hidden flex flex-col flex-1">
           <div className="px-4 py-3 border-b border-slate-50 space-y-2.5">
             <h3 className="font-semibold text-slate-800 text-[14px]">Sellers</h3>
 
@@ -126,7 +126,7 @@ export default function SellersSection({ onBreadcrumb }) {
           </div>
 
           {/* Seller rows */}
-          <div className="divide-y divide-slate-50">
+          <div className="divide-y divide-slate-50 flex-1 overflow-y-auto">
             {filtered.length === 0 && (
               <div className="px-5 py-8 text-[12px] text-slate-400 text-center">No sellers found</div>
             )}
@@ -157,8 +157,8 @@ export default function SellersSection({ onBreadcrumb }) {
 
       {/* Detail panel */}
       {selected && (
-        <div className="flex-1 min-w-0">
-          <div className="bg-white rounded-2xl border border-black/5 overflow-hidden">
+        <div className="flex-1 min-w-0 flex flex-col min-h-0">
+          <div className="bg-white rounded-2xl border border-black/5 overflow-hidden flex flex-col flex-1">
 
             {/* Header */}
             <div className="px-5 py-4 border-b border-slate-50 flex items-center gap-3">
@@ -181,7 +181,7 @@ export default function SellersSection({ onBreadcrumb }) {
               ))}
             </div>
 
-            <div className="p-5">
+            <div className="p-5 flex-1 overflow-y-auto min-h-0">
 
               {tab === 'Overview' && (
                 <div className="space-y-6">
