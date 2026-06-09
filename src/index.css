@@ -195,6 +195,55 @@ body {
   animation: pulse-dot 1.8s ease-in-out infinite;
 }
 
+/* ── Welcome / Login experience ─────────────────────────────── */
+
+/* Logo rises from the bottom, settles, then floats gently */
+@keyframes welcomeRise {
+  0%   { opacity: 0; transform: translateY(170px) scale(0.9); }
+  55%  { opacity: 1; }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes welcomeFloat {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-12px); }
+}
+.welcome-logo {
+  animation:
+    welcomeRise 1.2s var(--ease-entrance) both,
+    welcomeFloat 3.6s ease-in-out 1.2s infinite;
+}
+
+/* Soft halo behind the logo, fading in with it */
+@keyframes welcomeHalo {
+  0%   { opacity: 0; transform: scale(0.6); }
+  100% { opacity: 1; transform: scale(1); }
+}
+.welcome-halo { animation: welcomeHalo 1.4s var(--ease-entrance) 0.3s both; }
+
+/* Heading + supporting copy fade up after the logo lands */
+@keyframes welcomeFadeUp {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.welcome-fade-1 { animation: welcomeFadeUp 0.7s var(--ease-entrance) 1.0s both; }
+.welcome-fade-2 { animation: welcomeFadeUp 0.7s var(--ease-entrance) 1.3s both; }
+
+/* Determinate loading bar that fills across the ~3s sequence */
+@keyframes welcomeProgress {
+  from { width: 0%; }
+  to   { width: 100%; }
+}
+.welcome-progress { animation: welcomeProgress 2.9s var(--ease-progress) both; }
+
+/* Screen-level cross-fade between welcome → login → app */
+@keyframes screenFadeIn  { from { opacity: 0; } to { opacity: 1; } }
+@keyframes screenFadeOut { from { opacity: 1; } to { opacity: 0; } }
+.screen-enter { animation: screenFadeIn 0.5s ease both; }
+.screen-leave { animation: screenFadeOut 0.5s ease both; pointer-events: none; }
+
+/* Login card slides up subtly on entry */
+.login-card { animation: fadeSlideUp 0.6s var(--ease-entrance) 0.1s both; }
+
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
