@@ -177,6 +177,26 @@ function DocumentsTab({ documents }) {
   )
 }
 
+// ── Timeline helpers ──────────────────────────────────────────────────────────
+
+function groupByDay(entries) {
+  const today     = new Date().toISOString().slice(0, 10)
+  const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10)
+  const map = {}, order = []
+  entries.forEach(e => {
+    const key = (e.time || '').slice(0, 10)
+    if (!map[key]) { map[key] = []; order.push(key) }
+    map[key].push(e)
+  })
+  return order.map(key => {
+    const d = new Date(key + 'T12:00:00')
+    const label = key === today ? 'Today'
+      : key === yesterday ? 'Yesterday'
+      : `${d.getDate()} ${d.toLocaleString('en', { month: 'short' })}`
+    return { key, label, entries: map[key] }
+  })
+}
+
 // ── ChatterPanel (modeled on Pipeline.jsx ChatterPanel) ────────────────────────
 function ChatterPanel({ correspondence, onSend }) {
   const [chatterMode, setChatterMode] = useState(null)
@@ -191,29 +211,66 @@ function ChatterPanel({ correspondence, onSend }) {
       <div style={{ padding: '12px 16px', borderBottom: '1px solid #f1f5f9', flexShrink: 0 }}>
         <span style={{ fontSize: 11, fontWeight: 700, color: '#a3a3a3', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Activity & Notes</span>
       </div>
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+      <div className="flex-1 overflow-y-auto px-4 py-4">
         {correspondence.length === 0 && <div className="text-center text-[13px] text-slate-400 py-8">No activity yet.</div>}
-        {correspondence.map((entry, i) => {
-          const isYumnai = entry.from === 'Yumnai AI'
+        {correspondence.length > 0 && (() => {
+          const groups = groupByDay(correspondence)
+          const lastGi = groups.length - 1
           return (
-            <div key={i} className="rounded-xl border p-3"
-              style={isYumnai
-                ? { borderColor: 'rgba(144,132,253,0.30)', background: 'linear-gradient(135deg, #efedff 0%, #e9edff 50%, #e6f4ff 100%)' }
-                : { borderColor: '#e5e5e5', background: '#fafafa' }}>
-              <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                {isYumnai ? (
-                  <span className="inline-flex items-center gap-1 text-[12px] font-bold" style={{ color: 'var(--color-primary)' }}>
-                    <img src="/yumnai.svg" alt="" className="h-3.5 w-auto" /> Yumnai
-                  </span>
-                ) : (
-                  <span className="text-[12px] font-semibold text-slate-700">{entry.from}</span>
-                )}
-                <span className="ml-auto text-[10px] text-slate-400 shrink-0">{entry.time}</span>
-              </div>
-              <p className="text-[12px] leading-relaxed" style={{ color: isYumnai ? '#262626' : '#475569', margin: 0 }}>{entry.message}</p>
+            <div className="relative">
+              <div className="absolute top-3 bottom-3 w-px bg-slate-100" style={{ left: '11px' }} />
+              {groups.map((group, gi) => (
+                <div key={group.key}>
+                  <div className="relative z-10 flex items-center gap-2 mb-3 mt-1 pl-7" style={{ background: 'white' }}>
+                    <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">{group.label}</span>
+                    <div className="flex-1 h-px bg-slate-100" />
+                  </div>
+                  <div className="space-y-4 mb-2">
+                    {group.entries.map((entry, ei) => {
+                      const isLast = gi === lastGi && ei === group.entries.length - 1
+                      const isYumnai = entry.from === 'Yumnai AI'
+                      return (
+                        <div key={ei} className="flex gap-3">
+                          <div className="relative z-10 w-6 h-6 rounded-full border-2 shrink-0 mt-0.5 flex items-center justify-center overflow-hidden"
+                            style={isLast
+                              ? { borderColor: 'var(--color-primary)', background: '#ede9ff' }
+                              : isYumnai
+                                ? { borderColor: 'rgba(144,132,253,0.4)', background: 'rgba(144,132,253,0.1)' }
+                                : { borderColor: '#e5e5e5', background: '#f5f5f5' }
+                            }>
+                            {isYumnai
+                              ? <img src="/yumnai.svg" alt="" className="h-2.5 w-auto" />
+                              : <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#737373" strokeWidth="2.5" strokeLinecap="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+                            }
+                          </div>
+                          <div className="flex-1 rounded-xl border p-3"
+                            style={isYumnai
+                              ? { borderColor: 'rgba(144,132,253,0.30)', background: 'linear-gradient(135deg, #efedff 0%, #e9edff 50%, #e6f4ff 100%)' }
+                              : { borderColor: '#e5e5e5', background: '#fafafa' }}>
+                            <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                              {isYumnai ? (
+                                <span className="inline-flex items-center gap-1 text-[12px] font-bold" style={{ color: 'var(--color-primary)' }}>
+                                  <img src="/yumnai.svg" alt="" className="h-3.5 w-auto" /> Yumnai
+                                </span>
+                              ) : (
+                                <span className="text-[12px] font-semibold text-slate-700">{entry.from}</span>
+                              )}
+                              <span className="ml-auto text-[10px] text-slate-400 shrink-0 flex items-center gap-1">
+                                {entry.time}
+                                {isLast && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: '#ede9ff', color: 'var(--color-primary)' }}>Latest</span>}
+                              </span>
+                            </div>
+                            <p className="text-[12px] leading-relaxed" style={{ color: isYumnai ? '#262626' : '#475569', margin: 0 }}>{entry.message}</p>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              ))}
             </div>
           )
-        })}
+        })()}
       </div>
       <div className="border-t border-slate-100 shrink-0">
         <div className="px-4 py-3 flex gap-2">

@@ -1046,12 +1046,31 @@ function ChatterPanel({ card, onUpdate, addToast }) {
     addToast('Message sent.', 'success')
   }
 
-  function typeIcon(type) {
-    if (type === 'payment')   return <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0" style={{ background: '#525252' }}>₊</div>
-    if (type === 'escalation') return <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 border-2" style={{ borderColor: '#404040', background: 'white' }}><span className="text-[8px] font-black" style={{ color: '#404040' }}>!</span></div>
-    if (type === 'system')    return <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0" style={{ background: '#f0f0f0' }}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#a3a3a3" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>
-    if (type === 'message')   return <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0" style={{ background: '#e5e5e5' }}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#737373" strokeWidth="2.5" strokeLinecap="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></div>
-    return <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0" style={{ background: '#f5f5f5' }}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#a3a3a3" strokeWidth="2"><circle cx="12" cy="12" r="10"/></svg></div>
+  function groupByDay(entries) {
+    const today     = new Date().toISOString().slice(0, 10)
+    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10)
+    const map = {}, order = []
+    entries.forEach(e => {
+      const key = (e.date || '').slice(0, 10)
+      if (!map[key]) { map[key] = []; order.push(key) }
+      map[key].push(e)
+    })
+    return order.map(key => {
+      const d = new Date(key + 'T12:00:00')
+      const label = key === today ? 'Today'
+        : key === yesterday ? 'Yesterday'
+        : `${d.getDate()} ${d.toLocaleString('en', { month: 'short' })}`
+      return { key, label, entries: map[key] }
+    })
+  }
+
+  function typeIcon(type, isLast = false) {
+    const ring = isLast ? { outline: '2px solid var(--color-primary)', outlineOffset: '2px' } : {}
+    if (type === 'payment')   return <div className="relative z-10 w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0" style={{ background: '#525252', ...ring }}>₊</div>
+    if (type === 'escalation') return <div className="relative z-10 w-6 h-6 rounded-full flex items-center justify-center shrink-0 border-2" style={{ borderColor: '#404040', background: 'white', ...ring }}><span className="text-[8px] font-black" style={{ color: '#404040' }}>!</span></div>
+    if (type === 'system')    return <div className="relative z-10 w-6 h-6 rounded-full flex items-center justify-center shrink-0" style={{ background: '#f0f0f0', ...ring }}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#a3a3a3" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>
+    if (type === 'message')   return <div className="relative z-10 w-6 h-6 rounded-full flex items-center justify-center shrink-0" style={{ background: '#e5e5e5', ...ring }}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#737373" strokeWidth="2.5" strokeLinecap="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></div>
+    return <div className="relative z-10 w-6 h-6 rounded-full flex items-center justify-center shrink-0" style={{ background: '#f5f5f5', ...ring }}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#a3a3a3" strokeWidth="2"><circle cx="12" cy="12" r="10"/></svg></div>
   }
 
   return (
@@ -1060,19 +1079,44 @@ function ChatterPanel({ card, onUpdate, addToast }) {
         <div className="text-[11px] font-bold text-slate-700 uppercase tracking-widest">Activity</div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
-        {timeline.map(entry => (
-          <div key={entry.id} className="flex gap-2.5">
-            {typeIcon(entry.type)}
-            <div className="flex-1 min-w-0">
-              {entry.from && <div className="text-[10px] font-semibold text-slate-600 mb-0.5">{entry.from}</div>}
-              <div className="text-[11px] text-slate-700 leading-relaxed">{entry.text}</div>
-              {entry.notes && <div className="text-[10px] text-slate-400 mt-0.5 italic">{entry.notes}</div>}
-              {entry.ref && <div className="text-[9px] font-mono text-slate-400 mt-0.5">{entry.ref}</div>}
-              <div className="text-[9px] text-slate-300 mt-0.5">{entry.date}</div>
+      <div className="flex-1 overflow-y-auto px-4 py-3">
+        {(() => {
+          const groups = groupByDay(timeline)
+          const lastGi = groups.length - 1
+          return (
+            <div className="relative">
+              <div className="absolute top-3 bottom-3 w-px bg-slate-100" style={{ left: '11px' }} />
+              {groups.map((group, gi) => (
+                <div key={group.key}>
+                  <div className="relative z-10 flex items-center gap-2 mb-2.5 mt-1 pl-7" style={{ background: 'white' }}>
+                    <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">{group.label}</span>
+                    <div className="flex-1 h-px bg-slate-100" />
+                  </div>
+                  <div className="space-y-3 mb-2">
+                    {group.entries.map((entry, ei) => {
+                      const isLast = gi === lastGi && ei === group.entries.length - 1
+                      return (
+                        <div key={entry.id} className="flex gap-2.5">
+                          {typeIcon(entry.type, isLast)}
+                          <div className="flex-1 min-w-0">
+                            {entry.from && <div className="text-[10px] font-semibold text-slate-600 mb-0.5">{entry.from}</div>}
+                            <div className="text-[11px] text-slate-700 leading-relaxed">{entry.text}</div>
+                            {entry.notes && <div className="text-[10px] text-slate-400 mt-0.5 italic">{entry.notes}</div>}
+                            {entry.ref && <div className="text-[9px] font-mono text-slate-400 mt-0.5">{entry.ref}</div>}
+                            <div className="text-[10px] text-slate-400 mt-0.5 flex items-center gap-1">
+                              {entry.date}
+                              {isLast && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: '#ede9ff', color: 'var(--color-primary)' }}>Latest</span>}
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              ))}
             </div>
-          </div>
-        ))}
+          )
+        })()}
       </div>
 
       <div className="px-4 py-3 border-t border-black/5 shrink-0">

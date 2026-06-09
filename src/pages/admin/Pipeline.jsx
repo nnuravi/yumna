@@ -150,6 +150,26 @@ function LaneActions({ stage, onClose }) {
   )
 }
 
+// ── Timeline helpers ─────────────────────────────────────────────────────────
+
+function groupByDay(entries, dateKey = 'date') {
+  const today     = new Date().toISOString().slice(0, 10)
+  const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10)
+  const map = {}, order = []
+  entries.forEach(e => {
+    const key = (e[dateKey] || '').slice(0, 10)
+    if (!map[key]) { map[key] = []; order.push(key) }
+    map[key].push(e)
+  })
+  return order.map(key => {
+    const d = new Date(key + 'T12:00:00')
+    const label = key === today ? 'Today'
+      : key === yesterday ? 'Yesterday'
+      : `${d.getDate()} ${d.toLocaleString('en', { month: 'short' })}`
+    return { key, label, entries: map[key] }
+  })
+}
+
 // ── Chatter Panel ─────────────────────────────────────────────────────────────
 
 function ChatterPanel({ timeline, chatterMode, setChatterMode, draftText, setDraftText, onSend }) {
@@ -160,68 +180,105 @@ function ChatterPanel({ timeline, chatterMode, setChatterMode, draftText, setDra
         <span style={{ fontSize: 13, fontWeight: 700, color: '#171717' }}>Activity Timeline</span>
       </div>
       {/* Timeline */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+      <div className="flex-1 overflow-y-auto px-4 py-4">
         {timeline.length === 0 && (
           <div className="text-center text-[13px] text-slate-400 py-8">No activity yet.</div>
         )}
-        {timeline.map((entry, i) => {
-          if (entry.type === 'history') return (
-            <div key={entry.id || i} className="flex gap-3">
-              <div className="w-7 h-7 rounded-full border-2 border-slate-100 bg-white flex items-center justify-center text-[12px] shrink-0 mt-0.5">
-                {entry.icon}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-[12px] text-slate-700 leading-snug">{entry.text}</p>
-                <p className="text-[10px] text-slate-400 mt-0.5">{entry.date}</p>
-              </div>
-            </div>
-          )
-          if (entry.type === 'payment') return (
-            <div key={entry.id || i} className="flex gap-3">
-              <div className="w-7 h-7 rounded-full border-2 border-slate-200 bg-slate-50 flex items-center justify-center text-[12px] shrink-0 mt-0.5">
-                💰
-              </div>
-              <div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-[12px] font-semibold text-slate-700">Payment received</span>
-                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-slate-600 font-semibold tabular-nums">
-                    {formatSAR(entry.amount)}
-                  </span>
-                </div>
-                <p className="text-[10px] text-slate-400 mt-0.5">Instalment {entry.instalment} · {entry.date}</p>
-              </div>
-            </div>
-          )
-          if (entry.type === 'note') return (
-            <div key={entry.id || i} className="rounded-xl border p-3" style={{ background: '#f5f5f5', borderColor: '#e5e5e5' }}>
-              <div className="flex items-center gap-2 mb-1.5">
-                <span className="text-[11px] font-semibold" style={{ color: '#262626' }}>{entry.from}</span>
-                <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium" style={{ background: '#e5e5e5', color: '#525252' }}>Note</span>
-                <span className="ml-auto text-[10px] text-slate-400">{entry.date}</span>
-              </div>
-              <p className="text-[12px] text-slate-600 leading-relaxed">{entry.message}</p>
-            </div>
-          )
-          const isYumnai = entry.from === 'Yumnai AI'
+        {timeline.length > 0 && (() => {
+          const groups = groupByDay(timeline)
+          const lastGi = groups.length - 1
           return (
-            <div key={entry.id || i} className="rounded-xl border p-3"
-              style={isYumnai
-                ? { borderColor: 'rgba(144,132,253,0.30)', background: 'linear-gradient(135deg, #efedff 0%, #e9edff 50%, #e6f4ff 100%)' }
-                : { borderColor: '#e5e5e5', background: '#fafafa' }}>
-              <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                {isYumnai ? (
-                  <span className="inline-flex items-center gap-1 text-[12px] font-bold" style={{ color: 'var(--color-primary)' }}>
-                    <img src="/yumnai.svg" alt="" className="h-3.5 w-auto" /> Yumnai
-                  </span>
-                ) : (
-                  <span className="text-[12px] font-semibold text-slate-700">{entry.from}</span>
-                )}
-                <span className="ml-auto text-[10px] text-slate-400 shrink-0">{entry.date}</span>
-              </div>
-              <p className="text-[12px] leading-relaxed" style={{ color: isYumnai ? '#262626' : '#475569' }}>{entry.message}</p>
+            <div className="relative">
+              <div className="absolute top-3.5 bottom-3.5 w-px bg-slate-100" style={{ left: '13px' }} />
+              {groups.map((group, gi) => (
+                <div key={group.key}>
+                  <div className="relative z-10 flex items-center gap-2 mb-3 mt-1 pl-8" style={{ background: 'white' }}>
+                    <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">{group.label}</span>
+                    <div className="flex-1 h-px bg-slate-100" />
+                  </div>
+                  <div className="space-y-4 mb-2">
+                    {group.entries.map((entry, ei) => {
+                      const isLast = gi === lastGi && ei === group.entries.length - 1
+                      const dotRing = isLast ? { borderColor: 'var(--color-primary)' } : {}
+                      const latestChip = isLast
+                        ? <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: '#ede9ff', color: 'var(--color-primary)' }}>Latest</span>
+                        : null
+
+                      if (entry.type === 'history') return (
+                        <div key={entry.id || ei} className="flex gap-3">
+                          <div className="relative z-10 w-7 h-7 rounded-full border-2 border-slate-100 bg-white flex items-center justify-center text-[12px] shrink-0 mt-0.5" style={dotRing}>
+                            {entry.icon}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[12px] text-slate-700 leading-snug">{entry.text}</p>
+                            <p className="text-[10px] text-slate-400 mt-0.5 flex items-center gap-1">{entry.date}{latestChip}</p>
+                          </div>
+                        </div>
+                      )
+                      if (entry.type === 'payment') return (
+                        <div key={entry.id || ei} className="flex gap-3">
+                          <div className="relative z-10 w-7 h-7 rounded-full border-2 border-slate-200 bg-slate-50 flex items-center justify-center text-[12px] shrink-0 mt-0.5" style={dotRing}>
+                            💰
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-[12px] font-semibold text-slate-700">Payment received</span>
+                              <span className="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-slate-600 font-semibold tabular-nums">{formatSAR(entry.amount)}</span>
+                            </div>
+                            <p className="text-[10px] text-slate-400 mt-0.5 flex items-center gap-1">Instalment {entry.instalment} · {entry.date}{latestChip}</p>
+                          </div>
+                        </div>
+                      )
+                      if (entry.type === 'note') return (
+                        <div key={entry.id || ei} className="flex gap-3">
+                          <div className="relative z-10 w-7 h-7 rounded-full border-2 border-slate-100 bg-white flex items-center justify-center text-[11px] shrink-0 mt-0.5" style={dotRing}>📝</div>
+                          <div className="flex-1 rounded-xl border p-3" style={{ background: '#f5f5f5', borderColor: '#e5e5e5' }}>
+                            <div className="flex items-center gap-2 mb-1.5">
+                              <span className="text-[11px] font-semibold" style={{ color: '#262626' }}>{entry.from}</span>
+                              <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium" style={{ background: '#e5e5e5', color: '#525252' }}>Note</span>
+                              <span className="ml-auto text-[10px] text-slate-400 flex items-center gap-1">{entry.date}{latestChip}</span>
+                            </div>
+                            <p className="text-[12px] text-slate-600 leading-relaxed">{entry.message}</p>
+                          </div>
+                        </div>
+                      )
+                      const isYumnai = entry.from === 'Yumnai AI'
+                      return (
+                        <div key={entry.id || ei} className="flex gap-3">
+                          <div className="relative z-10 w-7 h-7 rounded-full border-2 shrink-0 mt-0.5 flex items-center justify-center overflow-hidden"
+                            style={isLast
+                              ? { borderColor: 'var(--color-primary)', background: '#ede9ff' }
+                              : { borderColor: '#e5e5e5', background: isYumnai ? 'rgba(144,132,253,0.1)' : '#f5f5f5' }}>
+                            {isYumnai
+                              ? <img src="/yumnai.svg" alt="" className="h-3 w-auto" />
+                              : <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#737373" strokeWidth="2.5" strokeLinecap="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+                            }
+                          </div>
+                          <div className="flex-1 rounded-xl border p-3"
+                            style={isYumnai
+                              ? { borderColor: 'rgba(144,132,253,0.30)', background: 'linear-gradient(135deg, #efedff 0%, #e9edff 50%, #e6f4ff 100%)' }
+                              : { borderColor: '#e5e5e5', background: '#fafafa' }}>
+                            <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                              {isYumnai ? (
+                                <span className="inline-flex items-center gap-1 text-[12px] font-bold" style={{ color: 'var(--color-primary)' }}>
+                                  <img src="/yumnai.svg" alt="" className="h-3.5 w-auto" /> Yumnai
+                                </span>
+                              ) : (
+                                <span className="text-[12px] font-semibold text-slate-700">{entry.from}</span>
+                              )}
+                              <span className="ml-auto text-[10px] text-slate-400 shrink-0 flex items-center gap-1">{entry.date}{latestChip}</span>
+                            </div>
+                            <p className="text-[12px] leading-relaxed" style={{ color: isYumnai ? '#262626' : '#475569' }}>{entry.message}</p>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              ))}
             </div>
           )
-        })}
+        })()}
       </div>
 
       {/* Bottom composer dock — chat-window style */}
