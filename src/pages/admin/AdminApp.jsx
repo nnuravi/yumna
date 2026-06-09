@@ -12,8 +12,9 @@ import SellersSection from './SellersSection'
 import BuyersSection from './BuyersSection'
 import TaskManager from './TaskManager'
 import Templates from './Templates'
+import CorrespondenceCenter from './CorrespondenceCenter'
 import YumnaiPanel from './YumnaiPanel'
-import { PIPELINE_CARDS, REPAYMENTS_CARDS, FINANCE_REQUEST_CARDS, INVOICE_FINANCE_CARDS, TASKS } from '../../data/mockData'
+import { PIPELINE_CARDS, REPAYMENTS_CARDS, DIRECT_FINANCE_CARDS, INVOICE_FINANCE_CARDS, TASKS } from '../../data/mockData'
 
 const ALL_NAV = [
   {
@@ -84,6 +85,17 @@ const ALL_NAV = [
     ),
   },
   {
+    id: 'correspondence',
+    label: 'Correspondence',
+    roles: null,
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        <line x1="9" y1="10" x2="15" y2="10"/><line x1="9" y1="14" x2="13" y2="14"/>
+      </svg>
+    ),
+  },
+  {
     id: 'tasks',
     label: 'Task Manager',
     roles: null,
@@ -139,7 +151,7 @@ export default function AdminApp() {
       }).length
 
   const financeRequestsBadge =
-    (FINANCE_REQUEST_CARDS  || []).filter(c => c.stage !== 'fr_closed').length +
+    (DIRECT_FINANCE_CARDS  || []).filter(c => c.stage !== 'df_payment_plan').length +
     (INVOICE_FINANCE_CARDS  || []).filter(c => c.stage !== 'if_active').length
 
   const myTaskCount = TASKS.filter(t => t.assignedTo === user.name && t.status !== 'done').length
@@ -154,6 +166,7 @@ export default function AdminApp() {
       case 'repayments':        return <RepaymentsPipeline onBreadcrumb={setBreadcrumb} />
       case 'sellers':           return <SellersSection onBreadcrumb={setBreadcrumb} />
       case 'buyers':            return <BuyersSection onBreadcrumb={setBreadcrumb} />
+      case 'correspondence':    return <CorrespondenceCenter onBreadcrumb={setBreadcrumb} />
       case 'tasks':             return <TaskManager />
       case 'templates':         return <Templates />
       default:                  return <BizOverview />
@@ -161,7 +174,7 @@ export default function AdminApp() {
   }
 
   const sectionLabel = navItems.find(n => n.id === activeSection)?.label || 'Overview'
-  const isPipelineFullHeight = activeSection === 'pipeline' || activeSection === 'repayments' || activeSection === 'finance_requests'
+  const isPipelineFullHeight = activeSection === 'pipeline' || activeSection === 'repayments' || activeSection === 'finance_requests' || activeSection === 'correspondence'
 
   return (
     <div className="app-bg flex flex-col h-dvh overflow-hidden">
