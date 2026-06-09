@@ -38,8 +38,31 @@ function Field({ label, children }) {
   )
 }
 
+function RepaymentSchedule({ schedule }) {
+  if (!schedule?.length) return null
+  return (
+    <div style={{ marginBottom: 14 }}>
+      <div style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Repayment Schedule</div>
+      <div style={{ border: '1px solid #e2e8f0', borderRadius: 10, overflow: 'hidden' }}>
+        {schedule.map((inst, i) => (
+          <div key={i} style={{
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            padding: '8px 14px', fontSize: 12,
+            borderBottom: i < schedule.length - 1 ? '1px solid #f1f5f9' : 'none',
+            background: i % 2 === 0 ? 'white' : '#fafafa',
+          }}>
+            <span style={{ color: '#94a3b8', fontWeight: 600, minWidth: 80 }}>Instalment {inst.no}</span>
+            <span style={{ color: '#64748b' }}>{inst.dueDate}</span>
+            <span style={{ fontWeight: 700, color: '#262626' }}><SARAmount amount={inst.amount} /></span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // ── Shared Yumnai Briefing Block ───────────────────────────────────────────────
-function YumnaiBriefing({ message, nextAction }) {
+function YumnaiBriefing({ message, nextAction, statusItems }) {
   if (!message) return null
   return (
     <div style={{ background: 'linear-gradient(135deg, #9084fd 0%, #6a7bff 50%, #3da4ff 100%)', padding: '1.5px', borderRadius: 18 }}>
@@ -50,14 +73,25 @@ function YumnaiBriefing({ message, nextAction }) {
           <span style={{ width: 6, height: 6, borderRadius: '50%', display: 'inline-block', background: 'rgba(255,255,255,0.7)', flexShrink: 0 }} />
           <span style={{ marginLeft: 'auto', fontSize: 11, color: 'rgba(255,255,255,0.65)', fontWeight: 500 }}>Deal Briefing</span>
         </div>
-        <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <div>
-            <div style={{ fontSize: 9, fontWeight: 700, color: 'rgba(106,123,255,0.7)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>Current State</div>
-            <p style={{ fontSize: 13, color: '#374151', lineHeight: 1.55, margin: 0 }}>{message}</p>
+        {statusItems?.length > 0 && (
+          <div style={{ padding: '10px 16px', borderBottom: '1px solid rgba(144,132,253,0.12)', display: 'flex', gap: 8, flexWrap: 'wrap', background: 'rgba(144,132,253,0.04)' }}>
+            {statusItems.map((item, i) => (
+              <span key={i} style={{
+                display: 'inline-flex', alignItems: 'center', gap: 5,
+                padding: '4px 11px', borderRadius: 20, fontSize: 11, fontWeight: 700,
+                background: item.done ? '#dcfce7' : item.pending ? '#fffbeb' : '#f1f5f9',
+                color:      item.done ? '#15803d' : item.pending ? '#92400e' : '#64748b',
+                border:     `1px solid ${item.done ? '#bbf7d0' : item.pending ? '#fde68a' : '#e2e8f0'}`,
+              }}>
+                {item.done ? '✓' : item.pending ? '⏳' : '·'} {item.label}
+              </span>
+            ))}
           </div>
+        )}
+        <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <p style={{ fontSize: 13, color: '#374151', lineHeight: 1.55, margin: 0 }}>{message}</p>
           {nextAction && (
             <div style={{ paddingTop: 10, borderTop: '1px solid rgba(144,132,253,0.15)' }}>
-              <div style={{ fontSize: 9, fontWeight: 700, color: 'rgba(106,123,255,0.7)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>Suggested Action</div>
               <p style={{ fontSize: 13, fontWeight: 600, color: '#4c1d95', lineHeight: 1.5, margin: 0 }}>{nextAction}</p>
             </div>
           )}
@@ -939,49 +973,50 @@ function FRCardDetailPage({ card, onClose, onCardUpdate, onPrev, onNext, current
 
 // ── Invoice Finance card detail ────────────────────────────────────────────────
 const IF_NEXT_STAGE = {
-  if_docs: 'if_review',
-  if_review: 'if_risk',
-  if_risk: 'if_offer',
-  if_offer: 'if_accepted',
-  if_accepted: 'if_disbursed',
-  if_disbursed: 'if_closed',
+  if_new_invoice:     'if_buyer_approval',
+  if_buyer_approval:  'if_payment_plan',
+  if_payment_plan:    'if_advance_payment',
+  if_advance_payment: 'if_ship_notice',
+  if_ship_notice:     'if_delivery_notice',
+  if_delivery_notice: 'if_disbursement',
+  if_disbursement:    'if_active',
 }
 const IF_ACCEPT_LABEL = {
-  if_docs: 'Send for Credit Review →',
-  if_review: 'Send for Risk Assessment →',
-  if_risk: 'Issue Offer →',
-  if_offer: 'Mark Offer Accepted →',
-  if_accepted: 'Confirm Disbursement →',
-  if_disbursed: 'Close Ticket →',
+  if_disbursement: 'Confirm Disbursement →',
+}
+const IF_CARD_STATUS = {
+  if_new_invoice:     (c) => c.invoiceAiCheck?.status === 'verified' ? 'Yumnai verified — buyer notified' : 'AI verification in progress',
+  if_buyer_approval:  ()  => 'Awaiting buyer confirmation',
+  if_payment_plan:    ()  => 'Generating payment plan',
+  if_advance_payment: ()  => 'Advance payment pending',
+  if_ship_notice:     ()  => 'Awaiting merchant shipment',
+  if_delivery_notice: ()  => 'Awaiting delivery confirmation',
+  if_disbursement:    ()  => 'Ready for disbursement',
+  if_active:          ()  => '✓ Payment plan active',
 }
 const IF_STAGE_HINT = {
-  if_docs:     'Review submitted documents for completeness and authenticity',
-  if_review:   'Assess credit terms — adjust amount, MDR, or tenure if needed',
-  if_risk:     'Complete risk scoring and flag any concerns before issuing an offer',
-  if_offer:    'Issue the Murabaha offer and await borrower acceptance',
-  if_accepted: 'Initiate commodity sale via broker and prepare disbursement',
-  if_disbursed:'Confirm full settlement and close the ticket',
+  if_new_invoice:     'Merchant has uploaded the invoice — awaiting buyer review',
+  if_buyer_approval:  'Buyer is reviewing and approving the order',
+  if_payment_plan:    'Buyer is selecting an instalment payment plan',
+  if_advance_payment: 'Edaat is processing the first advance payment',
+  if_ship_notice:     'Merchant has been notified and is preparing to ship',
+  if_delivery_notice: 'Awaiting merchant delivery confirmation and note upload',
+  if_disbursement:    'All steps complete — confirm disbursement to the merchant',
+  if_active:          'Buyer is enrolled in the instalment schedule',
 }
 
 function IFCardDetailPage({ card, onClose, onCardUpdate, onPrev, onNext, currentIdx, totalCards, laneCards, laneIdx, onPrevInLane, onNextInLane }) {
   const { state } = useApp()
   const [localCard, setLocalCard] = useState(card)
   const [activeTab, setActiveTab] = useState('overview')
-  const [editMdr, setEditMdr]     = useState(String(card.proposedMdrRate ?? card.mdrRate))
-  const [editAmt, setEditAmt]     = useState(String(card.proposedAmount  ?? card.amount))
-  const [editTen, setEditTen]     = useState(String(card.proposedTenure  ?? card.tenure))
-  const [editPayer, setEditPayer] = useState(card.mdrPayer || 'seller_full')
-  const [offerIssued, setOfferIssued] = useState(!!card.offerIssuedAt)
-  const [accepted, setAccepted]   = useState(!!card.acceptedAt)
   const [ticketOpen, setTicketOpen] = useState(true)
+  const [showInvoice, setShowInvoice] = useState(false)
 
   useEffect(() => { setLocalCard(card) }, [card])
 
   const buyerInfo  = localCard.buyerId ? MOCK_BUYERS.find(b => b.id === localCard.buyerId) || null : null
   const stageIdx   = INVOICE_FINANCE_STAGES.findIndex(s => s.id === localCard.stage)
   const stageLabel = INVOICE_FINANCE_STAGES.find(s => s.id === localCard.stage)?.label || localCard.stage
-  const available  = buyerInfo ? buyerInfo.creditLimit - buyerInfo.creditUsed : null
-  const fitsLimit  = available !== null ? localCard.amount <= available : null
   const laneTotal  = laneCards?.length ?? 1
 
   const appendNote = (msg, base = localCard) => {
@@ -1008,14 +1043,11 @@ function IFCardDetailPage({ card, onClose, onCardUpdate, onPrev, onNext, current
     }] }
     setLocalCard(updated); onCardUpdate?.(updated)
   }
-  const handleSaveProposal = () => {
-    const updated = { ...localCard, proposedAmount: Number(editAmt), proposedMdrRate: Number(editMdr), proposedTenure: Number(editTen), mdrPayer: editPayer }
-    setLocalCard(updated); onCardUpdate?.(updated)
-  }
-  const mdrFee     = localCard.amount * (Number(editMdr) / 100)
-  const netToSeller = localCard.amount - (editPayer === 'seller_full' ? mdrFee : editPayer === 'split_50_50' ? mdrFee / 2 : 0)
+  const mdrFee     = localCard.amount * (localCard.mdrRate / 100)
+  const netToSeller = localCard.amount - (localCard.mdrPayer === 'seller_full' ? mdrFee : localCard.mdrPayer === 'split_50_50' ? mdrFee / 2 : 0)
 
   return (
+    <>
     <div className="flex flex-col h-full overflow-hidden">
       {/* Action bar */}
       <div className="shrink-0 px-5 py-3 border-b border-black/5 flex items-center gap-3 flex-wrap">
@@ -1031,13 +1063,6 @@ function IFCardDetailPage({ card, onClose, onCardUpdate, onPrev, onNext, current
           {localCard.amount > 0 && (
             <span className="flex items-center px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-[12px] font-bold text-slate-700"><SARAmount amount={localCard.amount} /></span>
           )}
-          {localCard.riskScore !== null && localCard.riskScore !== undefined && (
-            <span className="flex items-center px-3 py-1.5 rounded-lg border text-[11px] font-bold"
-              style={{ background: riskColor(localCard.riskScore).bg, borderColor: riskColor(localCard.riskScore).bg, color: riskColor(localCard.riskScore).text }}>
-              Risk {localCard.riskScore}
-            </span>
-          )}
-          {localCard.aboveLimit && <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-[11px] font-bold" style={{ background: '#fff7ed', borderColor: '#fed7aa', color: '#c2410c' }}>⚠️ Above Limit</span>}
         </div>
         <div className="flex-1" />
         <span className="text-[12px] text-slate-400 tabular-nums">{currentIdx + 1} / {totalCards}</span>
@@ -1097,16 +1122,6 @@ function IFCardDetailPage({ card, onClose, onCardUpdate, onPrev, onNext, current
                 <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 20, background: '#f1f5f9', color: '#475569' }}>
                   {stageLabel}
                 </span>
-                {fitsLimit === true && (
-                  <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 20, background: '#dcfce7', color: '#15803d' }}>
-                    ✓ Within Limit
-                  </span>
-                )}
-                {fitsLimit === false && (
-                  <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 20, background: '#fff7ed', color: '#c2410c' }}>
-                    ⚠ Above Limit
-                  </span>
-                )}
                 {!ticketOpen && (
                   <span style={{ fontSize: 12, color: '#64748b', fontWeight: 500, marginLeft: 4 }}>
                     {localCard.seller} → {localCard.buyer || '—'} · {localCard.sector}
@@ -1164,7 +1179,37 @@ function IFCardDetailPage({ card, onClose, onCardUpdate, onPrev, onNext, current
           {activeTab === 'overview' && (
             <div className="p-6 space-y-6">
               {/* Yumnai briefing */}
-              <YumnaiBriefing message={localCard.yumnaiSuggestion?.message} nextAction={localCard.yumnaiSuggestion?.nextAction} />
+              <YumnaiBriefing
+                message={localCard.yumnaiSuggestion?.message}
+                nextAction={localCard.yumnaiSuggestion?.nextAction}
+                statusItems={(() => {
+                  const verified = localCard.invoiceAiCheck?.status === 'verified'
+                  const s = localCard.stage
+                  if (s === 'if_new_invoice' && verified) return [
+                    { label: 'Verification complete', done: true },
+                    { label: 'Buyer approval pending', pending: true },
+                  ]
+                  if (s === 'if_buyer_approval') return [
+                    { label: 'Verification complete', done: true },
+                    { label: 'Buyer approval pending', pending: true },
+                  ]
+                  if (['if_payment_plan', 'if_advance_payment', 'if_ship_notice', 'if_delivery_notice'].includes(s)) return [
+                    { label: 'Verification complete', done: true },
+                    { label: 'Buyer approved', done: true },
+                  ]
+                  if (s === 'if_disbursement') return [
+                    { label: 'Verification complete', done: true },
+                    { label: 'Buyer approved', done: true },
+                    { label: 'Disbursement pending', pending: true },
+                  ]
+                  if (s === 'if_active') return [
+                    { label: 'Verification complete', done: true },
+                    { label: 'Buyer approved', done: true },
+                    { label: 'Disbursed', done: true },
+                  ]
+                  return undefined
+                })()}
+              />
 
 
               {/* ── Card 2: Finance Details ── */}
@@ -1192,40 +1237,19 @@ function IFCardDetailPage({ card, onClose, onCardUpdate, onPrev, onNext, current
                 </div>
                 {buyerInfo && (() => {
                   const available = buyerInfo.creditLimit - buyerInfo.creditUsed
-                  const excess = localCard.amount - available
-                  const fits = excess <= 0
                   const util = buyerInfo.creditUsed / buyerInfo.creditLimit
                   const barColor = util > 0.85 ? '#b91c1c' : util > 0.6 ? '#a16207' : '#16a34a'
                   return (
-                    <>
-                      <div style={{ marginBottom: 10 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, fontWeight: 600, color: '#64748b', marginBottom: 4 }}>
-                          <span>Buyer credit · <SARAmount amount={buyerInfo.creditUsed} /> used of <SARAmount amount={buyerInfo.creditLimit} /></span>
-                          <span style={{ color: barColor }}>{Math.round(util * 100)}%</span>
-                        </div>
-                        <div style={{ height: 5, borderRadius: 20, background: '#f1f5f9', overflow: 'hidden', marginBottom: 3 }}>
-                          <div style={{ height: '100%', borderRadius: 20, width: `${Math.min(util * 100, 100)}%`, background: barColor }} />
-                        </div>
-                        <div style={{ fontSize: 11, color: '#64748b' }}>Available: <strong style={{ color: '#262626' }}><SARAmount amount={Math.max(available, 0)} /></strong></div>
+                    <div style={{ marginBottom: 10 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, fontWeight: 600, color: '#64748b', marginBottom: 4 }}>
+                        <span>Buyer credit · <SARAmount amount={buyerInfo.creditUsed} /> used of <SARAmount amount={buyerInfo.creditLimit} /></span>
+                        <span style={{ color: barColor }}>{Math.round(util * 100)}%</span>
                       </div>
-                      {fits ? (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', borderRadius: 10, background: '#f0fdf4', border: '1px solid #bbf7d0' }}>
-                          <span>✅</span>
-                          <div>
-                            <div style={{ fontSize: 11, fontWeight: 700, color: '#15803d' }}>Within credit limit — auto-approval eligible</div>
-                            <div style={{ fontSize: 11, color: '#64748b' }}>Request <strong><SARAmount amount={localCard.amount} /></strong> fits available <strong><SARAmount amount={available} /></strong></div>
-                          </div>
-                        </div>
-                      ) : (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', borderRadius: 10, background: '#fff7ed', border: '1px solid #fed7aa' }}>
-                          <span>⚠️</span>
-                          <div>
-                            <div style={{ fontSize: 11, fontWeight: 700, color: '#c2410c' }}>Exceeds credit limit — manual review required</div>
-                            <div style={{ fontSize: 11, color: '#64748b' }}>Exceeds available <strong><SARAmount amount={available} /></strong> by <strong style={{ color: '#c2410c' }}><SARAmount amount={excess} /></strong></div>
-                          </div>
-                        </div>
-                      )}
-                    </>
+                      <div style={{ height: 5, borderRadius: 20, background: '#f1f5f9', overflow: 'hidden', marginBottom: 3 }}>
+                        <div style={{ height: '100%', borderRadius: 20, width: `${Math.min(util * 100, 100)}%`, background: barColor }} />
+                      </div>
+                      <div style={{ fontSize: 11, color: '#64748b' }}>Available: <strong style={{ color: '#262626' }}><SARAmount amount={Math.max(available, 0)} /></strong></div>
+                    </div>
                   )
                 })()}
                 {localCard.acceptedAt && (() => {
@@ -1256,119 +1280,384 @@ function IFCardDetailPage({ card, onClose, onCardUpdate, onPrev, onNext, current
                 </div>
               </div>
 
-              {localCard.stage === 'if_review' && (
+              {INVOICE_FINANCE_STAGES.find(s => s.id === localCard.stage)?.auto
+                && localCard.stage !== 'if_active'
+                && localCard.stage !== 'if_new_invoice'
+                && localCard.stage !== 'if_buyer_approval'
+                && localCard.stage !== 'if_payment_plan'
+                && localCard.stage !== 'if_advance_payment' && (
                 <div className="bg-white rounded-2xl border border-black/5 p-5">
-                  <div style={{ fontSize: 11, fontWeight: 700, color: '#a3a3a3', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 14 }}>Adjust Terms (Above-Limit Review)</div>
-                  <div className="grid grid-cols-2 gap-4 mb-4">
-                    <div>
-                      <div style={{ fontSize: 11, fontWeight: 600, color: '#525252', marginBottom: 4 }}>Adjusted Amount</div>
-                      <input type="number" value={editAmt} onChange={e => setEditAmt(e.target.value)}
-                        style={{ width: '100%', border: '1.5px solid #e5e5e5', borderRadius: 8, padding: '6px 10px', fontSize: 13, outline: 'none', color: '#262626' }} />
-                      <div style={{ fontSize: 10, color: '#a3a3a3', marginTop: 3 }}>Original: <SARAmount amount={localCard.amount} /></div>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: 11, fontWeight: 600, color: '#525252', marginBottom: 4 }}>Adjusted MDR Rate (%)</div>
-                      <input type="number" step="0.1" value={editMdr} onChange={e => setEditMdr(e.target.value)}
-                        style={{ width: '100%', border: '1.5px solid #e5e5e5', borderRadius: 8, padding: '6px 10px', fontSize: 13, outline: 'none', color: '#262626' }} />
-                      <div style={{ fontSize: 10, color: '#a3a3a3', marginTop: 3 }}>Original: {localCard.mdrRate}%</div>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: 11, fontWeight: 600, color: '#525252', marginBottom: 4 }}>Adjusted Tenure (days)</div>
-                      <input type="number" value={editTen} onChange={e => setEditTen(e.target.value)}
-                        style={{ width: '100%', border: '1.5px solid #e5e5e5', borderRadius: 8, padding: '6px 10px', fontSize: 13, outline: 'none', color: '#262626' }} />
-                      <div style={{ fontSize: 10, color: '#a3a3a3', marginTop: 3 }}>Original: {localCard.tenure}d</div>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: 11, fontWeight: 600, color: '#525252', marginBottom: 4 }}>MDR Payer</div>
-                      <select value={editPayer} onChange={e => setEditPayer(e.target.value)}
-                        style={{ width: '100%', border: '1.5px solid #e5e5e5', borderRadius: 8, padding: '6px 10px', fontSize: 13, outline: 'none', background: 'white', color: '#262626' }}>
-                        <option value="seller_full">Seller bears full MDR</option>
-                        <option value="buyer_full">Buyer bears full MDR</option>
-                        <option value="split_50_50">Split 50/50</option>
-                      </select>
-                    </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#94a3b8', display: 'inline-block', flexShrink: 0 }} />
+                    <div style={{ fontSize: 11, fontWeight: 700, color: '#a3a3a3', textTransform: 'uppercase', letterSpacing: '0.06em' }}>System Processing</div>
                   </div>
-                  <div style={{ padding: '10px 14px', borderRadius: 10, background: '#f8fafc', border: '1px solid #e5e5e5', marginBottom: 14, display: 'flex', gap: 16, fontSize: 12, color: '#475569' }}>
-                    <span>MDR Fee: <strong style={{ color: '#262626' }}><SARAmount amount={mdrFee} /></strong></span>
-                    <span>Net to Seller: <strong style={{ color: '#262626' }}><SARAmount amount={netToSeller} /></strong></span>
+                  <div style={{ padding: '12px 14px', borderRadius: 10, background: '#f8fafc', border: '1px solid #e2e8f0', fontSize: 12, color: '#64748b' }}>
+                    {IF_STAGE_HINT[localCard.stage]}
                   </div>
-                  <button onClick={handleSaveProposal}
-                    style={{ padding: '8px 20px', borderRadius: 20, border: 'none', background: 'linear-gradient(135deg, #9084fd 0%, #6a7bff 50%, #3da4ff 100%)', color: 'white', fontSize: 12, fontWeight: 700, cursor: 'pointer', boxShadow: '0 2px 12px rgba(144,132,253,0.35)' }}>
-                    Save Adjusted Terms
-                  </button>
                 </div>
               )}
 
-              {localCard.stage === 'if_offer' && (
+              {localCard.stage === 'if_new_invoice' && (
                 <div className="bg-white rounded-2xl border border-black/5 p-5">
-                  <div style={{ fontSize: 11, fontWeight: 700, color: '#a3a3a3', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 14 }}>Murabaha Offer Details</div>
-                  <div style={{ border: '1px solid rgba(144,132,253,0.2)', borderRadius: 12, padding: '14px 16px', background: 'rgba(144,132,253,0.03)', marginBottom: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
-                      <span style={{ color: '#64748b' }}>Commodity Broker (Purchase)</span>
-                      <span style={{ fontWeight: 700, color: '#262626' }}>{localCard.commodityBroker}</span>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
-                      <span style={{ color: '#64748b' }}>Principal (Cost Price)</span>
-                      <span style={{ fontWeight: 700, color: '#262626' }}><SARAmount amount={localCard.amount} /></span>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
-                      <span style={{ color: '#64748b' }}>Murabaha Profit (MDR {localCard.mdrRate}%)</span>
-                      <span style={{ fontWeight: 700, color: '#262626' }}><SARAmount amount={localCard.amount * localCard.mdrRate / 100} /></span>
-                    </div>
-                    <div style={{ borderTop: '1px solid #e5e5e5', paddingTop: 8, display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
-                      <span style={{ fontWeight: 600, color: '#334155' }}>Total Deferred Payment</span>
-                      <span style={{ fontWeight: 800, color: '#0f172a' }}><SARAmount amount={localCard.amount + localCard.amount * localCard.mdrRate / 100} /></span>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
-                      <span style={{ color: '#64748b' }}>Payment Tenure</span>
-                      <span style={{ fontWeight: 700, color: '#262626' }}>{localCard.tenure} days ({localCard.emiFrequency})</span>
-                    </div>
-                    {localCard.offerIssuedAt && (
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
-                        <span style={{ color: '#64748b' }}>Offer Issued At</span>
-                        <span style={{ fontWeight: 700, color: '#262626' }}>{localCard.offerIssuedAt}</span>
-                      </div>
-                    )}
-                  </div>
-                  {!offerIssued
-                    ? <button onClick={() => setOfferIssued(true)} style={{ padding: '8px 20px', borderRadius: 20, border: 'none', background: 'linear-gradient(135deg, #9084fd 0%, #6a7bff 50%, #3da4ff 100%)', color: 'white', fontSize: 12, fontWeight: 700, cursor: 'pointer', boxShadow: '0 2px 12px rgba(144,132,253,0.35)' }}>
-                        Issue Murabaha Offer →
-                      </button>
-                    : <div style={{ padding: '8px 14px', borderRadius: 12, background: 'rgba(144,132,253,0.06)', border: '1px solid rgba(144,132,253,0.15)', fontSize: 12, fontWeight: 600, color: 'var(--color-primary)' }}>✓ Offer issued — awaiting borrower acceptance this session</div>
-                  }
-                </div>
-              )}
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#a3a3a3', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 14 }}>AI Invoice Verification</div>
 
-              {localCard.stage === 'if_accepted' && (
-                <div className="bg-white rounded-2xl border border-black/5 p-5">
-                  <div style={{ fontSize: 11, fontWeight: 700, color: '#a3a3a3', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 14 }}>Murabaha Acceptance & Transfer</div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 10, background: '#f0fdf4', border: '1px solid #86efac' }}>
-                      <span style={{ fontSize: 18 }}>✅</span>
-                      <div>
-                        <div style={{ fontSize: 12, fontWeight: 700, color: '#15803d' }}>Borrower accepted Murabaha offer</div>
-                        {localCard.acceptedAt && <div style={{ fontSize: 11, color: '#64748b' }}>Accepted at {localCard.acceptedAt}</div>}
+                  {localCard.invoiceAiCheck?.checks.map(check => (
+                    <div key={check.field} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 10, marginBottom: 6, background: check.pass ? '#f0fdf4' : '#fef2f2', border: `1px solid ${check.pass ? '#bbf7d0' : '#fecaca'}` }}>
+                      <span style={{ fontSize: 13, flexShrink: 0, fontWeight: 700, color: check.pass ? '#15803d' : '#b91c1c' }}>{check.pass ? '✓' : '✗'}</span>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: check.pass ? '#15803d' : '#b91c1c' }}>{check.field}</div>
+                        <div style={{ fontSize: 11, color: '#64748b' }}>Invoice: <strong style={{ color: '#262626' }}>{check.invoiceValue}</strong> · Expected: {check.requestValue}</div>
                       </div>
                     </div>
-                    {localCard.saleBroker && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 10, background: '#f0f9ff', border: '1px solid #bae6fd' }}>
-                        <span style={{ fontSize: 18 }}>📦</span>
-                        <div>
-                          <div style={{ fontSize: 12, fontWeight: 700, color: '#0369a1' }}>Commodity sale in progress</div>
-                          <div style={{ fontSize: 11, color: '#64748b' }}>Via {localCard.saleBroker} — proceeds being settled</div>
+                  ))}
+
+                  {localCard.invoiceAiCheck?.status === 'verified' && (
+                    <div style={{ marginTop: 14, padding: '9px 13px', borderRadius: 10, background: 'rgba(144,132,253,0.06)', border: '1px solid rgba(144,132,253,0.2)', fontSize: 12, fontWeight: 600, color: 'var(--color-primary)', marginBottom: 18 }}>
+                      ✦ Yumnai verified — all invoice fields match the finance request
+                    </div>
+                  )}
+
+                  {localCard.invoiceAiCheck?.status === 'verified' && (
+                    <>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: '#a3a3a3', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>Buyer Confirmation — Auto-dispatched</div>
+                      <div style={{ borderRadius: 12, border: '1px solid #e2e8f0', overflow: 'hidden', marginBottom: 12 }}>
+                        <div style={{ padding: '8px 14px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                          Message Sent to Buyer
+                        </div>
+                        <div style={{ padding: '12px 14px', fontSize: 12, color: '#334155', lineHeight: 1.75 }}>
+                          Dear <strong style={{ color: '#262626' }}>{localCard.buyer || 'buyer'}</strong>, Yumna Finance has verified your invoice from <strong style={{ color: '#262626' }}>{localCard.seller}</strong> for <strong style={{ color: '#262626' }}>{formatSAR(localCard.amount)}</strong> (dated {localCard.invoiceAiCheck?.checks.find(c => c.field === 'Date of Issue')?.invoiceValue || localCard.submittedAt}).
+                          <br/><br/>To confirm this purchase:
+                          <br/>• Reply <strong>YES</strong> to this message, or
+                          <br/>• View details &amp; confirm:&nbsp;
+                          <span style={{ color: 'var(--color-primary)', fontWeight: 600, fontFamily: 'monospace', fontSize: 11 }}>yumna.finance/confirm/{localCard.id}</span>
                         </div>
                       </div>
-                    )}
-                  </div>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 20, background: '#dcfce7', border: '1px solid #bbf7d0', fontSize: 11, fontWeight: 700, color: '#15803d' }}>
+                          ✓ WhatsApp sent
+                        </span>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 20, background: '#dcfce7', border: '1px solid #bbf7d0', fontSize: 11, fontWeight: 700, color: '#15803d' }}>
+                          ✓ SMS sent
+                        </span>
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
 
-              {localCard.stage === 'if_disbursed' && (
+              {localCard.stage === 'if_buyer_approval' && (() => {
+                const bas = localCard.buyerApprovalStatus
+                const sellerStatus = bas?.seller?.status || 'submitted'
+                const buyerStatus  = bas?.buyer?.status  || 'pending'
+
+                // Timer computation
+                let elapsedLabel = '—', remainsLabel = '—', isExpired = false, urgency = 'normal'
+                if (bas?.sentAt) {
+                  const sent     = new Date(bas.sentAt).getTime()
+                  const deadline = sent + (bas.deadlineHours || 72) * 3600 * 1000
+                  const now      = Date.now()
+                  const elapsed  = now - sent
+                  const remains  = deadline - now
+
+                  const fmtDuration = (ms) => {
+                    const totalH = Math.floor(Math.abs(ms) / 3600000)
+                    const m      = Math.floor((Math.abs(ms) % 3600000) / 60000)
+                    if (totalH >= 24) return `${Math.floor(totalH / 24)}d ${totalH % 24}h`
+                    return `${totalH}h ${m}m`
+                  }
+
+                  elapsedLabel = fmtDuration(elapsed) + ' ago'
+                  if (remains <= 0) {
+                    isExpired    = true
+                    remainsLabel = 'Expired ' + fmtDuration(remains) + ' ago'
+                    urgency      = 'high'
+                  } else {
+                    remainsLabel = fmtDuration(remains) + ' remaining'
+                    urgency      = remains < 12 * 3600000 ? 'high' : remains < 24 * 3600000 ? 'medium' : 'normal'
+                  }
+                }
+
+                const buyerBg    = buyerStatus === 'approved' ? '#f0fdf4' : buyerStatus === 'denied' ? '#fef2f2' : '#fffbeb'
+                const buyerBorder= buyerStatus === 'approved' ? '#bbf7d0' : buyerStatus === 'denied' ? '#fecaca' : '#fde68a'
+                const buyerColor = buyerStatus === 'approved' ? '#15803d' : buyerStatus === 'denied' ? '#b91c1c' : '#92400e'
+                const buyerIcon  = buyerStatus === 'approved' ? '✓' : buyerStatus === 'denied' ? '✗' : '⏳'
+                const buyerLabel = buyerStatus === 'approved' ? 'Approved' : buyerStatus === 'denied' ? 'Denied' : 'Pending response'
+
+                const timerBg    = urgency === 'high' ? '#fef2f2' : urgency === 'medium' ? '#fffbeb' : '#f8fafc'
+                const timerBorder= urgency === 'high' ? '#fecaca' : urgency === 'medium' ? '#fde68a' : '#e2e8f0'
+                const timerColor = urgency === 'high' ? '#b91c1c' : urgency === 'medium' ? '#92400e' : '#475569'
+
+                return (
+                  <div className="bg-white rounded-2xl border border-black/5 p-5">
+                    <div style={{ fontSize: 11, fontWeight: 700, color: '#a3a3a3', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 14 }}>Approval Status</div>
+
+                    {/* Seller row */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 14px', borderRadius: 10, background: '#f0fdf4', border: '1px solid #bbf7d0', marginBottom: 8 }}>
+                      <span style={{ fontSize: 16, flexShrink: 0 }}>🏢</span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: '#262626', marginBottom: 1 }}>{localCard.seller}</div>
+                        <div style={{ fontSize: 11, color: '#64748b' }}>Invoice submitted · {bas?.seller?.at ? new Date(bas.seller.at).toLocaleDateString('en-SA', { dateStyle: 'medium' }) : localCard.submittedAt}</div>
+                      </div>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: '#15803d', background: '#dcfce7', padding: '3px 10px', borderRadius: 20, flexShrink: 0 }}>✓ Submitted</span>
+                    </div>
+
+                    {/* Buyer row */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 14px', borderRadius: 10, background: buyerBg, border: `1px solid ${buyerBorder}`, marginBottom: 16 }}>
+                      <span style={{ fontSize: 16, flexShrink: 0 }}>👤</span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: '#262626', marginBottom: 1 }}>{localCard.buyer || 'Buyer'}</div>
+                        <div style={{ fontSize: 11, color: '#64748b' }}>
+                          {buyerStatus === 'pending' ? 'Confirmation sent via WhatsApp + SMS' : `Response recorded ${bas?.buyer?.at ? new Date(bas.buyer.at).toLocaleString('en-SA', { dateStyle: 'short', timeStyle: 'short' }) : ''}`}
+                        </div>
+                      </div>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: buyerColor, background: buyerBg, border: `1px solid ${buyerBorder}`, padding: '3px 10px', borderRadius: 20, flexShrink: 0 }}>{buyerIcon} {buyerLabel}</span>
+                    </div>
+
+                    {/* Timer */}
+                    <div style={{ borderRadius: 10, background: timerBg, border: `1px solid ${timerBorder}`, overflow: 'hidden' }}>
+                      <div style={{ padding: '7px 14px', borderBottom: `1px solid ${timerBorder}`, fontSize: 10, fontWeight: 700, color: timerColor, textTransform: 'uppercase', letterSpacing: '0.08em', display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span>⏱</span> Response Window ({bas?.deadlineHours || 72}h)
+                      </div>
+                      <div style={{ display: 'flex', padding: '10px 14px', gap: 0 }}>
+                        <div style={{ flex: 1, borderRight: `1px solid ${timerBorder}`, paddingRight: 14 }}>
+                          <div style={{ fontSize: 10, color: '#94a3b8', marginBottom: 3, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Sent</div>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: '#475569' }}>{elapsedLabel}</div>
+                        </div>
+                        <div style={{ flex: 1, paddingLeft: 14 }}>
+                          <div style={{ fontSize: 10, color: '#94a3b8', marginBottom: 3, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{isExpired ? 'Status' : 'Deadline'}</div>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: timerColor }}>{remainsLabel}</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })()}
+
+              {localCard.stage === 'if_payment_plan' && (() => {
+                const pps = localCard.paymentPlanStatus
+                const sel = pps?.selection
+
+                let elapsedLabel = '—', remainsLabel = '—', isExpired = false, urgency = 'normal'
+                if (pps?.sentAt) {
+                  const sent     = new Date(pps.sentAt).getTime()
+                  const deadline = sent + (pps.deadlineHours || 48) * 3600 * 1000
+                  const now      = Date.now()
+                  const elapsed  = now - sent
+                  const remains  = deadline - now
+                  const fmtD = (ms) => {
+                    const h = Math.floor(Math.abs(ms) / 3600000)
+                    const m = Math.floor((Math.abs(ms) % 3600000) / 60000)
+                    return h >= 24 ? `${Math.floor(h / 24)}d ${h % 24}h` : `${h}h ${m}m`
+                  }
+                  elapsedLabel = fmtD(elapsed) + ' ago'
+                  if (remains <= 0) { isExpired = true; remainsLabel = 'Expired ' + fmtD(remains) + ' ago'; urgency = 'high' }
+                  else { remainsLabel = fmtD(remains) + ' remaining'; urgency = remains < 8 * 3600000 ? 'high' : remains < 20 * 3600000 ? 'medium' : 'normal' }
+                }
+                const timerBg     = urgency === 'high' ? '#fef2f2' : urgency === 'medium' ? '#fffbeb' : '#f8fafc'
+                const timerBorder = urgency === 'high' ? '#fecaca' : urgency === 'medium' ? '#fde68a' : '#e2e8f0'
+                const timerColor  = urgency === 'high' ? '#b91c1c' : urgency === 'medium' ? '#92400e' : '#475569'
+
+                const freqLabel = (f) => f === 'lump_sum' ? 'Lump sum at end' : f === 'bimonthly' ? 'Bi-monthly' : f ? f.charAt(0).toUpperCase() + f.slice(1) : '—'
+
+                return (
+                  <div className="bg-white rounded-2xl border border-black/5 p-5">
+                    <div style={{ fontSize: 11, fontWeight: 700, color: '#a3a3a3', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 14 }}>Payment Plan Selection</div>
+
+                    {/* Auto-dispatched row */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 20, background: '#dcfce7', border: '1px solid #bbf7d0', fontSize: 11, fontWeight: 700, color: '#15803d' }}>✓ WhatsApp sent</span>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 20, background: '#dcfce7', border: '1px solid #bbf7d0', fontSize: 11, fontWeight: 700, color: '#15803d' }}>✓ SMS sent</span>
+                      {pps?.link && (
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 20, background: 'rgba(144,132,253,0.08)', border: '1px solid rgba(144,132,253,0.25)', fontSize: 10, fontWeight: 600, color: 'var(--color-primary)', fontFamily: 'monospace' }}>{pps.link}</span>
+                      )}
+                    </div>
+
+                    {/* Plan options offered */}
+                    <div style={{ marginBottom: 14 }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Options Offered to Buyer</div>
+                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
+                        <span style={{ fontSize: 10, fontWeight: 600, color: '#64748b', padding: '2px 8px', borderRadius: 6, background: '#f1f5f9', border: '1px solid #e2e8f0' }}>Tenure</span>
+                        {['30 days', '60 days', '90 days'].map(t => (
+                          <span key={t} style={{ fontSize: 11, fontWeight: 600, padding: '4px 12px', borderRadius: 20, background: sel?.status === 'selected' && sel.tenure === parseInt(t) ? 'rgba(144,132,253,0.12)' : '#f8fafc', border: `1px solid ${sel?.status === 'selected' && sel.tenure === parseInt(t) ? 'rgba(144,132,253,0.35)' : '#e2e8f0'}`, color: sel?.status === 'selected' && sel.tenure === parseInt(t) ? 'var(--color-primary)' : '#475569' }}>{t}</span>
+                        ))}
+                      </div>
+                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: 10, fontWeight: 600, color: '#64748b', padding: '2px 8px', borderRadius: 6, background: '#f1f5f9', border: '1px solid #e2e8f0' }}>Payment</span>
+                        {[{ key: 'monthly', label: 'Monthly' }, { key: 'lump_sum', label: 'Lump sum at end' }].map(opt => (
+                          <span key={opt.key} style={{ fontSize: 11, fontWeight: 600, padding: '4px 12px', borderRadius: 20, background: sel?.status === 'selected' && sel.frequency === opt.key ? 'rgba(144,132,253,0.12)' : '#f8fafc', border: `1px solid ${sel?.status === 'selected' && sel.frequency === opt.key ? 'rgba(144,132,253,0.35)' : '#e2e8f0'}`, color: sel?.status === 'selected' && sel.frequency === opt.key ? 'var(--color-primary)' : '#475569' }}>{opt.label}</span>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Buyer selection status */}
+                    <div style={{ padding: '11px 14px', borderRadius: 10, marginBottom: 14,
+                      background: sel?.status === 'selected' ? '#f0fdf4' : '#fffbeb',
+                      border: `1px solid ${sel?.status === 'selected' ? '#bbf7d0' : '#fde68a'}` }}>
+                      {sel?.status === 'selected' ? (
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <div>
+                            <div style={{ fontSize: 12, fontWeight: 700, color: '#15803d', marginBottom: 2 }}>✓ Plan selected by buyer</div>
+                            <div style={{ fontSize: 11, color: '#64748b' }}>{sel.tenure} days · {freqLabel(sel.frequency)}{sel.advancePaidOnLink ? ' · Advance paid on link' : ''}</div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div style={{ fontSize: 12, fontWeight: 700, color: '#92400e' }}>⏳ Awaiting buyer selection</div>
+                      )}
+                    </div>
+
+                    {sel?.status === 'selected' && <RepaymentSchedule schedule={localCard.instalmentSchedule} />}
+
+                    {/* Timer */}
+                    <div style={{ borderRadius: 10, background: timerBg, border: `1px solid ${timerBorder}`, overflow: 'hidden' }}>
+                      <div style={{ padding: '7px 14px', borderBottom: `1px solid ${timerBorder}`, fontSize: 10, fontWeight: 700, color: timerColor, textTransform: 'uppercase', letterSpacing: '0.08em', display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span>⏱</span> Response Window ({pps?.deadlineHours || 48}h)
+                      </div>
+                      <div style={{ display: 'flex', padding: '10px 14px' }}>
+                        <div style={{ flex: 1, borderRight: `1px solid ${timerBorder}`, paddingRight: 14 }}>
+                          <div style={{ fontSize: 10, color: '#94a3b8', marginBottom: 3, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Sent</div>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: '#475569' }}>{elapsedLabel}</div>
+                        </div>
+                        <div style={{ flex: 1, paddingLeft: 14 }}>
+                          <div style={{ fontSize: 10, color: '#94a3b8', marginBottom: 3, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{isExpired ? 'Status' : 'Deadline'}</div>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: timerColor }}>{remainsLabel}</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })()}
+
+              {localCard.stage === 'if_advance_payment' && (() => {
+                const pps = localCard.paymentPlanStatus
+                const sel = pps?.selection
+                const advancePaid = sel?.advancePaidOnLink === true
+                const freqLabel = (f) => f === 'lump_sum' ? 'Lump sum at end' : f === 'bimonthly' ? 'Bi-monthly' : f ? f.charAt(0).toUpperCase() + f.slice(1) : '—'
+
+                return (
+                  <div className="bg-white rounded-2xl border border-black/5 p-5">
+                    <div style={{ fontSize: 11, fontWeight: 700, color: '#a3a3a3', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 14 }}>Advance Payment</div>
+
+                    {/* Confirmed plan */}
+                    <div style={{ padding: '12px 14px', borderRadius: 10, background: '#f0fdf4', border: '1px solid #bbf7d0', marginBottom: 14 }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: '#15803d', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Confirmed Payment Plan</div>
+                      <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
+                        <div>
+                          <div style={{ fontSize: 10, color: '#64748b', marginBottom: 2 }}>Tenure</div>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: '#262626' }}>{sel?.tenure || localCard.tenure || '—'} days</div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 10, color: '#64748b', marginBottom: 2 }}>Repayment</div>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: '#262626' }}>{freqLabel(sel?.frequency || localCard.emiFrequency)}</div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 10, color: '#64748b', marginBottom: 2 }}>Invoice Amount</div>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: '#262626' }}><SARAmount amount={localCard.amount} /></div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Advance payment status */}
+                    <div style={{ padding: '12px 14px', borderRadius: 10, background: advancePaid ? '#f0fdf4' : '#fffbeb', border: `1px solid ${advancePaid ? '#bbf7d0' : '#fde68a'}`, marginBottom: advancePaid ? 14 : 0 }}>
+                      {advancePaid ? (
+                        <div style={{ fontSize: 12, fontWeight: 700, color: '#15803d' }}>✓ Advance paid on confirmation link</div>
+                      ) : (
+                        <>
+                          <div style={{ fontSize: 12, fontWeight: 700, color: '#92400e', marginBottom: 6 }}>⏳ Advance payment pending</div>
+                          <div style={{ fontSize: 11, color: '#64748b', marginBottom: 8 }}>Buyer can complete payment via the same link:</div>
+                          <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--color-primary)', fontFamily: 'monospace', padding: '4px 10px', borderRadius: 20, background: 'rgba(144,132,253,0.08)', border: '1px solid rgba(144,132,253,0.25)' }}>
+                            {pps?.link || `yumna.finance/plan/${localCard.id}`}
+                          </span>
+                        </>
+                      )}
+                    </div>
+
+                    {advancePaid && <RepaymentSchedule schedule={localCard.instalmentSchedule} />}
+                  </div>
+                )
+              })()}
+
+              {localCard.stage === 'if_ship_notice' && (() => {
+                const sel = localCard.paymentPlanStatus?.selection
+                const freqLabel = (f) => f === 'lump_sum' ? 'Lump sum at end' : f === 'bimonthly' ? 'Bi-monthly' : f ? f.charAt(0).toUpperCase() + f.slice(1) : '—'
+                const tenure   = sel?.tenure    || localCard.tenure
+                const frequency = sel?.frequency || localCard.emiFrequency
+                const yumnaiMsg = localCard.correspondence?.find(m => m.from === 'Yumnai AI')
+                return (
+                  <div className="bg-white rounded-2xl border border-black/5 p-5">
+                    <div style={{ fontSize: 11, fontWeight: 700, color: '#a3a3a3', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 14 }}>Deal Confirmed — Awaiting Shipment</div>
+
+                    {/* Status checklist */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}>
+                      {[
+                        'Buyer approved',
+                        `Payment plan selected — ${tenure} days · ${freqLabel(frequency)}`,
+                        'Advance payment confirmed',
+                        'Merchant notified to ship',
+                      ].map((label, i) => (
+                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 12, fontWeight: 600, color: '#15803d' }}>
+                          <span style={{ width: 18, height: 18, borderRadius: '50%', background: '#dcfce7', border: '1px solid #bbf7d0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 800, flexShrink: 0 }}>✓</span>
+                          {label}
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Repayment schedule */}
+                    <RepaymentSchedule schedule={localCard.instalmentSchedule} />
+
+                    {/* Yumnai merchant notification preview */}
+                    {yumnaiMsg && (
+                      <div style={{ border: '1px solid rgba(144,132,253,0.25)', borderRadius: 12, overflow: 'hidden' }}>
+                        <div style={{ padding: '8px 14px', background: 'linear-gradient(135deg, #9084fd 0%, #6a7bff 50%, #3da4ff 100%)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <span style={{ fontSize: 10, fontWeight: 700, color: 'white' }}>✦ Yumnai — Merchant Notification Sent</span>
+                        </div>
+                        <div style={{ padding: '12px 14px', background: 'rgba(144,132,253,0.03)', fontSize: 12, color: '#475569', lineHeight: 1.5, whiteSpace: 'pre-line' }}>
+                          {yumnaiMsg.message}
+                        </div>
+                        <div style={{ padding: '5px 14px 8px', fontSize: 10, color: '#94a3b8' }}>{yumnaiMsg.time}</div>
+                      </div>
+                    )}
+                  </div>
+                )
+              })()}
+
+              {localCard.stage === 'if_delivery_notice' && (() => {
+                const sel = localCard.paymentPlanStatus?.selection
+                const freqLabel = (f) => f === 'lump_sum' ? 'Lump sum at end' : f === 'bimonthly' ? 'Bi-monthly' : f ? f.charAt(0).toUpperCase() + f.slice(1) : '—'
+                const tenure   = sel?.tenure    || localCard.tenure
+                const frequency = sel?.frequency || localCard.emiFrequency
+                return (
+                  <div className="bg-white rounded-2xl border border-black/5 p-5">
+                    <div style={{ fontSize: 11, fontWeight: 700, color: '#a3a3a3', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 14 }}>Goods in Transit</div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}>
+                      {[
+                        'Buyer approved',
+                        `Payment plan selected — ${tenure} days · ${freqLabel(frequency)}`,
+                        'Advance payment confirmed',
+                        'Merchant shipped',
+                      ].map((label, i) => (
+                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 12, fontWeight: 600, color: '#15803d' }}>
+                          <span style={{ width: 18, height: 18, borderRadius: '50%', background: '#dcfce7', border: '1px solid #bbf7d0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 800, flexShrink: 0 }}>✓</span>
+                          {label}
+                        </div>
+                      ))}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 12, fontWeight: 600, color: '#92400e' }}>
+                        <span style={{ width: 18, height: 18, borderRadius: '50%', background: '#fef3c7', border: '1px solid #fde68a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 800, flexShrink: 0 }}>⏳</span>
+                        Awaiting delivery confirmation
+                      </div>
+                    </div>
+
+                    <RepaymentSchedule schedule={localCard.instalmentSchedule} />
+                  </div>
+                )
+              })()}
+
+              {localCard.stage === 'if_disbursement' && (
                 <div className="bg-white rounded-2xl border border-black/5 p-5">
                   <div style={{ fontSize: 11, fontWeight: 700, color: '#a3a3a3', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 14 }}>Disbursement Summary</div>
                   <div style={{ border: '1px solid #dcfce7', borderRadius: 12, padding: '14px 16px', background: '#f0fdf4', display: 'flex', flexDirection: 'column', gap: 8 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
-                      <span style={{ color: '#64748b' }}>Gross Proceeds</span>
+                      <span style={{ color: '#64748b' }}>Invoice Amount</span>
                       <span style={{ fontWeight: 700, color: '#262626' }}><SARAmount amount={localCard.amount} /></span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
@@ -1381,12 +1670,41 @@ function IFCardDetailPage({ card, onClose, onCardUpdate, onPrev, onNext, current
                       </div>
                     )}
                     <div style={{ borderTop: '1px solid #bbf7d0', paddingTop: 8, display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
-                      <span style={{ fontWeight: 600, color: '#15803d' }}>Net Disbursed to Borrower</span>
+                      <span style={{ fontWeight: 600, color: '#15803d' }}>Net to Merchant</span>
                       <span style={{ fontWeight: 800, color: '#15803d' }}>
                         <SARAmount amount={localCard.amount - (localCard.mdrPayer === 'buyer_full' ? 0 : localCard.mdrPayer === 'seller_full' ? localCard.amount * localCard.mdrRate / 100 : localCard.amount * localCard.mdrRate / 200)} />
                       </span>
                     </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+                      <span style={{ color: '#64748b' }}>Payment Tenure</span>
+                      <span style={{ fontWeight: 700, color: '#262626' }}>{localCard.tenure} days ({localCard.emiFrequency})</span>
+                    </div>
                   </div>
+                  <RepaymentSchedule schedule={localCard.instalmentSchedule} />
+                </div>
+              )}
+
+              {localCard.stage === 'if_active' && (
+                <div className="bg-white rounded-2xl border border-black/5 p-5">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+                    <span style={{ fontSize: 16 }}>✅</span>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: '#15803d', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Payment Plan Active</div>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+                      <span style={{ color: '#64748b' }}>Buyer</span>
+                      <span style={{ fontWeight: 700, color: '#262626' }}>{localCard.buyer || '—'}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+                      <span style={{ color: '#64748b' }}>Tenure</span>
+                      <span style={{ fontWeight: 700, color: '#262626' }}>{localCard.tenure} days ({localCard.emiFrequency})</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+                      <span style={{ color: '#64748b' }}>Total Financed</span>
+                      <span style={{ fontWeight: 700, color: '#262626' }}><SARAmount amount={localCard.amount} /></span>
+                    </div>
+                  </div>
+                  <RepaymentSchedule schedule={localCard.instalmentSchedule} />
                 </div>
               )}
 
@@ -1423,20 +1741,40 @@ function IFCardDetailPage({ card, onClose, onCardUpdate, onPrev, onNext, current
         )}
         <div style={{ flex: 1 }} />
         {/* Primary CTA */}
-        {localCard.stage !== 'if_closed' && (
-          <button onClick={handleAccept} style={{ padding: '7px 18px', borderRadius: 20, border: 'none', background: 'linear-gradient(135deg, #9084fd 0%, #6a7bff 50%, #3da4ff 100%)', fontSize: 13, fontWeight: 700, color: 'white', cursor: 'pointer', boxShadow: '0 2px 8px rgba(144,132,253,0.4)' }}>
-            {IF_ACCEPT_LABEL[localCard.stage] || 'Advance →'}
-          </button>
-        )}
-        {localCard.stage === 'if_closed' && (
-          <span style={{ fontSize: 12, fontWeight: 700, color: '#15803d' }}>✅ Closed — fully disbursed</span>
-        )}
+        {(() => {
+          const stageInfo = INVOICE_FINANCE_STAGES.find(s => s.id === localCard.stage)
+          if (stageInfo?.terminal) {
+            return <span style={{ fontSize: 12, fontWeight: 700, color: '#15803d' }}>✅ Payment plan active</span>
+          }
+          if (localCard.stage === 'if_new_invoice') {
+            return (
+              <button onClick={handleAccept} style={{ padding: '7px 18px', borderRadius: 20, border: 'none', background: 'linear-gradient(135deg, #9084fd 0%, #6a7bff 50%, #3da4ff 100%)', fontSize: 13, fontWeight: 700, color: 'white', cursor: 'pointer', boxShadow: '0 2px 8px rgba(144,132,253,0.4)' }}>
+                Move to Buyer Approval →
+              </button>
+            )
+          }
+          if (stageInfo?.auto) {
+            return (
+              <span style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px', borderRadius: 20, background: '#f1f5f9', border: '1px solid #e2e8f0', fontSize: 12, fontWeight: 600, color: '#64748b' }}>
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#94a3b8', display: 'inline-block' }} />
+                Automated
+              </span>
+            )
+          }
+          return (
+            <button onClick={handleAccept} style={{ padding: '7px 18px', borderRadius: 20, border: 'none', background: 'linear-gradient(135deg, #9084fd 0%, #6a7bff 50%, #3da4ff 100%)', fontSize: 13, fontWeight: 700, color: 'white', cursor: 'pointer', boxShadow: '0 2px 8px rgba(144,132,253,0.4)' }}>
+              {IF_ACCEPT_LABEL[localCard.stage] || 'Advance →'}
+            </button>
+          )
+        })()}
         {/* Assigned to */}
         <span style={{ fontSize: 11, color: '#a3a3a3' }}>
           Assigned: <strong style={{ color: '#404040' }}>{localCard.assignedTo || '—'}</strong>
         </span>
       </div>
     </div>
+    {showInvoice && <InvoiceModal card={localCard} onClose={() => setShowInvoice(false)} />}
+    </>
   )
 }
 
@@ -1476,12 +1814,14 @@ function FilterBar({ searchQuery, setSearchQuery, showFilters, setShowFilters, a
               {allAssignees.map(a => <option key={a} value={a}>{a}</option>)}
             </select>
           </div>
-          <div className="flex items-center gap-1.5">
-            <span className="text-[11px] font-semibold text-slate-500 whitespace-nowrap">Risk score</span>
-            <input type="number" min="0" max="100" value={filterRiskMin} onChange={e => setFilterRiskMin(e.target.value)} placeholder="Min" style={{ ...inputStyle, width: 52 }} />
-            <span className="text-[11px] text-slate-400">–</span>
-            <input type="number" min="0" max="100" value={filterRiskMax} onChange={e => setFilterRiskMax(e.target.value)} placeholder="Max" style={{ ...inputStyle, width: 52 }} />
-          </div>
+          {filterRiskMin !== undefined && (
+            <div className="flex items-center gap-1.5">
+              <span className="text-[11px] font-semibold text-slate-500 whitespace-nowrap">Risk score</span>
+              <input type="number" min="0" max="100" value={filterRiskMin} onChange={e => setFilterRiskMin(e.target.value)} placeholder="Min" style={{ ...inputStyle, width: 52 }} />
+              <span className="text-[11px] text-slate-400">–</span>
+              <input type="number" min="0" max="100" value={filterRiskMax} onChange={e => setFilterRiskMax(e.target.value)} placeholder="Max" style={{ ...inputStyle, width: 52 }} />
+            </div>
+          )}
           <div className="flex items-center gap-1.5">
             <span className="text-[11px] font-semibold text-slate-500 whitespace-nowrap">Stale ≥</span>
             <input type="number" min="0" value={filterDaysMin} onChange={e => setFilterDaysMin(e.target.value)} placeholder="days" style={{ ...inputStyle, width: 56 }} />
@@ -1516,27 +1856,52 @@ function KanbanBoard({ stages, filteredCards, onCardClick, showAboveLimit }) {
                   <div className="p-4 rounded-xl border-2 border-dashed border-slate-100 text-center text-[12px] text-slate-400">No items</div>
                 )}
                 {stageCards.map(card => {
-                  const rc      = riskColor(card.riskScore)
-                  const missing = card.documents.filter(d => d.status === 'missing' || d.status === 'pending').length
+                  const missing   = card.documents.filter(d => d.status === 'missing' || d.status === 'pending').length
                   const hasYumnai = !!card.yumnaiSuggestion?.message
+                  const borderColor = card.daysInStage >= 3 ? '#ef4444' : card.daysInStage >= 1 ? '#f59e0b' : '#e5e5e5'
+                  const borderWidth = card.daysInStage >= 1 ? '1.5px' : '1px'
+                  const daysChipStyle = card.daysInStage >= 3
+                    ? { background: '#fef2f2', color: '#dc2626' }
+                    : card.daysInStage >= 1
+                      ? { background: '#fffbeb', color: '#b45309' }
+                      : { background: '#f1f5f9', color: '#64748b' }
                   return (
                     <button key={card.id} onClick={() => onCardClick(card)}
-                      className="w-full text-start bg-white rounded-2xl border p-4 hover:shadow-md transition-all"
-                      style={{ borderColor: card.aboveLimit ? '#fed7aa' : '#e5e5e5' }}>
+                      className="w-full text-start bg-white rounded-2xl p-4 hover:shadow-md transition-all"
+                      style={{ border: `${borderWidth} solid ${borderColor}` }}>
+
+                      {/* Row 1: ID + days badge */}
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-[11px] font-mono text-slate-400">{card.id}</span>
-                        {card.riskScore !== null
-                          ? <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: rc.bg, color: rc.text }}>Risk {card.riskScore}</span>
-                          : <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-slate-50 text-slate-400">Scoring…</span>}
+                        <span className="text-[11px] font-mono font-semibold text-slate-600">{card.id}</span>
+                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={daysChipStyle}>
+                          {card.daysInStage === 0 ? 'new' : `${card.daysInStage}d`}
+                        </span>
                       </div>
+
+                      {/* Row 2: Seller */}
                       <div className="text-[13px] font-semibold text-slate-800 leading-tight mb-0.5 truncate">{card.seller}</div>
-                      {card.buyer && <div className="text-[11px] text-slate-400 mb-2">→ {card.buyer}</div>}
+
+                      {/* Row 3: Buyer */}
+                      {card.buyer && <div className="text-[11px] text-slate-400 mb-0.5">→ {card.buyer}</div>}
+
+                      {/* Row 4: Sector */}
+                      {card.sector && <div className="text-[11px] text-slate-400 mb-2">{card.sector}</div>}
+
+                      {/* Row 5: Amount */}
                       <div className="text-[14px] font-bold tabular-nums text-slate-900 mb-2"><SARAmount amount={card.amount} /></div>
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        {card.aboveLimit && <span className="text-[10px] px-2 py-0.5 rounded-full font-bold" style={{ background: '#fff7ed', color: '#c2410c' }}>⚠️ Above Limit</span>}
-                        {card.daysInStage > 0 && <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-50 text-slate-500 font-medium">{card.daysInStage}d here</span>}
+
+                      {/* Row 6: Stage status + flags */}
+                      <div className="mb-3 flex flex-wrap items-center gap-1.5">
+                        <span style={{ fontSize: 11, color: '#525252' }}>{IF_CARD_STATUS[card.stage]?.(card)}</span>
                         {missing > 0 && <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-semibold">{missing} doc{missing > 1 ? 's' : ''} pending</span>}
-                        {hasYumnai && <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold flex items-center gap-1" style={{ background: 'rgba(0,0,0,0.06)', color: 'var(--color-primary)' }}>✦ Yumnai</span>}
+                      </div>
+
+                      {/* Row 7: Assignee + Yumnai */}
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] text-slate-400 truncate">👤 {card.assignedTo || '—'}</span>
+                        {hasYumnai && (
+                          <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold flex items-center gap-1" style={{ background: 'rgba(0,0,0,0.06)', color: 'var(--color-primary)' }}>✦ Yumnai</span>
+                        )}
                       </div>
                     </button>
                   )
@@ -1572,8 +1937,6 @@ export default function FinanceRequestsPipeline({ onBreadcrumb }) {
   const [selectedIfCard, setSelectedIfCard] = useState(null)
   const [ifSearch, setIfSearch]             = useState('')
   const [ifAssignee, setIfAssignee]         = useState('')
-  const [ifRiskMin, setIfRiskMin]           = useState('')
-  const [ifRiskMax, setIfRiskMax]           = useState('')
   const [ifDaysMin, setIfDaysMin]           = useState('')
   const [ifFilters, setIfFilters]           = useState(false)
 
@@ -1629,16 +1992,16 @@ export default function FinanceRequestsPipeline({ onBreadcrumb }) {
   })
 
   const filteredFr = applyFilters(frCards, frSearch, frAssignee, frRiskMin, frRiskMax, frDaysMin)
-  const filteredIf = applyFilters(ifCards, ifSearch, ifAssignee, ifRiskMin, ifRiskMax, ifDaysMin)
+  const filteredIf = applyFilters(ifCards, ifSearch, ifAssignee, '', '', ifDaysMin)
   const frActiveFilters = [frAssignee, frRiskMin, frRiskMax, frDaysMin].filter(Boolean).length
-  const ifActiveFilters = [ifAssignee, ifRiskMin, ifRiskMax, ifDaysMin].filter(Boolean).length
+  const ifActiveFilters = [ifAssignee, ifDaysMin].filter(Boolean).length
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* Sub-view tab bar */}
       <div className="px-4 pt-2.5 pb-0 shrink-0 flex items-end gap-1 border-b border-black/5">
         {[
-          { id: 'invoice_finance', label: 'Invoice Finance', count: ifCards.filter(c => c.stage !== 'if_closed').length },
+          { id: 'invoice_finance', label: 'Invoice Finance', count: ifCards.filter(c => c.stage !== 'if_active').length },
           { id: 'direct',          label: 'Direct',          count: frCards.filter(c => c.stage !== 'fr_closed').length },
         ].map(tab => (
           <button key={tab.id} onClick={() => setActiveSubView(tab.id)} style={{
@@ -1685,10 +2048,8 @@ export default function FinanceRequestsPipeline({ onBreadcrumb }) {
             showFilters={ifFilters} setShowFilters={setIfFilters}
             activeFilterCount={ifActiveFilters}
             filterAssignee={ifAssignee} setFilterAssignee={setIfAssignee}
-            filterRiskMin={ifRiskMin} setFilterRiskMin={setIfRiskMin}
-            filterRiskMax={ifRiskMax} setFilterRiskMax={setIfRiskMax}
             filterDaysMin={ifDaysMin} setFilterDaysMin={setIfDaysMin}
-            clearFilters={() => { setIfAssignee(''); setIfRiskMin(''); setIfRiskMax(''); setIfDaysMin('') }}
+            clearFilters={() => { setIfAssignee(''); setIfDaysMin('') }}
             allAssignees={[...new Set(ifCards.map(c => c.assignedTo))].sort()}
             totalCount={ifCards.length} filteredCount={filteredIf.length}
           />

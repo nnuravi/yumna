@@ -3,22 +3,17 @@ import { useApp } from '../../context/AppContext'
 import { PIPELINE_STAGES, PIPELINE_CARDS, USERS, MOCK_BUYERS, MOCK_SELLERS, formatSAR } from '../../data/mockData'
 
 const ROLE_STAGE_MAP = {
-  verifier:    ['submitted', 'kyc'],
-  credit:      ['credit_score'],
-  risk:        ['risk'],
-  legal:       ['legal'],
-  account_mgr: ['approved', 'disbursed'],
-  collections: ['repayment', 'overdue'],
+  verifier:    ['doc_collection'],
+  credit:      ['credit_review', 'rejected'],
+  account_mgr: ['agreement', 'onboarding'],
   super:       null,
 }
 
 const STAGE_GROUPS = [
-  { label: 'SALES',   stages: ['submitted'] },
-  { label: 'OPS',     stages: ['kyc'] },
-  { label: 'CREDIT',  stages: ['credit_score', 'risk', 'overdue'] },
-  { label: 'LEGAL',   stages: ['legal'] },
-  { label: 'SALES',   stages: ['approved'] },
-  { label: 'OPS',     stages: ['disbursed', 'repayment'] },
+  { label: 'SALES',  stages: ['doc_collection'] },
+  { label: 'CREDIT', stages: ['credit_review'] },
+  { label: 'LEGAL',  stages: ['agreement'] },
+  { label: 'OPS',    stages: ['onboarding', 'closed', 'rejected'] },
 ]
 
 const stageDept = {}
@@ -40,10 +35,35 @@ function riskColor(score) {
 }
 
 function statusColor(status) {
-  if (status === 'received') return { color: '#262626', bg: '#f5f5f5' }
-  if (status === 'missing')  return { color: '#737373', bg: '#f0f0f0' }
-  return                            { color: '#525252', bg: '#f5f5f5' }
+  if (status === 'ai_verified')         return { color: '#16a34a', bg: '#f0fdf4' }
+  if (status === 'verified')            return { color: '#0369a1', bg: '#f0f9ff' }
+  if (status === 'verification_failed') return { color: '#dc2626', bg: '#fef2f2' }
+  if (status === 'missing')             return { color: '#737373', bg: '#f0f0f0' }
+  return                                       { color: '#a3a3a3', bg: '#fafafa' }  // pending
 }
+
+function statusIcon(status) {
+  if (status === 'ai_verified')         return '✓'
+  if (status === 'verified')            return '✓'
+  if (status === 'verification_failed') return '⚠'
+  if (status === 'missing')             return '✗'
+  return '○'  // pending
+}
+
+const STATUS_LABELS = {
+  ai_verified:         'AI Verified',
+  verified:            'Verified',
+  verification_failed: 'Failed',
+  missing:             'Missing',
+  pending:             'Pending',
+}
+
+const AGREEMENT_MANDATORY_CONTRACTS = [
+  { id: 'mandatory_agreement',       name: 'Agreement',                 desc: 'Formal agreement between both parties' },
+  { id: 'mandatory_nafith',          name: 'Promissory Note "NAFITH"',  desc: 'NAFITH-registered promissory note' },
+  { id: 'mandatory_corp_promissory', name: 'Corporate Promissory Note', desc: 'Corporate entity payment promise' },
+  { id: 'mandatory_assignment',      name: 'Assignment of Rights',      desc: 'Transfer of receivables and rights' },
+]
 
 function buildTimeline(card) {
   const stageLabel = PIPELINE_STAGES.find(s => s.id === card.stage)?.label || card.stage
@@ -64,18 +84,6 @@ function buildTimeline(card) {
       date: msg.time,
     })),
   ]
-
-  if (card.stage === 'repayment') {
-    const perInstalment = Math.round(card.amount / 5)
-    entries.push({ id: 'pay1', type: 'payment', amount: perInstalment, instalment: 1, date: '2026-05-15 10:22' })
-  }
-  if (card.stage === 'overdue') {
-    const perInstalment = Math.round(card.amount / 4)
-    entries.push(
-      { id: 'pay1', type: 'payment', amount: perInstalment, instalment: 1, date: '2026-04-25 09:15' },
-      { id: 'pay2', type: 'payment', amount: perInstalment, instalment: 2, date: '2026-05-02 11:30' },
-    )
-  }
 
   return entries
 }
@@ -147,6 +155,10 @@ function LaneActions({ stage, onClose }) {
 function ChatterPanel({ timeline, chatterMode, setChatterMode, draftText, setDraftText, onSend }) {
   return (
     <div className="flex flex-col border-l border-slate-100 bg-white shrink-0" style={{ width: 360 }}>
+      {/* Header */}
+      <div style={{ padding: '13px 16px', borderBottom: '1px solid #f1f5f9', flexShrink: 0 }}>
+        <span style={{ fontSize: 13, fontWeight: 700, color: '#171717' }}>Activity Timeline</span>
+      </div>
       {/* Timeline */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
         {timeline.length === 0 && (
@@ -277,15 +289,22 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
   const currentUser = appState.currentUser
 
   const [cardStage,       setCardStage]       = useState(card.stage)
-  const [showAssignPanel, setShowAssignPanel] = useState(false)
-  const [assignTarget,    setAssignTarget]    = useState(null)
+  const [showAssignPanel,      setShowAssignPanel]      = useState(false)
+  const [showAssignDropdown,   setShowAssignDropdown]   = useState(false)
+  const [ticketInfoCollapsed,  setTicketInfoCollapsed]  = useState(false)
+  const [assignTarget,         setAssignTarget]         = useState(null)
   const [assignNote,      setAssignNote]      = useState('')
   const [assignedTo,      setAssignedTo]      = useState(card.assignedTo)
   const [converted,       setConverted]       = useState(false)
   const [extraDocs,       setExtraDocs]       = useState(0)
   const [extraMeetings,   setExtraMeetings]   = useState(0)
   const [extraQuotes,     setExtraQuotes]     = useState(0)
-  const [custOpen,        setCustOpen]        = useState(true)  // customer info card collapse/expand
+  const [custOpen,        setCustOpen]        = useState(true)
+  const [showUploadModal, setShowUploadModal] = useState(false)
+  const [uploadDocName,   setUploadDocName]   = useState('')
+  const [uploadFile,      setUploadFile]      = useState(null)
+  const [uploadDragging,  setUploadDragging]  = useState(false)
+  const [uploadLoading,   setUploadLoading]   = useState(false)
 
   // Counter-proposal (risk stage)
   const [editingField,    setEditingField]    = useState(null)  // 'amount'|'tenure'|'mdr'|null
@@ -300,8 +319,9 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
   const [docStatuses,     setDocStatuses]     = useState(
     Object.fromEntries(card.documents.map(d => [d.name, d.status]))
   )
-  const [simahInput,      setSimahInput]      = useState(card.riskScore !== null ? String(card.riskScore) : '')
-  const [riskDecision,    setRiskDecision]    = useState('approve')
+  const [showCreditDocsModal,  setShowCreditDocsModal]  = useState(false)
+  const [creditDecision,       setCreditDecision]       = useState(null)
+  const [proposedCreditAmount, setProposedCreditAmount] = useState(String(card.proposedAmount || card.amount || ''))
   const [nafathVerified,  setNafathVerified]  = useState(
     card.documents.some(d => d.name.toLowerCase().includes('nafath') && d.status === 'received')
   )
@@ -312,15 +332,34 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
   const [docAiChecks, setDocAiChecks] = useState(
     Object.fromEntries(card.documents.map(d => [d.name, { check: d.aiCheck ?? null, discrepancy: d.discrepancy ?? null }]))
   )
-  const [aiRunning,   setAiRunning]   = useState(false)
-  const [aiAdvanced,  setAiAdvanced]  = useState(false)
-
-  // Contracts (legal stage)
-  const [contracts,       setContracts]       = useState(card.contracts || [])
+  // Contracts (legal stage) — mandatory contracts auto-injected when stage is agreement
+  const [contracts, setContracts] = useState(() => {
+    const existing = card.contracts || []
+    if (card.stage !== 'agreement') return existing
+    const existingIds = new Set(existing.map(c => c.id))
+    const now = new Date().toLocaleString('en-SA', { dateStyle: 'short', timeStyle: 'short' })
+    const toInject = AGREEMENT_MANDATORY_CONTRACTS
+      .filter(m => !existingIds.has(m.id))
+      .map(m => ({ id: m.id, name: m.name, status: 'Draft', mandatory: true, addedBy: 'System', addedAt: now }))
+    return [...toInject, ...existing]
+  })
   const [showContractAdd, setShowContractAdd] = useState(false)
   const [contractMode,    setContractMode]    = useState('template')
   const [selectedTpl,     setSelectedTpl]     = useState('')
   const [uploadName,      setUploadName]      = useState('')
+
+  // Inject mandatory contracts whenever the stage transitions to agreement mid-session
+  useEffect(() => {
+    if (cardStage !== 'agreement') return
+    const now = new Date().toLocaleString('en-SA', { dateStyle: 'short', timeStyle: 'short' })
+    setContracts(prev => {
+      const existingIds = new Set(prev.map(c => c.id))
+      const toInject = AGREEMENT_MANDATORY_CONTRACTS
+        .filter(m => !existingIds.has(m.id))
+        .map(m => ({ id: m.id, name: m.name, status: 'Draft', mandatory: true, addedBy: 'System', addedAt: now }))
+      return toInject.length > 0 ? [...toInject, ...prev] : prev
+    })
+  }, [cardStage])
 
   // Doc Collection editable amount (may be blank if not entered at ticket creation)
   const [editAmount, setEditAmount] = useState(String(card.amount || ''))
@@ -349,10 +388,7 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
   const perEMI              = totalBuyerRepayment / instalmentCount
 
   const missingDocs      = card.documents.filter(d => d.status === 'missing').length
-  const paidInstalments  = card.stage === 'overdue' ? 2 : card.stage === 'repayment' ? 1 : 0
-  const overdueInstalments = card.stage === 'overdue' ? 1 : 0
-
-  const cardNum = parseInt(card.id.replace('FR-', ''))
+  const cardNum = parseInt(card.id.replace('OR-', ''))
   const smartCounts = {
     documents:  card.documents.length + extraDocs,
     meetings:   (cardNum * 7 % 5) + 1 + extraMeetings,
@@ -376,25 +412,25 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
       text: `Amount (${formatSAR(card.amount)}) exceeds buyer's remaining credit limit (${formatSAR(remainingCredit)}) — escalated review required`,
       urgency: 'red',
     }] : []),
-    ...(card.type === 'onboarding' ? [{
-      icon: '🚀',
-      text: 'Onboarding request — verify entity, complete KYC, and assign initial credit limit',
-      urgency: 'amber',
-    }] : []),
     ...missingDocNames.length ? [{ icon: '📄', text: `${missingDocNames.length} missing doc${missingDocNames.length > 1 ? 's' : ''}: ${missingDocNames.join(', ')}`, urgency: 'red' }] : [],
-    ...pendingDocCount        ? [{ icon: '⏳', text: `${pendingDocCount} document${pendingDocCount > 1 ? 's' : ''} pending verification`, urgency: 'amber' }] : [],
+    ...(card.type === 'onboarding'
+      ? [{ icon: '📥', text: '1 finance request raised', urgency: 'amber' }]
+      : pendingDocCount
+        ? [{ icon: '⏳', text: `${pendingDocCount} document${pendingDocCount > 1 ? 's' : ''} pending verification`, urgency: 'amber' }]
+        : []),
     ...card.daysInStage > 5   ? [{ icon: '🕐', text: `Stale — ${card.daysInStage} days in current stage (threshold: 5d)`, urgency: 'amber' }] : [],
-    ...(card.riskScore !== null && card.riskScore > 60) ? [{ icon: '⚠️', text: `High risk score: ${card.riskScore} — manual review recommended`, urgency: 'red' }] : [],
+    ...(card.type !== 'onboarding' && card.riskScore !== null && card.riskScore > 60) ? [{ icon: '⚠️', text: `High risk score: ${card.riskScore} — manual review recommended`, urgency: 'red' }] : [],
     ...unreadMsgCount         ? [{ icon: '💬', text: `${unreadMsgCount} unread message${unreadMsgCount > 1 ? 's' : ''} in correspondence`, urgency: 'amber' }] : [],
   ]
 
   const ACTION_LABELS = {
-    request_document: 'Request missing documents from buyer',
-    escalate:         'Escalate to formal notice',
-    suggest_template: 'Apply legal framework template',
-    generate_invoice: 'Generate and share invoice',
-    monitor:          'Monitor repayment schedule',
-    score:            'Initiate credit scoring sequence',
+    request_document:   'Request missing documents from buyer',
+    request_signatures: 'Request buyer to sign mandatory contracts',
+    escalate:           'Escalate to formal notice',
+    suggest_template:   'Apply legal framework template',
+    generate_invoice:   'Generate and share invoice',
+    monitor:            'Monitor repayment schedule',
+    score:              'Initiate credit scoring sequence',
   }
 
   const openComposerWithDraft = () => {
@@ -414,7 +450,7 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
       date: 'Just now',
     }
     const yumnaiFollowUp = chatterMode === 'message' &&
-      (card.yumnaiSuggestion.action === 'request_document' || card.yumnaiSuggestion.action === 'escalate')
+      (card.yumnaiSuggestion.action === 'request_document' || card.yumnaiSuggestion.action === 'escalate' || card.yumnaiSuggestion.action === 'request_signatures')
       ? [{
           id: `yumnai-${Date.now()}`,
           type: 'correspondence',
@@ -430,8 +466,7 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
     setChatterMode(null)
   }
 
-  const canApprove = ['legal', 'approved'].includes(cardStage) &&
-    ['super', 'legal', 'account_mgr'].includes(currentUser?.adminRole)
+  const canApprove = false
 
   const handleMoveStage = (newStageId) => {
     const label = PIPELINE_STAGES.find(s => s.id === newStageId)?.label || newStageId
@@ -447,30 +482,10 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
   const handleDocStatusChange = (docName, newStatus) => {
     setDocStatuses(prev => {
       const updated = { ...prev, [docName]: newStatus }
-      const nowAllVerified = activeDocList.every(n => (updated[n] || 'pending') === 'received')
-      if (nowAllVerified) {
-        setCardStage('kyc')
-        onCardUpdate?.({
-          ...card,
-          stage: 'kyc',
-          documents: activeDocList.map(n => ({ name: n, status: updated[n] || 'pending' })),
-        })
-      }
       return updated
     })
   }
 
-  const handleApprove = () => {
-    const nextStage = cardStage === 'legal' ? 'approved' : 'disbursed'
-    const label = cardStage === 'legal' ? 'APPROVED' : 'DISBURSED'
-    setCardStage(nextStage)
-    setTimeline(prev => [...prev, {
-      id: `approval-${Date.now()}`, type: 'history', icon: '✅',
-      text: `Finance request ${label} by ${currentUser?.name || 'You'}`,
-      date: new Date().toLocaleString('en-SA', { dateStyle: 'short', timeStyle: 'short' }),
-    }])
-    onCardUpdate?.({ ...card, stage: nextStage, assignedTo })
-  }
 
   const handleAssignConfirm = () => {
     if (!assignTarget) return
@@ -489,24 +504,6 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
     onCardUpdate?.({ ...card, stage: cardStage, assignedTo: targetUser.name })
   }
 
-  const handleRerunChecks = () => {
-    if (aiRunning) return
-    setAiRunning(true)
-    setAiAdvanced(false)
-    const t = setTimeout(() => {
-      setDocAiChecks(Object.fromEntries(
-        card.documents.map(d => [d.name, { check: d.aiCheck ?? null, discrepancy: d.discrepancy ?? null }])
-      ))
-      setAiRunning(false)
-      setTimeline(prev => [...prev, {
-        id: `rerun-${Date.now()}`, type: 'history', icon: '🔄',
-        text: 'Yumnai AI re-check complete.',
-        date: new Date().toLocaleString('en-SA', { dateStyle: 'short', timeStyle: 'short' }),
-      }])
-    }, 1500)
-    return () => clearTimeout(t)
-  }
-
   const handleYumnaiAction = () => {
     const text = card.yumnaiSuggestion.draftText
     if (!text) return
@@ -517,17 +514,32 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
     setSent(true)
   }
 
+  const handleConfirmCreditDecision = () => {
+    const now = new Date().toLocaleString('en-SA', { dateStyle: 'short', timeStyle: 'short' })
+    if (creditDecision === 'approve') {
+      setTimeline(prev => [...prev, { id: `cr-${Date.now()}`, type: 'history', icon: '✅', text: `Credit approved by ${currentUser?.name || 'You'}. Proceeding to agreement.`, date: now }])
+      handleMoveStage('agreement')
+    } else if (creditDecision === 'reject') {
+      setTimeline(prev => [...prev, { id: `cr-${Date.now()}`, type: 'history', icon: '❌', text: `Credit rejected by ${currentUser?.name || 'You'}.`, date: now }])
+      handleMoveStage('rejected')
+    } else if (creditDecision === 'propose_new') {
+      const amt = Number(proposedCreditAmount)
+      if (!amt) return
+      setPropAmount(String(amt))
+      onCardUpdate?.({ ...card, stage: 'agreement', assignedTo, proposedAmount: amt, proposedTenure: card.tenure, proposedMdrRate: card.mdrRate, counterProposedBy: currentUser?.name || 'You', counterProposedAt: now })
+      setTimeline(prev => [...prev, { id: `cr-${Date.now()}`, type: 'history', icon: '⚖️', text: `Credit proposed at ${formatSAR(amt)} by ${currentUser?.name || 'You'}. Forwarding to agreement.`, date: now }])
+      handleMoveStage('agreement')
+    }
+  }
+
   // ── Primary action per stage ──────────────────────────────────────────────
   const STAGE_PRIMARY = {
-    submitted:    { label: '✓ Confirm Receipt',    next: 'kyc',          msg: 'Documents received. KYC initiated.' },
-    kyc:          { label: '✓ Clear KYC',          next: 'credit_score', msg: 'KYC cleared. Forwarding to credit team.' },
-    credit_score: { label: '✓ Submit Score',        next: 'risk',         msg: () => `Credit score submitted: ${simahInput || card.riskScore || '—'}. Moving to risk assessment.` },
-    risk:         { label: '✓ Complete Assessment', next: 'legal',        msg: 'Risk assessment complete. Forwarding to legal.' },
-    legal:        { label: '✓ Docs Signed',         next: 'approved',     msg: 'Documents signed. Forwarding for approval.' },
-    approved:     { label: '✓ Disburse',            next: 'disbursed',    msg: 'Finance approved and disbursed to merchant.' },
-    disbursed:    { label: '✓ Confirm Active',      next: 'repayment',    msg: 'Finance active. Repayment schedule initiated.' },
-    repayment:    { label: '✓ Log Payment',         next: null,           msg: 'Payment logged.' },
-    overdue:      { label: '⚡ Escalate',           next: null,           msg: 'Escalated for collections action.' },
+    doc_collection: { label: '✓ Docs Collected',   next: 'credit_review', msg: 'Documents collected. Forwarding to credit review.' },
+    credit_review:  null,
+    agreement:      { label: '✓ Agreement Signed', next: 'onboarding',    msg: 'Agreement signed. Proceeding to onboarding.' },
+    onboarding:     { label: '✓ Complete Onboarding', next: 'closed',     msg: 'Onboarding complete. Account is live.' },
+    rejected:       { label: '⚡ Acknowledge',     next: null,            msg: 'Application rejected by credit team.' },
+    closed:         { label: null,                 next: null,            msg: null },
   }
   const primaryAction  = STAGE_PRIMARY[cardStage]
   const canPrimary     = primaryAction && (stageInfo?.assignedRole === currentUser?.adminRole || currentUser?.adminRole === 'super')
@@ -610,21 +622,6 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
     onCardUpdate?.({ ...card, stage: cardStage, assignedTo, proposedAmount: null, proposedTenure: null, proposedMdrRate: null, counterProposedBy: null, counterProposedAt: null })
   }
 
-  useEffect(() => {
-    if (cardStage !== 'kyc' || aiAdvanced || aiRunning) return
-    const relevantChecks = Object.values(docAiChecks).filter(c => c.check !== null)
-    if (relevantChecks.length === 0) return
-    if (relevantChecks.every(c => c.check === 'pass')) {
-      setAiAdvanced(true)
-      setTimeline(prev => [...prev, {
-        id: `kyc-pass-${Date.now()}`, type: 'history', icon: '✅',
-        text: 'Yumnai AI: All document checks passed — advancing to Credit Review.',
-        date: new Date().toLocaleString('en-SA', { dateStyle: 'short', timeStyle: 'short' }),
-      }])
-      const t = setTimeout(() => handleMoveStage('credit_score'), 2000)
-      return () => clearTimeout(t)
-    }
-  }, [cardStage, docAiChecks, aiAdvanced, aiRunning])
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -660,15 +657,10 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
               {formatSAR(card.amount)}
             </span>
           )}
-          {card.riskScore !== null && card.riskScore !== undefined && (
+          {card.riskScore !== null && card.riskScore !== undefined && card.type !== 'onboarding' && (
             <span className="flex items-center px-3 py-1.5 rounded-lg border text-[11px] font-bold"
               style={{ background: riskColor(card.riskScore).bg, borderColor: riskColor(card.riskScore).bg, color: riskColor(card.riskScore).text }}>
               Risk {card.riskScore}
-            </span>
-          )}
-          {card.referredBy && (
-            <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-[12px] font-semibold text-slate-600">
-              ↩ {card.referredBy}
             </span>
           )}
           {isAboveLimit && (
@@ -719,19 +711,17 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
                     const isPast    = sIdx < currentIdx
                     const isCurrent = stageId === cardStage
                     const isFuture  = sIdx > currentIdx
-                    const isNAForType = card.type === 'onboarding' && ['risk', 'repayment', 'overdue'].includes(stageId)
                     return (
-                      <div key={stageId} className="flex items-center" style={{ opacity: isNAForType ? 0.3 : 1 }}>
+                      <div key={stageId} className="flex items-center">
                         {si > 0 && <span style={{ color: '#d4d4d4', fontSize: 10, margin: '0 4px' }}>›</span>}
                         <button
-                          onClick={() => !isCurrent && !isNAForType && handleMoveStage(stageId)}
-                          title={isNAForType ? 'N/A for onboarding' : undefined}
+                          onClick={() => !isCurrent && handleMoveStage(stageId)}
                           style={{
                             display: 'flex', alignItems: 'center', gap: 5,
                             padding: '4px 8px', borderRadius: 8,
                             border: isCurrent ? '1px solid #86d6a3' : '1px solid transparent',
                             background: isCurrent ? '#dcfce7' : 'transparent',
-                            cursor: isCurrent || isNAForType ? 'default' : 'pointer',
+                            cursor: isCurrent ? 'default' : 'pointer',
                           }}>
                           <span style={{
                             width: 14, height: 14, borderRadius: '50%',
@@ -772,6 +762,157 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
           {/* Scroll container — customer info scrolls away; tabs stick */}
           <div className="flex-1 overflow-y-auto">
 
+          {/* TICKET INFO CARD — collapsible, above tabs */}
+          {(() => {
+            const detailPriority = card.daysInStage >= 2 ? 'high' : card.daysInStage === 1 ? 'medium' : 'normal'
+            const detailTatStyle = {
+              high:   { background: '#fee2e2', color: '#b91c1c' },
+              medium: { background: '#fef3c7', color: '#b45309' },
+              normal: { background: '#f5f5f5', color: '#737373' },
+            }[detailPriority]
+            const detailTatLabel = card.daysInStage === 0 ? 'new' : `${card.daysInStage}d`
+            const businessName = card.buyer || card.seller
+            const assignedUserEntry = Object.values(USERS).find(u => u.name === assignedTo)
+            return (
+              <div style={{ margin: '12px 24px 0', background: 'white', borderRadius: 14, border: '1px solid #e5e5e5', overflow: 'visible' }}>
+                {/* Collapse header — always visible */}
+                <button
+                  onClick={() => setTicketInfoCollapsed(v => !v)}
+                  style={{
+                    width: '100%', display: 'flex', alignItems: 'center', gap: 8,
+                    padding: '9px 14px',
+                    background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left',
+                    borderBottom: ticketInfoCollapsed ? 'none' : '1px solid #f0f0f0',
+                    borderRadius: ticketInfoCollapsed ? 14 : '14px 14px 0 0',
+                  }}
+                >
+                  <span style={{ fontSize: 10, fontWeight: 700, background: '#f0f9ff', color: '#0369a1', borderRadius: 20, padding: '2px 8px', letterSpacing: 0.2, flexShrink: 0 }}>
+                    {card.clientType === 'seller' ? '🏪 Merchant' : '🛒 Buyer'}
+                  </span>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: '#171717', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{businessName}</span>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: '#171717', background: '#f5f5f5', borderRadius: 20, padding: '2px 10px', flexShrink: 0, whiteSpace: 'nowrap' }}>
+                    {formatSAR(card.amount)}
+                  </span>
+                  {card.sector && <span style={{ fontSize: 11, color: '#a3a3a3', flexShrink: 0, whiteSpace: 'nowrap' }}>{card.sector}</span>}
+                  <span style={{ fontSize: 11, fontWeight: 700, borderRadius: 20, padding: '2px 8px', flexShrink: 0, marginLeft: 4, ...detailTatStyle }}>
+                    {detailTatLabel}
+                  </span>
+                  <span style={{ fontSize: 10, color: '#a3a3a3', marginLeft: 2, flexShrink: 0, transition: 'transform 0.15s', display: 'inline-block', transform: ticketInfoCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)' }}>▾</span>
+                </button>
+
+                {/* Expanded body — compact 2-row layout */}
+                {!ticketInfoCollapsed && (
+                  <div style={{ padding: '10px 14px 12px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+
+                    {/* Row 1: contact details inline */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                      {card.contactPerson && (
+                        <span style={{ fontSize: 12, fontWeight: 600, color: '#262626' }}>{card.contactPerson}</span>
+                      )}
+                      {card.contactPhone && (
+                        <>
+                          <span style={{ color: '#d4d4d4', fontSize: 10 }}>·</span>
+                          <span style={{ fontSize: 12, color: '#525252' }}>📞 {card.contactPhone}</span>
+                        </>
+                      )}
+                      {card.contactEmail && (
+                        <>
+                          <span style={{ color: '#d4d4d4', fontSize: 10 }}>·</span>
+                          <a href={`mailto:${card.contactEmail}`} style={{ fontSize: 12, color: 'var(--color-primary)', textDecoration: 'none', fontWeight: 500 }}>✉ {card.contactEmail}</a>
+                        </>
+                      )}
+                    </div>
+
+                    {/* Row 2: amount + TAT + assignee dropdown */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, position: 'relative' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 1, flexShrink: 0 }}>
+                        <span style={{ fontSize: 9, fontWeight: 700, color: '#a3a3a3', textTransform: 'uppercase', letterSpacing: 0.6 }}>Requested Credit</span>
+                        <span style={{ fontSize: 15, fontWeight: 700, color: '#171717', lineHeight: 1.2 }}>{formatSAR(card.amount)}</span>
+                      </div>
+                      <span style={{ color: '#e5e5e5', fontSize: 10 }}>·</span>
+                      <span style={{ fontSize: 11, fontWeight: 700, borderRadius: 20, padding: '2px 8px', flexShrink: 0, ...detailTatStyle }}>TAT {detailTatLabel}</span>
+                      <div style={{ flex: 1 }} />
+                      {/* Assignee trigger */}
+                      {stageInfo?.auto
+                        ? (
+                          <div style={{
+                            display: 'flex', alignItems: 'center', gap: 6,
+                            border: '1px solid #e5e5e5', borderRadius: 20, padding: '4px 12px',
+                            background: 'rgba(0,0,0,0.02)', flexShrink: 0,
+                          }}>
+                            <span style={{ fontSize: 11, color: 'var(--color-primary)', fontWeight: 700 }}>✦</span>
+                            <span style={{ fontSize: 11, fontWeight: 600, color: '#262626' }}>Yumnai</span>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => setShowAssignDropdown(v => !v)}
+                            style={{
+                              display: 'flex', alignItems: 'center', gap: 6,
+                              border: '1px solid #e5e5e5', borderRadius: 20, padding: '4px 10px 4px 6px',
+                              background: showAssignDropdown ? 'rgba(0,0,0,0.03)' : 'white',
+                              cursor: 'pointer', flexShrink: 0,
+                            }}
+                          >
+                            <span style={{
+                              width: 20, height: 20, borderRadius: '50%', background: 'var(--color-primary)',
+                              color: 'white', fontSize: 9, fontWeight: 700,
+                              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                            }}>{assignedUserEntry?.initials || '?'}</span>
+                            <span style={{ fontSize: 11, fontWeight: 600, color: '#262626', maxWidth: 90, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{assignedTo || '—'}</span>
+                            <span style={{ fontSize: 9, color: '#a3a3a3' }}>▾</span>
+                          </button>
+                        )
+                      }
+
+                      {/* Dropdown — anchored to the right, overlays below */}
+                      {!stageInfo?.auto && showAssignDropdown && (
+                        <div style={{
+                          position: 'absolute', right: 0, top: '100%', marginTop: 4, zIndex: 50,
+                          border: '1px solid #e5e5e5', borderRadius: 12,
+                          background: 'white', overflow: 'hidden', boxShadow: '0 8px 24px rgba(0,0,0,0.10)',
+                          minWidth: 220,
+                        }}>
+                          {adminUsers.map(user => (
+                            <button
+                              key={user.id}
+                              onClick={() => {
+                                setAssignedTo(user.name)
+                                setTimeline(prev => [...prev, {
+                                  id: `assign-${Date.now()}`, type: 'note', from: currentUser?.name || 'Admin',
+                                  message: `Reassigned to ${user.name}.`, autoRead: false,
+                                  date: new Date().toLocaleString('en-SA', { dateStyle: 'short', timeStyle: 'short' }),
+                                }])
+                                setShowAssignDropdown(false)
+                                onCardUpdate?.({ ...card, stage: cardStage, assignedTo: user.name })
+                              }}
+                              style={{
+                                width: '100%', display: 'flex', alignItems: 'center', gap: 10,
+                                padding: '9px 12px', background: user.name === assignedTo ? 'rgba(0,0,0,0.03)' : 'transparent',
+                                border: 'none', borderBottom: '1px solid #f5f5f5', cursor: 'pointer', textAlign: 'left',
+                              }}
+                            >
+                              <span style={{
+                                width: 26, height: 26, borderRadius: '50%', background: 'var(--color-primary)',
+                                color: 'white', fontSize: 10, fontWeight: 700,
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                              }}>{user.initials}</span>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontSize: 12, fontWeight: 600, color: '#171717' }}>{user.name}</div>
+                                {user.title && <div style={{ fontSize: 10, color: '#737373' }}>{user.title}</div>}
+                              </div>
+                              {user.name === assignedTo && <span style={{ fontSize: 10, color: 'var(--color-primary)', fontWeight: 700 }}>✓</span>}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                  </div>
+                )}
+              </div>
+            )
+          })()}
+
           {/* Tab bar — sticky under the stage tracker */}
           <div className="sticky top-0 z-20 flex items-end gap-0 px-6 pt-2 border-b border-black/5" style={{ background: 'var(--color-page)' }}>
             {[
@@ -795,29 +936,50 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
           {activeTab === 'documents' && (
             <div className="flex" style={{ minHeight: 'calc(100vh - 200px)' }}>
               {/* Document list */}
-              <div className="overflow-y-auto border-r border-slate-100 shrink-0 p-4" style={{ width: 300, background: '#fafafa' }}>
-                <div className="flex flex-col gap-2">
+              <div className="overflow-y-auto border-r border-slate-100 shrink-0" style={{ width: 300, background: '#fafafa', display: 'flex', flexDirection: 'column' }}>
+                {/* Header */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px 8px', flexShrink: 0 }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: '#737373', letterSpacing: 0.5 }}>
+                    REQUIRED DOCS ({card.documents.length})
+                  </span>
+                  <button
+                    onClick={() => { setUploadDocName(''); setUploadFile(null); setShowUploadModal(true) }}
+                    style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 20, border: '1.5px solid var(--color-primary)', background: 'white', fontSize: 11, fontWeight: 700, color: 'var(--color-primary)', cursor: 'pointer' }}>
+                    ↑ Upload
+                  </button>
+                </div>
+                {/* List */}
+                <div style={{ flex: 1, overflowY: 'auto', padding: '0 12px 12px', display: 'flex', flexDirection: 'column', gap: 6 }}>
                   {card.documents.map((doc, i) => {
                     const st = docStatuses[doc.name] || doc.status
                     const sc = statusColor(st)
                     const isSelected = selectedDoc?.name === doc.name
+                    const needsUpload = st === 'pending' || st === 'missing'
                     return (
                       <button key={i} onClick={() => setSelectedDoc(doc)}
                         style={{
-                          display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px',
+                          display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 12px',
                           borderRadius: 10, border: '1.5px solid',
                           borderColor: isSelected ? 'rgba(0,0,0,0.15)' : '#e5e5e5',
                           background: isSelected ? 'rgba(0,0,0,0.03)' : 'white',
                           borderLeft: isSelected ? '3px solid var(--color-primary)' : '1.5px solid #e5e5e5',
-                          cursor: 'pointer', textAlign: 'left',
+                          cursor: 'pointer', textAlign: 'left', width: '100%',
                         }}>
-                        <span style={{ fontSize: 18, color: sc.color }}>
-                          {st === 'received' ? '✓' : st === 'missing' ? '✗' : '○'}
+                        <span style={{ fontSize: 16, color: sc.color, marginTop: 1, flexShrink: 0 }}>
+                          {statusIcon(st)}
                         </span>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: 12, fontWeight: 600, color: '#262626' }}>{doc.name}</div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 12, fontWeight: 600, color: '#262626', marginBottom: 2 }}>{doc.name}</div>
+                          <div style={{ fontSize: 10, color: '#a3a3a3' }}>{stageInfo?.label || cardStage}</div>
                         </div>
-                        <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 20, background: sc.bg, color: sc.color, textTransform: 'capitalize' }}>{st}</span>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
+                          <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 20, background: sc.bg, color: sc.color, whiteSpace: 'nowrap' }}>
+                            {STATUS_LABELS[st] || st}
+                          </span>
+                          {needsUpload && (
+                            <span style={{ fontSize: 9, color: '#a3a3a3' }}>↑ upload</span>
+                          )}
+                        </div>
                       </button>
                     )
                   })}
@@ -845,7 +1007,13 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
                           {canEdit ? (
                             <select value={st} onChange={e => handleDocStatusChange(selectedDoc.name, e.target.value)}
                               style={{ border: '1.5px solid #e5e5e5', borderRadius: 8, padding: '4px 10px', fontSize: 12, outline: 'none', fontFamily: 'inherit', color: sc.color, background: sc.bg, fontWeight: 600, cursor: 'pointer' }}>
-                              {['received', 'pending', 'missing'].map(s => <option key={s} value={s} style={{ color: '#262626', background: 'white' }}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
+                              {[
+                                { value: 'pending',             label: 'Pending' },
+                                { value: 'ai_verified',         label: 'AI Verified' },
+                                { value: 'verification_failed', label: 'Verification Failed' },
+                                { value: 'verified',            label: 'Verified (Human)' },
+                                { value: 'missing',             label: 'Missing' },
+                              ].map(s => <option key={s.value} value={s.value} style={{ color: '#262626', background: 'white' }}>{s.label}</option>)}
                             </select>
                           ) : (
                             <span style={{ fontSize: 12, fontWeight: 600, padding: '3px 10px', borderRadius: 20, background: sc.bg, color: sc.color, textTransform: 'capitalize' }}>{st}</span>
@@ -853,8 +1021,8 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
                         </div>
                       </div>
 
-                      {/* Yumnai AI Check — kyc stage only */}
-                      {cardStage === 'kyc' && (() => {
+                      {/* Yumnai AI Check — doc_collection stage only */}
+                      {cardStage === 'doc_collection' && (() => {
                         const ac = docAiChecks[selectedDoc.name]
                         const aiCheck = ac?.check
                         const discrepancy = ac?.discrepancy
@@ -908,9 +1076,16 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
                             Request from buyer →
                           </button>
                         )}
-                        {canEdit && st !== 'received' && (
-                          <button onClick={() => handleDocStatusChange(selectedDoc.name, 'received')} style={{ padding: '7px 16px', borderRadius: 10, background: '#171717', border: 'none', fontSize: 12, fontWeight: 700, color: 'white', cursor: 'pointer' }}>
-                            ✓ Mark as Received
+                        {(st === 'pending' || st === 'missing') && (
+                          <button onClick={() => { setUploadDocName(selectedDoc.name); setUploadFile(null); setShowUploadModal(true) }}
+                            style={{ padding: '7px 16px', borderRadius: 10, background: '#171717', border: 'none', fontSize: 12, fontWeight: 700, color: 'white', cursor: 'pointer' }}>
+                            ↑ Upload Document
+                          </button>
+                        )}
+                        {canEdit && st === 'verification_failed' && (
+                          <button onClick={() => handleDocStatusChange(selectedDoc.name, 'verified')}
+                            style={{ padding: '7px 16px', borderRadius: 10, background: '#0369a1', border: 'none', fontSize: 12, fontWeight: 700, color: 'white', cursor: 'pointer' }}>
+                            ✓ Mark Verified
                           </button>
                         )}
                       </div>
@@ -953,225 +1128,95 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
                   </span>
                 </div>
 
-                {/* Alert chips */}
-                {yumnaiItems.length > 0 && (
-                  <div style={{
-                    padding: '10px 14px',
-                    background: 'rgba(144,132,253,0.04)',
-                    borderBottom: '1px solid rgba(144,132,253,0.12)',
-                    display: 'flex', gap: 6, flexWrap: 'wrap',
-                  }}>
-                    {yumnaiItems.map((item, idx) => (
-                      <span key={idx} style={{
-                        display: 'inline-flex', alignItems: 'center', gap: 5,
-                        padding: '4px 10px', borderRadius: 20,
-                        background: 'rgba(144,132,253,0.10)',
-                        color: 'rgba(90,78,210,0.85)',
-                        fontSize: 11, fontWeight: 600,
-                      }}>
-                        <span style={{ fontSize: 12 }}>{item.icon}</span>
-                        {item.text}
-                      </span>
-                    ))}
+                {/* Info chips */}
+                {yumnaiItems.length > 0 ? (
+                  <div style={{ padding: '7px 12px', background: 'rgba(144,132,253,0.04)', borderBottom: '1px solid rgba(144,132,253,0.10)', display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+                    {yumnaiItems.map((item, idx) => {
+                      const isRed = item.urgency === 'red'
+                      return (
+                        <span key={idx} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 9px', borderRadius: 20, background: isRed ? 'rgba(239,68,68,0.10)' : 'rgba(144,132,253,0.10)', color: isRed ? '#dc2626' : 'rgba(90,78,210,0.85)', fontSize: 11, fontWeight: 600 }}>
+                          <span style={{ fontSize: 11 }}>{item.icon}</span>
+                          {item.text}
+                        </span>
+                      )
+                    })}
                   </div>
-                )}
-                {yumnaiItems.length === 0 && (
-                  <div style={{
-                    padding: '8px 14px',
-                    background: 'rgba(144,132,253,0.04)',
-                    borderBottom: '1px solid rgba(144,132,253,0.12)',
-                    display: 'flex', alignItems: 'center', gap: 6,
-                  }}>
-                    <span style={{
-                      display: 'inline-flex', alignItems: 'center', gap: 5,
-                      padding: '3px 10px', borderRadius: 20,
-                      background: 'rgba(144,132,253,0.08)',
-                      color: 'rgba(90,78,210,0.7)',
-                      fontSize: 11, fontWeight: 600,
-                    }}>
+                ) : (
+                  <div style={{ padding: '6px 12px', background: 'rgba(144,132,253,0.04)', borderBottom: '1px solid rgba(144,132,253,0.10)' }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 9px', borderRadius: 20, background: 'rgba(144,132,253,0.08)', color: 'rgba(90,78,210,0.7)', fontSize: 11, fontWeight: 600 }}>
                       ✓ No issues detected — ticket looks healthy
                     </span>
                   </div>
                 )}
 
-                {/* Yumnai message bubble + actions */}
-                <div style={{ padding: '14px 16px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  {/* Chat bubble row */}
-                  <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                    {/* Avatar */}
-                    <div style={{
-                      width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
-                      background: 'linear-gradient(135deg, #9084fd 0%, #3da4ff 100%)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      padding: 5,
-                    }}>
-                      <img src="/yumnai.svg" alt="" style={{ width: '100%', height: '100%', filter: 'brightness(0) invert(1)' }} />
-                    </div>
-                    {/* Bubble */}
-                    <div style={{
-                      flex: 1,
-                      background: 'linear-gradient(135deg, #efedff 0%, #e9edff 50%, #e6f4ff 100%)',
-                      border: '1px solid rgba(144,132,253,0.30)',
-                      borderRadius: '4px 16px 16px 16px',
-                      padding: '10px 14px',
-                    }}>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-primary)', marginBottom: 4 }}>Yumnai</div>
-                      <p style={{ fontSize: 13, color: '#262626', lineHeight: 1.55, margin: 0 }}>
-                        {card.yumnaiSuggestion.message}
-                      </p>
-                    </div>
+                {/* One-liner + Action */}
+                <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+
+                  {/* Yumnai one-liner */}
+                  <div>
+                    <div style={{ fontSize: 9, fontWeight: 700, color: 'rgba(144,132,253,0.65)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>Yumnai</div>
+                    <p style={{ fontSize: 12, color: '#262626', lineHeight: 1.5, margin: 0 }}>
+                      {card.type === 'onboarding'
+                        ? 'This merchant has not yet drawn on their credit line. No active facility or transaction in progress.'
+                        : card.yumnaiSuggestion.message}
+                    </p>
                   </div>
 
-                  {/* Action area */}
-                  {(card.yumnaiSuggestion.action === 'request_document' || card.yumnaiSuggestion.action === 'escalate') && (
-                    sent
-                      ? <div style={{ padding: '8px 14px', borderRadius: 12, background: 'rgba(144,132,253,0.06)', border: '1px solid rgba(144,132,253,0.15)' }}>
-                          <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-primary)' }}>✓ Message sent — Yumnai is monitoring the reply</span>
-                        </div>
-                      : <button onClick={handleYumnaiAction} style={{
-                          alignSelf: 'flex-start', padding: '8px 20px', borderRadius: 20, border: 'none',
-                          background: 'linear-gradient(135deg, #9084fd 0%, #6a7bff 50%, #3da4ff 100%)',
-                          color: 'white', fontSize: 12, fontWeight: 700, cursor: 'pointer',
-                          boxShadow: '0 2px 12px rgba(144,132,253,0.35)',
-                        }}>
-                          {card.yumnaiSuggestion.action === 'escalate' ? 'Send Formal Notice →' : 'Send Request →'}
-                        </button>
-                  )}
+                  {card.type !== 'onboarding' && <div style={{ height: 1, background: 'rgba(144,132,253,0.08)' }} />}
 
-                  {card.yumnaiSuggestion.action === 'suggest_template' && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                      <div style={{ padding: '10px 12px', borderRadius: 12, border: '1px solid rgba(144,132,253,0.20)', background: 'rgba(144,132,253,0.04)' }}>
-                        <div style={{ fontSize: 12, fontWeight: 600, color: '#262626', marginBottom: 2 }}>Standard ICT Credit Framework v2.1</div>
-                        <div style={{ fontSize: 11, color: '#a3a3a3' }}>ICT · Full Credit · SAR 50K–500K · ≤ 90 days</div>
-                      </div>
-                      <div style={{ display: 'flex', gap: 8 }}>
-                        <button style={{ padding: '8px 18px', borderRadius: 20, border: 'none', background: 'linear-gradient(135deg, #9084fd 0%, #6a7bff 50%, #3da4ff 100%)', color: 'white', fontSize: 12, fontWeight: 700, cursor: 'pointer', boxShadow: '0 2px 12px rgba(144,132,253,0.35)' }}>
-                          Apply Template ✓
-                        </button>
-                        <button style={{ padding: '8px 14px', borderRadius: 20, border: '1.5px solid #e5e5e5', background: 'none', color: '#525252', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-                          Dismiss
-                        </button>
-                      </div>
+                  {/* Action section */}
+                  {card.type !== 'onboarding' &&
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+                      <span style={{ fontSize: 9, fontWeight: 700, color: 'rgba(144,132,253,0.65)', textTransform: 'uppercase', letterSpacing: '0.08em', flexShrink: 0 }}>Action</span>
+                      <span style={{ fontSize: 11, color: '#737373', fontWeight: 500, lineHeight: 1.3 }}>
+                        {ACTION_LABELS[card.yumnaiSuggestion.action] || ''}
+                      </span>
                     </div>
-                  )}
 
-                  {card.yumnaiSuggestion.action === 'generate_invoice' && (
-                    invoiceGenerated
-                      ? <div style={{ display: 'flex', gap: 8 }}>
-                          <button style={{ flex: 1, padding: '8px 0', borderRadius: 20, border: 'none', background: '#171717', color: 'white', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Share with Buyer →</button>
-                          <button style={{ padding: '8px 14px', borderRadius: 20, border: '1.5px solid #e5e5e5', background: 'none', color: '#525252', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Hold</button>
+                    {(card.yumnaiSuggestion.action === 'request_document' || card.yumnaiSuggestion.action === 'escalate' || card.yumnaiSuggestion.action === 'request_signatures') && (
+                      sent
+                        ? <div style={{ padding: '7px 12px', borderRadius: 10, background: 'rgba(144,132,253,0.06)', border: '1px solid rgba(144,132,253,0.15)' }}>
+                            <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--color-primary)' }}>✓ Signing request sent — Yumnai is monitoring replies</span>
+                          </div>
+                        : <button onClick={handleYumnaiAction} style={{ alignSelf: 'flex-start', padding: '7px 18px', borderRadius: 20, border: 'none', background: 'linear-gradient(135deg, #9084fd 0%, #6a7bff 50%, #3da4ff 100%)', color: 'white', fontSize: 12, fontWeight: 700, cursor: 'pointer', boxShadow: '0 2px 10px rgba(144,132,253,0.30)' }}>
+                            {card.yumnaiSuggestion.action === 'escalate' ? 'Send Formal Notice →' : 'Send Request →'}
+                          </button>
+                    )}
+
+                    {card.yumnaiSuggestion.action === 'suggest_template' && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+                        <div style={{ padding: '8px 10px', borderRadius: 10, border: '1px solid rgba(144,132,253,0.18)', background: 'rgba(144,132,253,0.04)' }}>
+                          <div style={{ fontSize: 11, fontWeight: 600, color: '#262626', marginBottom: 1 }}>Standard ICT Credit Framework v2.1</div>
+                          <div style={{ fontSize: 10, color: '#a3a3a3' }}>ICT · Full Credit · SAR 50K–500K · ≤ 90 days</div>
                         </div>
-                      : <button onClick={() => setInvoiceGenerated(true)} style={{ alignSelf: 'flex-start', padding: '8px 20px', borderRadius: 20, border: 'none', background: 'linear-gradient(135deg, #9084fd 0%, #6a7bff 50%, #3da4ff 100%)', color: 'white', fontSize: 12, fontWeight: 700, cursor: 'pointer', boxShadow: '0 2px 12px rgba(144,132,253,0.35)' }}>
-                          Generate Invoice Preview →
-                        </button>
-                  )}
+                        <div style={{ display: 'flex', gap: 7 }}>
+                          <button style={{ padding: '7px 16px', borderRadius: 20, border: 'none', background: 'linear-gradient(135deg, #9084fd 0%, #6a7bff 50%, #3da4ff 100%)', color: 'white', fontSize: 11, fontWeight: 700, cursor: 'pointer', boxShadow: '0 2px 10px rgba(144,132,253,0.30)' }}>Apply Template ✓</button>
+                          <button style={{ padding: '7px 12px', borderRadius: 20, border: '1.5px solid #e5e5e5', background: 'none', color: '#525252', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>Dismiss</button>
+                        </div>
+                      </div>
+                    )}
 
-                  {(card.yumnaiSuggestion.action === 'monitor' || card.yumnaiSuggestion.action === 'score') && (
-                    <div style={{ padding: '8px 14px', borderRadius: 12, background: 'rgba(144,132,253,0.06)', border: '1px solid rgba(144,132,253,0.15)' }}>
-                      <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-primary)' }}>✓ Yumnai is on it</span>
-                    </div>
-                  )}
+                    {card.yumnaiSuggestion.action === 'generate_invoice' && (
+                      invoiceGenerated
+                        ? <div style={{ display: 'flex', gap: 7 }}>
+                            <button style={{ flex: 1, padding: '7px 0', borderRadius: 20, border: 'none', background: '#171717', color: 'white', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>Share with Buyer →</button>
+                            <button style={{ padding: '7px 12px', borderRadius: 20, border: '1.5px solid #e5e5e5', background: 'none', color: '#525252', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>Hold</button>
+                          </div>
+                        : <button onClick={() => setInvoiceGenerated(true)} style={{ alignSelf: 'flex-start', padding: '7px 18px', borderRadius: 20, border: 'none', background: 'linear-gradient(135deg, #9084fd 0%, #6a7bff 50%, #3da4ff 100%)', color: 'white', fontSize: 12, fontWeight: 700, cursor: 'pointer', boxShadow: '0 2px 10px rgba(144,132,253,0.30)' }}>
+                            Generate Invoice Preview →
+                          </button>
+                    )}
+
+                    {(card.yumnaiSuggestion.action === 'monitor' || card.yumnaiSuggestion.action === 'score') && (
+                      <div style={{ padding: '7px 12px', borderRadius: 10, background: 'rgba(144,132,253,0.06)', border: '1px solid rgba(144,132,253,0.15)' }}>
+                        <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--color-primary)' }}>✓ Yumnai is on it</span>
+                      </div>
+                    )}
+                  </div>}
+
                 </div>
 
-              </div>
-            </div>
-
-            {/* CUSTOMER + DEAL INFO GRID */}
-            <div className="bg-white rounded-2xl border border-black/5 p-5">
-              <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-                <Field label="Seller (Merchant)">
-                  <button onClick={() => onNavigate('sellers')} className="text-[13px] font-semibold text-left hover:underline" style={{ color: 'var(--color-primary)' }}>
-                    {card.seller} <span className="text-[11px] opacity-60">↗</span>
-                  </button>
-                </Field>
-                {card.buyer && (
-                  <Field label="Buyer (Customer)">
-                    <button onClick={() => onNavigate('buyers')} className="text-[13px] font-semibold text-left hover:underline" style={{ color: 'var(--color-primary)' }}>
-                      {card.buyer} <span className="text-[11px] opacity-60">↗</span>
-                    </button>
-                  </Field>
-                )}
-                {card.referredBy && (
-                  <Field label="Referred By">
-                    <span className="text-[13px] font-semibold" style={{ color: 'var(--color-primary)' }}>{card.referredBy}</span>
-                  </Field>
-                )}
-                {card.amount > 0 && (
-                  <Field label="Amount">
-                    <span className="text-[15px] font-bold text-slate-900">{formatSAR(card.amount)}</span>
-                  </Field>
-                )}
-                {card.mdrRate !== undefined && (
-                  <Field label="MDR Rate">
-                    <span className="text-[13px] text-slate-700">{card.mdrRate}%</span>
-                  </Field>
-                )}
-                {card.tenure !== undefined && (
-                  <Field label="Tenure">
-                    <span className="text-[13px] text-slate-700">{card.tenure} days</span>
-                  </Field>
-                )}
-                {card.emiFrequency && (
-                  <Field label="EMI Frequency">
-                    <span className="text-[13px] text-slate-700 capitalize">{card.emiFrequency}</span>
-                  </Field>
-                )}
-                {card.sector && (
-                  <Field label="Sector">
-                    <span className="text-[13px] text-slate-700">{card.sector}</span>
-                  </Field>
-                )}
-                <Field label="Assigned To">
-                  <span className="text-[13px] text-slate-700">{assignedTo || '—'}</span>
-                </Field>
-                <Field label="Days in Stage">
-                  <span className="text-[13px] text-slate-700">{card.daysInStage} days</span>
-                </Field>
-                {card.contactPerson && (
-                  <Field label="Contact Person">
-                    <span className="text-[13px] text-slate-700">{card.contactPerson}</span>
-                  </Field>
-                )}
-                {card.contactEmail && (
-                  <Field label="Email">
-                    <a href={`mailto:${card.contactEmail}`} className="text-[13px] font-medium hover:underline" style={{ color: 'var(--color-primary)' }}>{card.contactEmail}</a>
-                  </Field>
-                )}
-                {card.contactPhone && (
-                  <Field label="Phone">
-                    <span className="text-[13px] text-slate-700">{card.contactPhone}</span>
-                  </Field>
-                )}
-                <Field label="Process Type">
-                  <span className="inline-flex items-center gap-1 text-[12px] font-semibold px-2 py-0.5 rounded-full"
-                    style={card.type === 'invoice_finance' ? { background: '#f5f5f5', color: '#525252' } : { background: 'rgba(0,0,0,0.03)', color: '#525252' }}>
-                    {card.type === 'invoice_finance' ? '💼 Invoice Finance' : '🚀 Onboarding'}
-                  </span>
-                </Field>
-                {card.riskScore !== null && card.riskScore !== undefined && (
-                  <Field label="Risk Score">
-                    <span className="text-[12px] font-bold px-2 py-0.5 rounded-full"
-                      style={{ background: riskColor(card.riskScore).bg, color: riskColor(card.riskScore).text }}>
-                      {card.riskScore}
-                    </span>
-                  </Field>
-                )}
-                {buyerInfo && (
-                  <Field label="Buyer Credit">
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                      <div style={{ display: 'flex', gap: 8, fontSize: 12, color: '#525252', flexWrap: 'wrap' }}>
-                        <span>Limit: <strong style={{ color: '#262626' }}>{formatSAR(buyerInfo.creditLimit)}</strong></span>
-                        <span>Used: <strong style={{ color: buyerInfo.creditUsed / buyerInfo.creditLimit > 0.8 ? '#737373' : '#334155' }}>
-                          {formatSAR(buyerInfo.creditUsed)} ({Math.round(buyerInfo.creditUsed / buyerInfo.creditLimit * 100)}%)
-                        </strong></span>
-                      </div>
-                      <div style={{ fontSize: 12 }}>
-                        Remaining: <strong style={{ color: isAboveLimit ? '#737373' : '#262626' }}>{formatSAR(remainingCredit)}</strong>
-                        {isAboveLimit && <span style={{ marginLeft: 6, fontSize: 10, fontWeight: 600, color: '#737373' }}>⚠️ Request exceeds limit</span>}
-                      </div>
-                    </div>
-                  </Field>
-                )}
               </div>
             </div>
 
@@ -1184,11 +1229,11 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
 
               const docStatusColor = { received: '#262626', pending: '#525252', missing: '#737373' }
               return (
-                <Section title={`${stageInfo?.label || ''} — Stage Actions`} badge="Your Stage" badgeColor={stageInfo?.color || '#6b7280'}>
+                <Section title={`${stageInfo?.label || ''} — Stage Actions`}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
 
-                    {/* SALES — submitted */}
-                    {cardStage === 'submitted' && (
+                    {/* SALES — doc_collection */}
+                    {cardStage === 'doc_collection' && (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
 
                         {/* Finance Request (invoice_finance only) */}
@@ -1230,184 +1275,142 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
                         </div>
                         {activeDocList.map(docName => {
                           const status = docStatuses[docName] || 'pending'
+                          const sc = statusColor(status)
+                          const docObj = card.documents.find(d => d.name === docName)
                           return (
-                            <div key={docName}
+                            <button key={docName}
+                              onClick={() => { if (docObj) { setSelectedDoc(docObj); setActiveTab('documents') } }}
                               style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 10,
-                                border: '1.5px solid', borderColor: status === 'received' ? '#d4d4d4' : '#f0f0f0',
-                                background: status === 'received' ? '#fafafa' : 'white', cursor: 'default', textAlign: 'left' }}>
-                              <span style={{ width: 18, height: 18, borderRadius: '50%', border: '2px solid',
-                                borderColor: status === 'received' ? '#262626' : '#d4d4d4',
-                                background: status === 'received' ? '#262626' : 'transparent',
-                                display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                                {status === 'received' && (
-                                  <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                                )}
-                                {status === 'missing' && (
-                                  <svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="#d4d4d4" strokeWidth="3" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                                )}
+                                border: '1.5px solid', borderColor: sc.bg === '#fafafa' ? '#f0f0f0' : sc.bg,
+                                background: 'white', cursor: 'pointer', textAlign: 'left', width: '100%' }}>
+                              <span style={{ width: 18, height: 18, borderRadius: '50%', border: `2px solid ${sc.color}`,
+                                background: (status === 'ai_verified' || status === 'verified' || status === 'verification_failed') ? sc.color : 'transparent',
+                                display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                                fontSize: 9, color: 'white', fontWeight: 700 }}>
+                                {(status === 'ai_verified' || status === 'verified') && '✓'}
+                                {status === 'verification_failed' && '!'}
                               </span>
-                              <span style={{ fontSize: 12, flex: 1, color: '#262626' }}>{docName}</span>
-                              <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 20,
-                                background: status === 'received' ? '#f0f0f0' : '#fafafa',
-                                color: status === 'received' ? '#262626' : status === 'missing' ? '#737373' : '#a3a3a3' }}>
-                                {status}
+                              <span style={{ fontSize: 12, flex: 1, color: '#262626', textAlign: 'left' }}>{docName}</span>
+                              <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 20, background: sc.bg, color: sc.color, whiteSpace: 'nowrap' }}>
+                                {STATUS_LABELS[status] || status}
                               </span>
-                            </div>
+                            </button>
                           )
                         })}
 
                         {allVerified && (
                           <div style={{ padding: '8px 12px', borderRadius: 10, background: '#f0f0f0', border: '1px solid #e5e5e5', fontSize: 12, fontWeight: 600, color: '#262626' }}>
-                            ✓ All documents received — advancing to Checking Docs…
+                            ✓ All documents received — ready to advance to Credit Review
                           </div>
                         )}
                       </div>
                     )}
 
-                    {/* VERIFIER — kyc: Yumnai AI Document Review */}
-                    {cardStage === 'kyc' && (() => {
-                      const flaggedDocs = card.documents.filter(d => docAiChecks[d.name]?.check === 'flagged')
-                      const allRelevantPass = card.documents.every(d => {
-                        const c = docAiChecks[d.name]?.check
-                        return c === null || c === 'pass'
-                      }) && card.documents.some(d => docAiChecks[d.name]?.check === 'pass')
-                      return (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    {/* CREDIT — credit_review */}
+                    {cardStage === 'credit_review' && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
 
-                          {/* Summary banner */}
-                          {aiRunning ? (
-                            <div style={{ padding: '10px 14px', borderRadius: 10, background: '#f5f5f5', border: '1px solid #e5e5e5', display: 'flex', alignItems: 'center', gap: 8 }}>
-                              <span style={{ fontSize: 12 }}>⏳</span>
-                              <span style={{ fontSize: 12, fontWeight: 600, color: '#525252' }}>Checking documents…</span>
-                            </div>
-                          ) : allRelevantPass ? (
-                            <div style={{ padding: '10px 14px', borderRadius: 10, background: '#f0f0f0', border: '1px solid #d4d4d4' }}>
-                              <span style={{ fontSize: 12, fontWeight: 700, color: '#262626' }}>✓ All checks passed — advancing to Credit Review…</span>
-                            </div>
-                          ) : flaggedDocs.length > 0 ? (
-                            <div style={{ padding: '10px 14px', borderRadius: 10, background: '#f5f5f5', border: '1px solid #d4d4d4' }}>
-                              <span style={{ fontSize: 12, fontWeight: 700, color: '#525252' }}>⚠ {flaggedDocs.length} discrepanc{flaggedDocs.length === 1 ? 'y' : 'ies'} found — review and contact client</span>
-                            </div>
-                          ) : null}
-
-                          {/* Re-run button */}
-                          <button onClick={handleRerunChecks} disabled={aiRunning}
-                            style={{ alignSelf: 'flex-start', padding: '6px 14px', borderRadius: 10, border: '1.5px solid #e5e5e5', background: aiRunning ? '#f5f5f5' : 'white', fontSize: 12, fontWeight: 600, color: aiRunning ? '#a3a3a3' : '#525252', cursor: aiRunning ? 'default' : 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
-                            🔄 {aiRunning ? 'Checking…' : 'Re-run AI Checks'}
-                          </button>
-
-                          {/* Per-document cards */}
-                          {card.documents.map((doc, i) => {
-                            const ac = docAiChecks[doc.name]
-                            const aiCheck = ac?.check
-                            const discrepancy = ac?.discrepancy
-                            const st = docStatuses[doc.name] || doc.status
-                            const badgeStyle = aiCheck === 'pass'
-                              ? { background: '#f0f0f0', color: '#262626', borderColor: '#d4d4d4' }
-                              : aiCheck === 'flagged'
-                              ? { background: '#f5f5f5', color: '#737373', borderColor: '#d4d4d4' }
-                              : { background: '#f5f5f5', color: '#a3a3a3', borderColor: '#e5e5e5' }
-                            const badgeLabel = aiCheck === 'pass' ? '✓ pass'
-                              : aiCheck === 'flagged' ? '⚠ flagged'
-                              : st === 'missing' ? 'missing'
-                              : 'pending'
-                            return (
-                              <div key={i} style={{ borderRadius: 12, border: '1.5px solid', borderColor: aiCheck === 'flagged' ? '#d4d4d4' : '#e5e5e5', background: 'white', overflow: 'hidden' }}>
-                                {/* Document viewer placeholder */}
-                                <div style={{ height: 80, background: '#f5f5f5', borderBottom: '1px solid #e5e5e5', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 4 }}>
-                                  <span style={{ fontSize: 24 }}>📄</span>
-                                  <span style={{ fontSize: 10, color: '#a3a3a3', fontWeight: 500 }}>{doc.name}</span>
-                                  <span style={{ fontSize: 9, color: '#d4d4d4' }}>Document preview</span>
-                                </div>
-                                {/* Info row */}
-                                <div style={{ padding: '10px 12px', display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-                                  <div style={{ flex: 1 }}>
-                                    <div style={{ fontSize: 12, fontWeight: 600, color: '#262626' }}>{doc.name}</div>
-                                    {discrepancy && !aiRunning && (
-                                      <div style={{ fontSize: 11, color: '#525252', lineHeight: 1.5, padding: '6px 8px', borderRadius: 8, background: '#f5f5f5', border: '1px solid #e5e5e5', marginTop: 6 }}>
-                                        {discrepancy}
-                                      </div>
-                                    )}
-                                  </div>
-                                  {!aiRunning && (
-                                    <span style={{ fontSize: 10, fontWeight: 700, padding: '3px 10px', borderRadius: 20, border: '1px solid', flexShrink: 0, ...badgeStyle }}>
-                                      {badgeLabel}
-                                    </span>
-                                  )}
-                                </div>
+                        {/* Credit summary card */}
+                        <div style={{ borderRadius: 14, border: '1.5px solid #e5e5e5', background: '#fafafa', overflow: 'hidden' }}>
+                          <div style={{ padding: '12px 14px', borderBottom: '1px solid #f0f0f0' }}>
+                            <div style={{ fontSize: 10, fontWeight: 700, color: '#a3a3a3', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 8 }}>Credit Summary</div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 12px' }}>
+                              <div>
+                                <div style={{ fontSize: 10, color: '#a3a3a3', fontWeight: 600 }}>Requested Amount</div>
+                                <div style={{ fontSize: 13, fontWeight: 700, color: '#171717' }}>{formatSAR(card.amount)}</div>
                               </div>
-                            )
-                          })}
-                        </div>
-                      )
-                    })()}
-
-                    {/* CREDIT — credit_score */}
-                    {cardStage === 'credit_score' && (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                          <label style={{ fontSize: 11, fontWeight: 600, color: '#525252', textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>SIMAH Score</label>
-                          <input type="number" min="0" max="999" value={simahInput} onChange={e => setSimahInput(e.target.value)}
-                            placeholder="Enter score…" style={{ ...fieldStyle, width: 100 }} />
-                          {simahInput && (
-                            <span style={{ fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 20,
-                              background: Number(simahInput) >= 700 ? '#f0f0f0' : Number(simahInput) >= 600 ? '#f5f5f5' : '#e5e5e5',
-                              color:      Number(simahInput) >= 700 ? '#262626' : Number(simahInput) >= 600 ? '#525252' : '#737373' }}>
-                              {Number(simahInput) >= 700 ? 'Excellent' : Number(simahInput) >= 600 ? 'Good' : Number(simahInput) >= 500 ? 'Fair' : 'Poor'}
-                            </span>
-                          )}
-                        </div>
-                        {buyerInfo && (
-                          <div style={{ padding: '10px 12px', borderRadius: 10, background: '#f5f5f5', border: '1px solid #e5e5e5', fontSize: 12, color: '#262626' }}>
-                            Credit utilisation: <strong>{formatSAR(buyerInfo.creditUsed)}</strong> used of <strong>{formatSAR(buyerInfo.creditLimit)}</strong>
-                            {' '}({Math.round(buyerInfo.creditUsed / buyerInfo.creditLimit * 100)}% utilised)
-                            {isAboveLimit && <span style={{ color: '#737373', fontWeight: 700, marginLeft: 8 }}>⚠️ This request exceeds remaining limit</span>}
+                              {buyerInfo && (
+                                <div>
+                                  <div style={{ fontSize: 10, color: '#a3a3a3', fontWeight: 600 }}>Buyer Remaining Limit</div>
+                                  <div style={{ fontSize: 13, fontWeight: 700, color: isAboveLimit ? '#dc2626' : '#171717' }}>{formatSAR(remainingCredit)}</div>
+                                </div>
+                              )}
+                              {card.tenure > 0 && (
+                                <div>
+                                  <div style={{ fontSize: 10, color: '#a3a3a3', fontWeight: 600 }}>Tenor</div>
+                                  <div style={{ fontSize: 13, fontWeight: 700, color: '#171717' }}>{card.tenure}d</div>
+                                </div>
+                              )}
+                              {card.mdrRate > 0 && (
+                                <div>
+                                  <div style={{ fontSize: 10, color: '#a3a3a3', fontWeight: 600 }}>MDR Rate</div>
+                                  <div style={{ fontSize: 13, fontWeight: 700, color: '#171717' }}>{card.mdrRate}%</div>
+                                </div>
+                              )}
+                            </div>
+                            {isAboveLimit && (
+                              <div style={{ marginTop: 8, padding: '6px 10px', borderRadius: 8, background: '#fef2f2', border: '1px solid #fecaca', fontSize: 11, fontWeight: 600, color: '#dc2626' }}>
+                                ⚠️ Exceeds buyer limit by {formatSAR(card.amount - remainingCredit)}
+                              </div>
+                            )}
                           </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* RISK — risk */}
-                    {cardStage === 'risk' && (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                          <label style={{ fontSize: 11, fontWeight: 600, color: '#525252', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Risk Decision</label>
-                          {['approve', 'counter_propose', 'reject'].map(d => (
-                            <button key={d} onClick={() => setRiskDecision(d)} style={{ padding: '5px 12px', borderRadius: 20, border: '1.5px solid', borderColor: riskDecision === d ? '#262626' : '#e5e5e5', background: riskDecision === d ? '#f0f0f0' : 'white', fontSize: 11, fontWeight: 600, color: riskDecision === d ? '#262626' : '#525252', cursor: 'pointer' }}>
-                              {d === 'approve' ? '✓ Approve' : d === 'counter_propose' ? '⚖️ Counter-propose' : '✗ Reject'}
+                          {/* Document access */}
+                          <div style={{ padding: '10px 14px', display: 'flex', gap: 8 }}>
+                            <a href="/CREDIT MODEL.xlsm" target="_blank" rel="noreferrer"
+                              style={{ flex: 1, padding: '7px 0', borderRadius: 10, border: '1.5px solid #e5e5e5', background: 'white', fontSize: 11, fontWeight: 600, color: '#525252', textDecoration: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+                              📊 Credit Model ↗
+                            </a>
+                            <button onClick={() => setShowCreditDocsModal(true)}
+                              style={{ flex: 1, padding: '7px 0', borderRadius: 10, border: '1.5px solid #e5e5e5', background: 'white', fontSize: 11, fontWeight: 600, color: '#525252', cursor: 'pointer' }}>
+                              🏗️ Architecture
                             </button>
-                          ))}
-                        </div>
-                        {isAboveLimit && (
-                          <div style={{ padding: '8px 12px', borderRadius: 10, background: '#f0f0f0', border: '1px solid #d4d4d4', fontSize: 12, color: '#737373', fontWeight: 600 }}>
-                            ⚠️ Amount exceeds buyer's remaining limit by {formatSAR(card.amount - remainingCredit)}
                           </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* ACCOUNT MGR — approved */}
-                    {cardStage === 'approved' && (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                        <div style={{ fontSize: 11, fontWeight: 600, color: '#525252', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Confirm disbursement details</div>
-                        <div style={{ padding: '10px 12px', borderRadius: 10, background: '#f5f5f5', border: '1px solid #e5e5e5', fontSize: 12 }}>
-                          Merchant receives <strong style={{ color: '#262626' }}>{formatSAR(merchantDisbursement)}</strong> after MDR deduction
                         </div>
+
+                        {/* Decision section */}
+                        <div>
+                          <div style={{ fontSize: 10, fontWeight: 700, color: '#a3a3a3', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 8 }}>Decision</div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                            {[
+                              { value: 'approve',     label: 'Approve',           desc: 'Credit approved — proceed to agreement', icon: '✅' },
+                              { value: 'reject',      label: 'Reject',            desc: 'Credit declined — move to rejected',      icon: '❌' },
+                              { value: 'propose_new', label: 'Propose New Limit', desc: 'Suggest a revised credit amount',         icon: '⚖️' },
+                            ].map(opt => (
+                              <label key={opt.value} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 12px', borderRadius: 12,
+                                border: `1.5px solid ${creditDecision === opt.value ? '#171717' : '#e5e5e5'}`,
+                                background: creditDecision === opt.value ? '#f5f5f5' : 'white', cursor: 'pointer', flexDirection: 'column' }}>
+                                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, width: '100%' }}>
+                                  <input type="radio" name="creditDecision" value={opt.value}
+                                    checked={creditDecision === opt.value}
+                                    onChange={() => setCreditDecision(opt.value)}
+                                    style={{ marginTop: 2, accentColor: '#171717', flexShrink: 0 }} />
+                                  <div style={{ flex: 1 }}>
+                                    <div style={{ fontSize: 12, fontWeight: 700, color: '#171717' }}>{opt.icon} {opt.label}</div>
+                                    <div style={{ fontSize: 11, color: '#a3a3a3', marginTop: 1 }}>{opt.desc}</div>
+                                  </div>
+                                </div>
+                                {opt.value === 'propose_new' && creditDecision === 'propose_new' && (
+                                  <input
+                                    type="number" min="0"
+                                    value={proposedCreditAmount}
+                                    onChange={e => setProposedCreditAmount(e.target.value)}
+                                    placeholder={`e.g. ${formatSAR(card.amount)}`}
+                                    onClick={e => e.preventDefault()}
+                                    style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1.5px solid #d4d4d4', fontSize: 13, fontFamily: 'inherit', color: '#171717', outline: 'none', boxSizing: 'border-box', background: 'white', marginTop: 8 }}
+                                    autoFocus
+                                  />
+                                )}
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+
                       </div>
                     )}
 
-                    {/* COLLECTIONS — repayment */}
-                    {cardStage === 'repayment' && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <label style={{ fontSize: 11, fontWeight: 600, color: '#525252', textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>Log Payment</label>
-                        <input type="number" placeholder="Amount (SAR)…" style={{ ...fieldStyle, flex: 1 }}
-                          onKeyDown={e => {
-                            if (e.key === 'Enter' && e.target.value) {
-                              setTimeline(prev => [...prev, { id: `pay-${Date.now()}`, type: 'payment', amount: Number(e.target.value), instalment: paidInstalments + 1, date: new Date().toLocaleString('en-SA', { dateStyle: 'short', timeStyle: 'short' }) }])
-                              e.target.value = ''
-                            }
-                          }} />
-                        <span style={{ fontSize: 11, color: '#a3a3a3' }}>Press Enter to log</span>
+                    {/* ONBOARDING — onboarding stage */}
+                    {cardStage === 'onboarding' && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        {[
+                          { label: 'Transaction completion pending', done: false },
+                        ].map((item, i) => (
+                          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 10, border: '1.5px solid #e5e5e5', background: 'white' }}>
+                            <div style={{ width: 16, height: 16, borderRadius: 4, border: '1.5px solid #d4d4d4', background: item.done ? '#171717' : 'white', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              {item.done && <span style={{ color: 'white', fontSize: 10, fontWeight: 700 }}>✓</span>}
+                            </div>
+                            <span style={{ fontSize: 12, color: item.done ? '#a3a3a3' : '#262626', fontWeight: 500, textDecoration: item.done ? 'line-through' : 'none' }}>{item.label}</span>
+                          </div>
+                        ))}
                       </div>
                     )}
 
@@ -1417,9 +1420,9 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
             })()}
 
             {/* ── FINANCE REQUEST ── */}
-            {card.type !== 'onboarding' && card.amount > 0 && cardStage !== 'submitted' && (() => {
-              const canEditCore   = cardStage === 'risk'     && ['risk',        'super'].includes(currentUser?.adminRole)
-              const canEditFee    = cardStage === 'approved' && ['account_mgr', 'super'].includes(currentUser?.adminRole)
+            {card.type !== 'onboarding' && card.amount > 0 && cardStage !== 'doc_collection' && (() => {
+              const canEditCore   = cardStage === 'credit_review' && ['credit', 'super'].includes(currentUser?.adminRole)
+              const canEditFee    = cardStage === 'agreement'     && ['account_mgr', 'super'].includes(currentUser?.adminRole)
               const activeAmount  = Number(propAmount)  || card.amount
               const activeTenure  = Number(propTenure)  || card.tenure
               const activeMdr     = Number(propMdrRate) || card.mdrRate
@@ -1462,7 +1465,7 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
                     <div style={{ padding: '10px 16px', background: '#f5f5f5', borderBottom: '1px solid #e5e5e5', display: 'flex', alignItems: 'center', gap: 8 }}>
                       <span style={{ fontSize: 14 }}>⚖️</span>
                       <span style={{ fontSize: 12, color: '#404040', flex: 1 }}>Counter-proposal by <strong>{counterProposal.by}</strong> — pending buyer acceptance</span>
-                      {(currentUser?.adminRole === 'risk' || currentUser?.adminRole === 'super') && (
+                      {(currentUser?.adminRole === 'credit' || currentUser?.adminRole === 'super') && (
                         <button onClick={withdrawCounterProposal} style={{ fontSize: 11, fontWeight: 600, color: '#737373', background: 'none', border: '1px solid #d4d4d4', borderRadius: 8, padding: '3px 10px', cursor: 'pointer' }}>Withdraw</button>
                       )}
                     </div>
@@ -1554,9 +1557,9 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
                     <div className="grid grid-cols-4 border-b border-slate-100">
                       {[
                         { label: 'Total',   value: instCountCalc,                                                        danger: false },
-                        { label: 'Paid',    value: paidInstalments,                                                      danger: false },
-                        { label: 'Pending', value: Math.max(0, instCountCalc - paidInstalments - overdueInstalments),   danger: false },
-                        { label: 'Overdue', value: overdueInstalments,                                                   danger: true  },
+                        { label: 'Paid',    value: 0,                                                      danger: false },
+                        { label: 'Pending', value: Math.max(0, instCountCalc - 0 - 0),   danger: false },
+                        { label: 'Overdue', value: 0,                                                   danger: true  },
                       ].map((stat, i) => (
                         <div key={stat.label} className={`px-4 py-2.5 text-center ${i < 3 ? 'border-r border-slate-100' : ''}`}>
                           <div className={`text-[18px] font-bold ${stat.danger && stat.value > 0 ? 'text-slate-500' : 'text-slate-800'}`}>{stat.value}</div>
@@ -1576,8 +1579,8 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
                         {Array.from({ length: instCountCalc }, (_, i) => {
                           const dueMs = new Date('2026-06-01').getTime() + (i + 1) * emiDaysCalc * 86400000
                           const dueDate = new Date(dueMs).toISOString().slice(0, 10)
-                          const isPaid    = i < paidInstalments
-                          const isOverdue = !isPaid && i < paidInstalments + overdueInstalments
+                          const isPaid    = i < 0
+                          const isOverdue = !isPaid && i < 0 + 0
                           return (
                             <tr key={i} className="border-b border-slate-50 last:border-0">
                               <td className="px-4 py-2.5 text-[12px] text-slate-400">{i + 1}</td>
@@ -1612,18 +1615,28 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
               )
             })()}
 
-            {/* CONTRACTS (legal stage, legal/super only) */}
-            {cardStage === 'legal' && (currentUser?.adminRole === 'legal' || currentUser?.adminRole === 'super') && (
-              <Section title="Contracts">
+            {/* CONTRACTS (agreement stage, account_mgr/super only) */}
+            {cardStage === 'agreement' && (currentUser?.adminRole === 'account_mgr' || currentUser?.adminRole === 'super') && (() => {
+              const mandatorySent = contracts.filter(c => c.mandatory && (c.status === 'Sent' || c.status === 'Signed')).length
+              const mandatoryTotal = AGREEMENT_MANDATORY_CONTRACTS.length
+              return (
+              <Section title="Contracts" badge={`${mandatorySent} / ${mandatoryTotal} required sent`} badgeColor={mandatorySent === mandatoryTotal ? '#16a34a' : '#737373'}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {contracts.map(c => {
                     const statusColor = { Draft: '#a3a3a3', Sent: '#525252', Signed: '#262626' }
                     return (
-                      <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 10, border: '1px solid #f1f5f9', background: 'white' }}>
-                        <span style={{ fontSize: 16 }}>📋</span>
+                      <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 10, border: `1px solid ${c.mandatory ? '#e2e8f0' : '#f1f5f9'}`, background: c.mandatory ? '#fafafa' : 'white' }}>
+                        <span style={{ fontSize: 16 }}>📄</span>
                         <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: 12, fontWeight: 600, color: '#262626' }}>{c.name}</div>
-                          <div style={{ fontSize: 10, color: '#a3a3a3' }}>Added by {c.addedBy} · {c.addedAt}</div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span style={{ fontSize: 12, fontWeight: 600, color: '#262626' }}>{c.name}</span>
+                            {c.mandatory && (
+                              <span style={{ fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 20, background: '#f0f0f0', color: '#737373', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Required</span>
+                            )}
+                          </div>
+                          <div style={{ fontSize: 10, color: '#a3a3a3' }}>
+                            {c.mandatory ? 'Mandatory — must be sent before proceeding' : `Added by ${c.addedBy} · ${c.addedAt}`}
+                          </div>
                         </div>
                         <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 10px', borderRadius: 20, background: statusColor[c.status] + '18', color: statusColor[c.status] }}>{c.status}</span>
                         {c.status === 'Draft' && (
@@ -1632,7 +1645,7 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
                       </div>
                     )
                   })}
-                  {contracts.length === 0 && <div style={{ fontSize: 12, color: '#a3a3a3', fontStyle: 'italic' }}>No contracts yet — add one below.</div>}
+                  {contracts.length === 0 && <div style={{ fontSize: 12, color: '#a3a3a3', fontStyle: 'italic' }}>No contracts added yet.</div>}
                   {/* Add Contract */}
                   {showContractAdd ? (
                     <div style={{ padding: '12px 14px', borderRadius: 10, border: '1.5px solid #e2e8f0', background: '#f5f5f5', display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -1675,7 +1688,8 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
                   )}
                 </div>
               </Section>
-            )}
+            )
+          })()}
 
             {/* (Finance Model section removed — merged into Finance Request chunk above) */}
             {false && (() => {
@@ -1749,9 +1763,9 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
                         <div className="grid grid-cols-4 border-b border-slate-100">
                           {[
                             { label: 'Total',   value: instalmentCount,                                                         danger: false },
-                            { label: 'Paid',    value: paidInstalments,                                                         danger: false },
-                            { label: 'Pending', value: Math.max(0, instalmentCount - paidInstalments - overdueInstalments),     danger: false },
-                            { label: 'Overdue', value: overdueInstalments,                                                      danger: true  },
+                            { label: 'Paid',    value: 0,                                                         danger: false },
+                            { label: 'Pending', value: Math.max(0, instalmentCount - 0 - 0),     danger: false },
+                            { label: 'Overdue', value: 0,                                                      danger: true  },
                           ].map((stat, i) => (
                             <div key={stat.label} className={`px-4 py-3 text-center ${i < 3 ? 'border-r border-slate-100' : ''}`}>
                               <div className={`text-[20px] font-bold ${stat.danger && stat.value > 0 ? 'text-slate-500' : 'text-slate-800'}`}>{stat.value}</div>
@@ -1772,8 +1786,8 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
                             {Array.from({ length: instalmentCount }, (_, i) => {
                               const dueMs = new Date('2026-06-01').getTime() + (i + 1) * emiDays * 86400000
                               const dueDate = new Date(dueMs).toISOString().slice(0, 10)
-                              const isPaid    = i < paidInstalments
-                              const isOverdue = !isPaid && i < paidInstalments + overdueInstalments
+                              const isPaid    = i < 0
+                              const isOverdue = !isPaid && i < 0 + 0
                               return (
                                 <tr key={i} className="border-b border-slate-50 last:border-0">
                                   <td className="px-4 py-2.5 text-[12px] text-slate-400">{i + 1}</td>
@@ -1815,88 +1829,210 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
         />
       </div>
 
-      {/* ASSIGN PANEL — full width, slides up above action bar */}
-      {showAssignPanel && (
-        <div style={{
-          background: 'white',
-          borderTop: '1px solid #e2e8f0',
-          boxShadow: '0 -8px 32px rgba(0,0,0,0.08)',
-          padding: '16px 24px 20px',
-          maxHeight: 340, overflowY: 'auto', flexShrink: 0,
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-            <span style={{ fontSize: 12, fontWeight: 700, color: '#262626' }}>Reassign ticket</span>
-            <button
-              onClick={() => { setShowAssignPanel(false); setAssignTarget(null); setAssignNote('') }}
-              style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: '#a3a3a3', padding: 4 }}>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-              </svg>
-            </button>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
-            {adminUsers.map(user => (
-              <button key={user.id}
-                onClick={() => setAssignTarget(Object.keys(USERS).find(k => USERS[k].id === user.id))}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px',
-                  borderRadius: 10, border: '1.5px solid',
-                  borderColor: assignTarget && USERS[assignTarget]?.id === user.id ? 'rgba(0,0,0,0.15)' : '#e5e5e5',
-                  background: assignTarget && USERS[assignTarget]?.id === user.id ? 'rgba(0,0,0,0.03)' : 'transparent',
-                  cursor: 'pointer', textAlign: 'left',
-                }}>
-                <div style={{
-                  width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
-                  background: user.avatar, display: 'flex', alignItems: 'center',
-                  justifyContent: 'center', fontSize: 11, fontWeight: 700, color: 'white',
-                }}>
-                  {user.initials}
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: '#262626' }}>{user.name}</div>
-                  <div style={{ fontSize: 10, color: '#a3a3a3' }}>{user.title} · {user.adminRole}</div>
-                </div>
-                {user.name === assignedTo && (
-                  <span style={{ fontSize: 10, fontWeight: 600, color: '#262626' }}>current</span>
-                )}
-              </button>
-            ))}
-          </div>
-          {assignTarget && (
-            <div style={{ marginBottom: 10 }}>
-              <div style={{ fontSize: 10, fontWeight: 600, color: '#a3a3a3', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
-                Note to assignee (optional)
+
+
+      {/* SUPPORTING DOCS VIEWER */}
+      {showCreditDocsModal && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.35)' }}
+          onClick={() => setShowCreditDocsModal(false)}>
+          <div style={{ background: 'white', borderRadius: 20, padding: 28, width: 660, maxWidth: '95vw', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 24px 64px rgba(0,0,0,0.18)' }}
+            onClick={e => e.stopPropagation()}>
+
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20 }}>
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 800, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Obligor Rating Model Design</div>
+                <div style={{ fontSize: 11, color: '#737373', marginTop: 2 }}>Financial Ratios Assessment</div>
               </div>
-              <textarea
-                value={assignNote}
-                onChange={e => setAssignNote(e.target.value)}
-                rows={3}
-                placeholder="Explain why you're reassigning this ticket…"
-                style={{
-                  width: '100%', padding: '8px 12px', borderRadius: 8,
-                  border: '1.5px solid #e2e8f0', fontSize: 12, resize: 'none',
-                  fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box',
-                  color: '#262626',
-                }}
-              />
+              <button onClick={() => setShowCreditDocsModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: '#a3a3a3', lineHeight: 1, flexShrink: 0 }}>✕</button>
             </div>
-          )}
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={handleAssignConfirm} disabled={!assignTarget} style={{
-              flex: 1, padding: '8px 0', borderRadius: 10,
-              background: assignTarget ? '#171717' : '#e5e5e5',
-              border: 'none', fontSize: 12, fontWeight: 700,
-              color: assignTarget ? 'white' : '#94a3b8', cursor: assignTarget ? 'pointer' : 'default',
-            }}>
-              Confirm Reassignment
-            </button>
-            <button onClick={() => { setShowAssignPanel(false); setAssignTarget(null); setAssignNote('') }} style={{
-              padding: '8px 16px', borderRadius: 10, background: 'none',
-              border: '1.5px solid #e2e8f0', fontSize: 12, fontWeight: 600,
-              color: '#525252', cursor: 'pointer',
-            }}>
-              Cancel
-            </button>
+
+            {/* Architecture diagram */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 0, marginBottom: 28, padding: '20px 16px', border: '1.5px dashed #d4d4d4', borderRadius: 14, background: '#fafafa', overflowX: 'auto' }}>
+
+              {/* Column 1: Input factors */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 24, flexShrink: 0 }}>
+                {/* Financial Risk inputs */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                  {['Financial Operations', 'Debt Coverage', 'Liquidity', 'Leverage'].map(f => (
+                    <div key={f} style={{ padding: '6px 12px', background: '#d4d4d4', borderRadius: 4, fontSize: 11, fontWeight: 700, color: '#171717', whiteSpace: 'nowrap', textAlign: 'center' }}>{f}</div>
+                  ))}
+                </div>
+                {/* QA inputs */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                  {['Status', 'Conduct', 'Industry'].map(f => (
+                    <div key={f} style={{ padding: '6px 12px', background: '#d4d4d4', borderRadius: 4, fontSize: 11, fontWeight: 700, color: '#171717', whiteSpace: 'nowrap', textAlign: 'center' }}>{f}</div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Connector lines col 1→2 */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 24, alignItems: 'center', padding: '0 8px', flexShrink: 0 }}>
+                <div style={{ width: 32, height: 1, background: '#a3a3a3' }} />
+                <div style={{ width: 32, height: 1, background: '#a3a3a3' }} />
+              </div>
+
+              {/* Column 2: Intermediate */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 24, flexShrink: 0 }}>
+                <div style={{ padding: '10px 18px', background: '#6b8fbd', color: 'white', borderRadius: 6, fontSize: 12, fontWeight: 700, textAlign: 'center', whiteSpace: 'nowrap' }}>Financial Risk (FR)</div>
+                <div style={{ padding: '10px 18px', background: '#6b8fbd', color: 'white', borderRadius: 6, fontSize: 12, fontWeight: 700, textAlign: 'center', whiteSpace: 'nowrap' }}>Qualitative Analysis (QA)</div>
+              </div>
+
+              {/* Connector lines col 2→3 */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 24, alignItems: 'center', padding: '0 8px', flexShrink: 0 }}>
+                <div style={{ width: 32, height: 1, background: '#a3a3a3' }} />
+                <div style={{ width: 32, height: 1, background: '#a3a3a3' }} />
+              </div>
+
+              {/* Column 3: Final */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, flexShrink: 0, alignItems: 'flex-start' }}>
+                <div style={{ padding: '8px 16px', background: '#4a80b8', color: 'white', borderRadius: 6, fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap' }}>Owner's Additional Support</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ width: 24, height: 1, background: '#a3a3a3' }} />
+                  <div style={{ padding: '10px 18px', background: '#525252', color: 'white', borderRadius: 6, fontSize: 12, fontWeight: 800, whiteSpace: 'nowrap' }}>Final Obligor Rating</div>
+                </div>
+              </div>
+
+            </div>
+
+            {/* Summary Risk Score Sheet table */}
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+              <thead>
+                <tr>
+                  <th style={{ padding: '9px 14px', background: '#4a80b8', color: 'white', textAlign: 'left', fontWeight: 700, borderRadius: '6px 0 0 0' }}>Summary Risk Score Sheet</th>
+                  <th style={{ padding: '9px 14px', background: '#4a80b8', color: 'white', textAlign: 'center', fontWeight: 700, borderRadius: '0 6px 0 0' }}>Final Score</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[
+                  { label: 'Financial Risk Score',                  value: '90',   style: 'normal' },
+                  { label: 'Status of Account Risk Score',          value: '578',  style: 'normal' },
+                  { label: 'Conduct of Account Risk Score',         value: '470',  style: 'normal' },
+                  { label: 'Industry Risk Score',                   value: '278',  style: 'normal' },
+                  { label: 'Total Obligor Risk Score (ORS)',        value: '286',  style: 'bold' },
+                  { label: 'Intermediate Rating Grade',             value: '4.0',  style: 'bold' },
+                  { label: "Owner's Additional Support Notch Up",   value: '1.0',  style: 'bold' },
+                  { label: 'Final Rating Grade',                    value: '3.0',  style: 'bold' },
+                  { label: 'Override Grade',                        value: '3',    style: 'pink' },
+                  { label: 'Override Reason',                       value: 'Yes',  style: 'pink' },
+                  { label: 'Final Grade (After Override, if any)',  value: '3.0',  style: 'bold' },
+                ].map(({ label, value, style }, i) => (
+                  <tr key={label} style={{
+                    background: style === 'pink' ? '#fce4e4' : style === 'bold' ? '#d4d4d4' : i % 2 === 0 ? 'white' : '#f9f9f9',
+                    borderBottom: '1px solid #e5e5e5',
+                  }}>
+                    <td style={{ padding: '7px 14px', fontWeight: style !== 'normal' ? 700 : 400, color: style === 'pink' ? '#dc2626' : '#171717' }}>{label}</td>
+                    <td style={{ padding: '7px 14px', textAlign: 'center', fontWeight: style !== 'normal' ? 700 : 400, color: style === 'pink' ? '#dc2626' : '#171717' }}>{value}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+          </div>
+        </div>
+      )}
+
+      {/* UPLOAD MODAL */}
+      {showUploadModal && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.35)' }}
+          onClick={() => { if (!uploadLoading) { setShowUploadModal(false); setUploadFile(null) } }}>
+          <div style={{ background: 'white', borderRadius: 20, padding: 28, width: 440, maxWidth: '90vw', boxShadow: '0 24px 64px rgba(0,0,0,0.18)' }}
+            onClick={e => e.stopPropagation()}>
+
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+              <span style={{ fontSize: 15, fontWeight: 700, color: '#171717' }}>Upload Document</span>
+              <button onClick={() => { setShowUploadModal(false); setUploadFile(null) }} disabled={uploadLoading}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: '#a3a3a3', lineHeight: 1 }}>✕</button>
+            </div>
+
+            {/* Document type selector */}
+            <div style={{ marginBottom: 18 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#737373', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 8 }}>Document Type</div>
+              <select
+                value={uploadDocName}
+                onChange={e => setUploadDocName(e.target.value)}
+                style={{ width: '100%', padding: '9px 12px', borderRadius: 10, border: '1.5px solid #e5e5e5', fontSize: 13, fontFamily: 'inherit', color: uploadDocName ? '#171717' : '#a3a3a3', outline: 'none', background: 'white', cursor: 'pointer' }}>
+                <option value="">Select document…</option>
+                {card.documents.map(doc => {
+                  const st = docStatuses[doc.name] || doc.status
+                  return (
+                    <option key={doc.name} value={doc.name}>
+                      {doc.name} — {STATUS_LABELS[st] || st}
+                    </option>
+                  )
+                })}
+              </select>
+            </div>
+
+            {/* Drag-drop zone */}
+            <div
+              onDragOver={e => { e.preventDefault(); setUploadDragging(true) }}
+              onDragLeave={() => setUploadDragging(false)}
+              onDrop={e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) setUploadFile(f); setUploadDragging(false) }}
+              style={{
+                border: `2px dashed ${uploadDragging ? 'var(--color-primary)' : '#d4d4d4'}`,
+                borderRadius: 14, padding: '28px 20px', textAlign: 'center', marginBottom: 20,
+                background: uploadDragging ? 'rgba(var(--color-primary-rgb,144,132,253),0.04)' : uploadFile ? '#f0fdf4' : '#fafafa',
+                transition: 'all 0.15s',
+              }}>
+              {uploadFile ? (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+                  <span style={{ fontSize: 24 }}>📄</span>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: '#171717' }}>{uploadFile.name}</div>
+                    <div style={{ fontSize: 11, color: '#a3a3a3' }}>{(uploadFile.size / 1024).toFixed(1)} KB</div>
+                  </div>
+                  <button onClick={() => setUploadFile(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#a3a3a3', fontSize: 16, marginLeft: 8 }}>✕</button>
+                </div>
+              ) : (
+                <>
+                  <div style={{ fontSize: 28, marginBottom: 8 }}>☁</div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: '#525252', marginBottom: 4 }}>Drag & drop file here</div>
+                  <div style={{ fontSize: 12, color: '#a3a3a3', marginBottom: 12 }}>or</div>
+                  <label style={{ padding: '7px 18px', borderRadius: 20, border: '1.5px solid #e5e5e5', background: 'white', fontSize: 12, fontWeight: 600, color: '#525252', cursor: 'pointer' }}>
+                    Browse files
+                    <input type="file" style={{ display: 'none' }} onChange={e => { const f = e.target.files[0]; if (f) setUploadFile(f) }} />
+                  </label>
+                </>
+              )}
+            </div>
+
+            {/* Footer buttons */}
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={() => { setShowUploadModal(false); setUploadFile(null) }} disabled={uploadLoading}
+                style={{ flex: 1, padding: '10px 0', borderRadius: 12, border: '1.5px solid #e5e5e5', background: 'white', fontSize: 13, fontWeight: 600, color: '#525252', cursor: 'pointer' }}>
+                Cancel
+              </button>
+              <button
+                disabled={!uploadDocName || !uploadFile || uploadLoading}
+                onClick={() => {
+                  setUploadLoading(true)
+                  setTimeout(() => {
+                    handleDocStatusChange(uploadDocName, 'ai_verified')
+                    setTimeline(prev => [...prev, {
+                      id: `upload-${Date.now()}`, type: 'history', icon: '📎',
+                      text: `${uploadDocName} uploaded and AI verified.`,
+                      date: new Date().toLocaleString('en-SA', { dateStyle: 'short', timeStyle: 'short' }),
+                    }])
+                    const docObj = card.documents.find(d => d.name === uploadDocName)
+                    if (docObj) { setSelectedDoc(docObj); setActiveTab('documents') }
+                    setShowUploadModal(false)
+                    setUploadFile(null)
+                    setUploadDocName('')
+                    setUploadLoading(false)
+                  }, 1200)
+                }}
+                style={{
+                  flex: 2, padding: '10px 0', borderRadius: 12, border: 'none',
+                  background: uploadDocName && uploadFile ? '#171717' : '#e5e5e5',
+                  fontSize: 13, fontWeight: 700,
+                  color: uploadDocName && uploadFile ? 'white' : '#a3a3a3',
+                  cursor: uploadDocName && uploadFile ? 'pointer' : 'default',
+                }}>
+                {uploadLoading ? 'Uploading…' : 'Upload →'}
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -1934,6 +2070,25 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
         <span style={{ width: 1, height: 18, background: '#e5e5e5', flexShrink: 0 }} />
 
         {/* Primary action (stage-specific, role-gated) */}
+        {cardStage === 'credit_review' && creditDecision && (
+          <>
+            <button onClick={() => setCreditDecision(null)}
+              style={{ padding: '7px 16px', borderRadius: 20, border: '1.5px solid #e5e5e5', background: 'white', fontSize: 13, fontWeight: 600, color: '#525252', cursor: 'pointer' }}>
+              Cancel
+            </button>
+            <button
+              onClick={handleConfirmCreditDecision}
+              disabled={creditDecision === 'propose_new' && !Number(proposedCreditAmount)}
+              style={{
+                padding: '7px 20px', borderRadius: 20, border: 'none', fontSize: 13, fontWeight: 700, cursor: 'pointer',
+                background: creditDecision === 'propose_new' && !Number(proposedCreditAmount) ? '#e5e5e5' : '#171717',
+                color:      creditDecision === 'propose_new' && !Number(proposedCreditAmount) ? '#a3a3a3' : 'white',
+                boxShadow:  creditDecision === 'propose_new' && !Number(proposedCreditAmount) ? 'none' : '0 2px 8px rgba(0,0,0,0.18)',
+              }}>
+              Confirm Decision
+            </button>
+          </>
+        )}
         {canPrimary && primaryAction && (
           <button onClick={handlePrimaryAction} style={{
             display: 'flex', alignItems: 'center', gap: 6,
@@ -1946,33 +2101,12 @@ function CardDetailPage({ card, currentIdx, totalCards, onClose, onPrev, onNext,
           </button>
         )}
 
-        {/* Legacy approve (account_mgr approve for disbursement) */}
-        {canApprove && !canPrimary && (
-          <button onClick={handleApprove} style={{
-            display: 'flex', alignItems: 'center', gap: 6,
-            padding: '6px 14px', borderRadius: 20,
-            background: '#262626', border: 'none',
-            fontSize: 12, fontWeight: 700, color: 'white', cursor: 'pointer',
-          }}>
-            ✓ {cardStage === 'legal' ? 'Approve Finance Request' : 'Confirm Disbursement'}
-          </button>
-        )}
-
-        {/* Assign */}
-        <button onClick={() => setShowAssignPanel(v => !v)} style={{
-          display: 'flex', alignItems: 'center', gap: 6,
-          padding: '6px 12px', borderRadius: 20,
-          background: showAssignPanel ? 'rgba(0,0,0,0.03)' : 'white',
-          border: '1.5px solid',
-          borderColor: showAssignPanel ? 'rgba(0,0,0,0.15)' : '#e5e5e5',
-          fontSize: 12, fontWeight: 600,
-          color: showAssignPanel ? '#171717' : '#404040', cursor: 'pointer',
-        }}>
-          <span>👤</span> Assign
-        </button>
 
         <span style={{ fontSize: 11, color: '#a3a3a3', marginLeft: 'auto' }}>
-          Assigned: <strong style={{ color: '#404040' }}>{assignedTo}</strong>
+          {stageInfo?.auto
+            ? <><strong style={{ color: 'var(--color-primary)' }}>✦ Yumnai</strong></>
+            : <>Assigned: <strong style={{ color: '#404040' }}>{assignedTo}</strong></>
+          }
         </span>
       </div>
     </div>
@@ -2021,10 +2155,10 @@ function NewTicketModal({ currentUser, cards, onClose, onAdd }) {
   const linkedSeller = MOCK_SELLERS.find(s => s.id === sellerId)
 
   const handleCreate = () => {
-    const nextId = Math.max(0, ...cards.map(c => parseInt(c.id.replace('FR-', '')) || 0)) + 1
+    const nextId = Math.max(0, ...cards.map(c => parseInt(c.id.replace('OR-', '')) || 0)) + 1
     const today  = new Date().toISOString().slice(0, 10)
     const newCard = {
-      id: `FR-${String(nextId).padStart(4, '0')}`,
+      id: `OR-${String(nextId).padStart(4, '0')}`,
       type: 'onboarding',
       seller: clientType === 'merchant' ? businessName : (linkedSeller?.name || ''),
       sellerId: clientType === 'merchant' ? null : sellerId,
@@ -2032,7 +2166,7 @@ function NewTicketModal({ currentUser, cards, onClose, onAdd }) {
       buyerId: null,
       amount: clientType === 'merchant' ? 0 : (Number(amount) || 0),
       mdrRate: null,
-      stage: 'submitted',
+      stage: 'doc_collection',
       daysInStage: 0,
       riskScore: null,
       assignedTo: currentUser.name,
@@ -2056,6 +2190,7 @@ function NewTicketModal({ currentUser, cards, onClose, onAdd }) {
           ? `Dear ${contactPerson},\n\nTo process your finance request, we still need the following documents:\n${missingDocs.map(d => `• ${d}`).join('\n')}\n\nPlease provide these at your earliest convenience.\n\nYumna Finance Team`
           : '',
       },
+      clientType,
       contactPerson, contactEmail, contactPhone,
       createdAt: today, createdBy: currentUser.name,
       proposedAmount: null, proposedTenure: null, proposedMdrRate: null,
@@ -2319,7 +2454,21 @@ export default function Pipeline({ onNavigate, onBreadcrumb }) {
 
   const myStages = ROLE_STAGE_MAP[adminRole] || PIPELINE_STAGES.map(s => s.id)
   const currentIdx = selectedCard ? cards.findIndex(c => c.id === selectedCard.id) : -1
-  const laneCards  = selectedCard ? cards.filter(c => c.stage === selectedCard.stage) : []
+
+  const filteredCards = cards.filter(card => {
+    if (card.type !== 'onboarding') return false
+    const q = searchQuery.trim().toLowerCase()
+    if (q && !(card.buyer || '').toLowerCase().includes(q) &&
+             !(card.seller || '').toLowerCase().includes(q) &&
+             !card.id.toLowerCase().includes(q)) return false
+    if (filterAssignee && card.assignedTo !== filterAssignee) return false
+    if (filterRiskMin !== '' && card.riskScore !== null && card.riskScore < Number(filterRiskMin)) return false
+    if (filterRiskMax !== '' && card.riskScore !== null && card.riskScore > Number(filterRiskMax)) return false
+    if (filterDaysMin !== '' && card.daysInStage < Number(filterDaysMin)) return false
+    return true
+  })
+
+  const laneCards  = selectedCard ? filteredCards.filter(c => c.stage === selectedCard.stage) : []
   const laneIdx    = selectedCard ? laneCards.findIndex(c => c.id === selectedCard.id) : -1
   const laneLabel  = selectedCard ? (PIPELINE_STAGES.find(s => s.id === selectedCard.stage)?.label || '') : ''
 
@@ -2351,19 +2500,6 @@ export default function Pipeline({ onNavigate, onBreadcrumb }) {
   const allAssignees = [...new Set(cards.map(c => c.assignedTo))].sort()
   const activeFilterCount = [filterAssignee, filterRiskMin, filterRiskMax, filterDaysMin].filter(Boolean).length
   const clearFilters = () => { setFilterAssignee(''); setFilterRiskMin(''); setFilterRiskMax(''); setFilterDaysMin('') }
-
-  const filteredCards = cards.filter(card => {
-    if (card.type !== 'onboarding') return false
-    const q = searchQuery.trim().toLowerCase()
-    if (q && !(card.buyer || '').toLowerCase().includes(q) &&
-             !(card.seller || '').toLowerCase().includes(q) &&
-             !card.id.toLowerCase().includes(q)) return false
-    if (filterAssignee && card.assignedTo !== filterAssignee) return false
-    if (filterRiskMin !== '' && card.riskScore !== null && card.riskScore < Number(filterRiskMin)) return false
-    if (filterRiskMax !== '' && card.riskScore !== null && card.riskScore > Number(filterRiskMax)) return false
-    if (filterDaysMin !== '' && card.daysInStage < Number(filterDaysMin)) return false
-    return true
-  })
 
   const getBuyerCredit = (buyerId) => buyerId ? MOCK_BUYERS.find(b => b.id === buyerId) || null : null
   const isAboveLimitCard = (card) => {
@@ -2534,76 +2670,81 @@ export default function Pipeline({ onNavigate, onBreadcrumb }) {
                     const aboveLimit = isAboveLimitCard(card)
                     const canSeeDetail = adminRole === stage.assignedRole || adminRole === 'super'
                     const verifiedCount = card.documents.filter(d => d.status === 'received').length
+                    const priority = card.daysInStage >= 2 ? 'high' : card.daysInStage === 1 ? 'medium' : 'normal'
+                    const priorityBorder = { high: '#ef4444', medium: '#f59e0b', normal: '#e5e5e5' }[priority]
+                    const chipStyle = {
+                      high:   { background: '#fee2e2', color: '#b91c1c' },
+                      medium: { background: '#fef3c7', color: '#b45309' },
+                      normal: { background: '#f5f5f5', color: '#737373' },
+                    }[priority]
                     return (
                       <button key={card.id}
                         onClick={() => { setSelectedCard(card); setLaneActionStage(null) }}
                         className="w-full text-start bg-white rounded-2xl border p-4 hover:shadow-md transition-all"
-                        style={{ borderColor: aboveLimit ? '#d4d4d4' : '#e5e5e5' }}>
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-[11px] font-mono text-slate-400">{card.id}</span>
-                          {card.riskScore !== null
-                            ? <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: rc.bg, color: rc.text }}>Risk {card.riskScore}</span>
-                            : <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-slate-50 text-slate-400">Scoring…</span>}
-                        </div>
-                        <div className="text-[13px] font-semibold text-slate-800 leading-tight mb-0.5 truncate">{card.seller}</div>
-                        {card.buyer && <div className="text-[11px] text-slate-400 mb-2">→ {card.buyer}</div>}
-                        <div className="text-[14px] font-bold tabular-nums text-slate-900 mb-1">{formatSAR(card.amount)}</div>
+                        style={{ borderColor: priorityBorder, borderWidth: priority !== 'normal' ? '1.5px' : '1px' }}>
 
-                        {/* Stage-specific info block */}
-                        <div className="mb-2" style={{ fontSize: 11, color: '#525252' }}>
-                          {stage.id === 'submitted' && (
+                        {/* Row 1: OR number + days in stage */}
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-[12px] font-mono font-semibold text-slate-700">{card.id}</span>
+                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={chipStyle}>
+                            {card.daysInStage === 0 ? 'new' : `${card.daysInStage}d`}
+                          </span>
+                        </div>
+
+                        {/* Row 2: Business name being onboarded */}
+                        <div className="text-[13px] font-semibold text-slate-800 leading-tight mb-0.5 truncate">
+                          {card.buyer || card.seller}
+                        </div>
+
+                        {/* Row 3: Sector */}
+                        {card.sector && (
+                          <div className="text-[11px] text-slate-400 mb-2">{card.sector}</div>
+                        )}
+
+                        {/* Row 4: Requested amount */}
+                        {card.amount > 0 && (
+                          <div className="text-[14px] font-bold tabular-nums text-slate-900 mb-2">{formatSAR(card.amount)}</div>
+                        )}
+
+                        {/* Row 5: Stage-specific status */}
+                        <div className="mb-3" style={{ fontSize: 11, color: '#525252' }}>
+                          {stage.id === 'doc_collection' && (
                             <span>{verifiedCount}/{card.documents.length} docs received{missing > 0 ? ` · ${missing} missing` : ''}</span>
                           )}
-                          {stage.id === 'kyc' && (
-                            <span>{verifiedCount}/{card.documents.length} docs · {missing > 0 ? <span style={{ color: '#737373' }}>{missing} missing</span> : <span style={{ color: '#262626' }}>all received</span>}</span>
+                          {stage.id === 'credit_review' && (
+                            <span style={{ color: '#737373' }}>Pending credit review</span>
                           )}
-                          {stage.id === 'credit_score' && canSeeDetail && (
-                            <span>{card.riskScore !== null ? <span>SIMAH: <strong style={{ color: card.riskScore >= 600 ? '#262626' : '#737373' }}>{card.riskScore}</strong></span> : 'Awaiting SIMAH score'}</span>
-                          )}
-                          {stage.id === 'risk' && canSeeDetail && (
-                            <span>
-                              {card.riskScore !== null ? <span>Risk: <strong style={{ color: card.riskScore > 60 ? '#737373' : '#262626' }}>{card.riskScore}</strong></span> : 'Scoring pending'}
-                              {card.proposedAmount && <span style={{ color: '#525252' }}> · ⚖️ Counter-proposed</span>}
-                            </span>
-                          )}
-                          {stage.id === 'legal' && (
+                          {stage.id === 'agreement' && (
                             <span>{(card.contracts || []).length} contract{(card.contracts || []).length !== 1 ? 's' : ''} · {(card.contracts || []).filter(c => c.status === 'Signed').length} signed</span>
                           )}
-                          {stage.id === 'approved' && (
-                            <span style={{ color: '#262626', fontWeight: 600 }}>✓ Approved — ready to disburse</span>
+                          {stage.id === 'onboarding' && (
+                            <span style={{ color: '#262626' }}>Account setup in progress</span>
                           )}
-                          {stage.id === 'disbursed' && (
-                            <span style={{ color: '#262626' }}>Disbursed · instalment 1 due soon</span>
+                          {stage.id === 'rejected' && (
+                            <span style={{ color: '#737373', fontWeight: 600 }}>✗ Rejected · {card.daysInStage}d in stage</span>
                           )}
-                          {stage.id === 'repayment' && (
-                            <span>Instalment 1 / {Math.ceil(card.tenure / 15)} paid</span>
-                          )}
-                          {stage.id === 'overdue' && (
-                            <span style={{ color: '#737373', fontWeight: 600 }}>⚠️ Overdue · {card.daysInStage}d in stage</span>
+                          {stage.id === 'closed' && (
+                            <span style={{ color: '#262626', fontWeight: 600 }}>✓ Onboarding complete</span>
                           )}
                         </div>
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          {/* Process type badge */}
-                          {card.type === 'invoice_finance'
-                            ? <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold" style={{ background: '#f5f5f5', color: '#525252' }}>💼 Invoice</span>
-                            : <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold" style={{ background: 'rgba(0,0,0,0.03)', color: '#525252' }}>🚀 Onboarding</span>
+
+                        {/* Row 6: Assignee + Yumnai */}
+                        <div className="flex items-center justify-between">
+                          {stage.auto
+                            ? <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold flex items-center gap-1"
+                                style={{ background: 'rgba(0,0,0,0.06)', color: 'var(--color-primary)' }}>
+                                ✦ Yumnai
+                              </span>
+                            : <>
+                                <span className="text-[11px] text-slate-400 truncate">👤 {card.assignedTo || '—'}</span>
+                                {hasYumnai && (
+                                  <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold flex items-center gap-1"
+                                    style={{ background: 'rgba(0,0,0,0.06)', color: 'var(--color-primary)' }}>
+                                    ✦ Yumnai
+                                  </span>
+                                )}
+                              </>
                           }
-                          {/* Above-limit warning */}
-                          {aboveLimit && (
-                            <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-slate-100 text-slate-600">⚠️ Above limit</span>
-                          )}
-                          {card.daysInStage > 0 && (
-                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-50 text-slate-500 font-medium">{card.daysInStage}d here</span>
-                          )}
-                          {missing > 0 && (
-                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-semibold">{missing} doc{missing > 1 ? 's' : ''} missing</span>
-                          )}
-                          {hasYumnai && (
-                            <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold flex items-center gap-1"
-                              style={{ background: 'rgba(0,0,0,0.06)', color: 'var(--color-primary)' }}>
-                              ✦ Yumnai
-                            </span>
-                          )}
                         </div>
                       </button>
                     )

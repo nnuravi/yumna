@@ -140,7 +140,7 @@ export default function AdminApp() {
 
   const financeRequestsBadge =
     (FINANCE_REQUEST_CARDS  || []).filter(c => c.stage !== 'fr_closed').length +
-    (INVOICE_FINANCE_CARDS  || []).filter(c => c.stage !== 'if_closed').length
+    (INVOICE_FINANCE_CARDS  || []).filter(c => c.stage !== 'if_active').length
 
   const myTaskCount = TASKS.filter(t => t.assignedTo === user.name && t.status !== 'done').length
 

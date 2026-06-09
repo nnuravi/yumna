@@ -14,7 +14,7 @@ const SECTION_CONTEXT = {
 const CANNED_RESPONSES = {
   'What needs my attention today?': (role, name) => `Hi ${name}! Based on current activity: ${role === 'risk' ? '1 card has missing bank statements (FR-0041). I\'ve drafted a request — just review and send.' : role === 'collections' ? 'FR-0043 is 20 days overdue. A formal notice is ready for your review.' : role === 'verifier' ? 'FR-0047 needs KYC documents. FR-0044 has a pending Nafath check.' : role === 'account_mgr' ? 'FR-0042 is approved — invoice needs to be generated today.' : role === 'credit' ? 'FR-0045 is waiting for SIMAH pull. Documents are all verified.' : 'Great question — here\'s your dashboard summary.'}`,
   'Show me overdue items': () => 'FR-0043 (Mohammed Al-Rashid · SAR 240,000) is 20 days overdue. FR-0037 (Al-Noor Trading) is also flagged in collections.',
-  'Any compliance issues?': () => 'No SAMA compliance flags today. One template is due for annual review (HealthCare Framework v1.0). Two buyer accounts have incomplete KYC documentation.',
+  'Any compliance issues?': () => 'No compliance flags today. One template is due for annual review (HealthCare Framework v1.0). Two buyer accounts have incomplete KYC documentation.',
   'Summarise pipeline health': () => '9 active stages. 3 cards require immediate action: FR-0041 (missing docs), FR-0043 (overdue payment), FR-0047 (new — incomplete KYC). 2 cards are on track. Disbursement for FR-0042 is pending invoice generation.',
 }
 

@@ -81,9 +81,9 @@ export default function AuditTrail() {
         />
       </div>
 
-      {/* SAMA compliance note */}
+      {/* Compliance note */}
       <div className="mb-4 px-4 py-3 rounded-xl border text-[12px]" style={{ background: '#eff6ff', borderColor: '#bfdbfe', color: '#3b82f6' }}>
-        SAMA-compliant audit trail — all actions logged with actor ID, timestamp (UTC + AST), IP address, and result.
+        Complete audit trail — all actions logged with actor ID, timestamp (UTC + AST), IP address, and result.
       </div>
 
       {/* Table */}
