@@ -196,7 +196,7 @@ export default function BuyersSection({ onBreadcrumb }) {
               <Avatar initials={selected.initials} bg={selected.risk === 'High' ? '#737373' : 'var(--color-primary)'} size="sm" />
               <div className="flex-1">
                 <div className="font-bold text-slate-800 text-[14px]">{selected.name}</div>
-                <div className="text-[11px] text-slate-400">{selected.city} · SIMAH {selected.simahScore} · CR {selected.cr}</div>
+                <div className="text-[11px] text-slate-400">{selected.city} · CR {selected.cr}</div>
               </div>
               <Badge stage={selected.risk} />
             </div>
@@ -223,7 +223,6 @@ export default function BuyersSection({ onBreadcrumb }) {
                       {[
                         { label: 'Credit Limit', value: formatSAR(selected.creditLimit) },
                         { label: 'Credit Used', value: formatSAR(selected.creditUsed) },
-                        { label: 'SIMAH Score', value: selected.simahScore },
                         { label: 'Risk Tier', value: selected.risk },
                       ].map(f => (
                         <div key={f.label} className="bg-slate-50 rounded-xl px-3 py-2.5">
@@ -253,8 +252,8 @@ export default function BuyersSection({ onBreadcrumb }) {
                         </div>
                         <p className="text-[12px] text-slate-600 leading-relaxed">
                           {selected.risk === 'High'
-                            ? `${selected.name} has a credit utilisation of ${Math.round((selected.creditUsed / selected.creditLimit) * 100)}% — above the 80% threshold. SIMAH score of ${selected.simahScore} suggests elevated risk. Recommend pausing new credit issuance until utilisation drops below 75%.`
-                            : `${selected.name} maintains a healthy credit utilisation of ${Math.round((selected.creditUsed / selected.creditLimit) * 100)}%. SIMAH score of ${selected.simahScore} is strong. Payment history is clean with no late payments in the last 12 months. Eligible for limit increase consideration.`}
+                            ? `${selected.name} has a credit utilisation of ${Math.round((selected.creditUsed / selected.creditLimit) * 100)}% — above the 80% threshold, which suggests elevated risk. Recommend pausing new credit issuance until utilisation drops below 75%.`
+                            : `${selected.name} maintains a healthy credit utilisation of ${Math.round((selected.creditUsed / selected.creditLimit) * 100)}%. Payment history is clean with no late payments in the last 12 months. Eligible for limit increase consideration.`}
                         </p>
                       </div>
                       <div>

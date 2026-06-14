@@ -10,7 +10,7 @@ const STATS = [
   { value: '99.2%', label: 'Repayment accuracy' },
 ]
 
-export default function LoginScreen({ onLogin }) {
+export default function LoginScreen({ onLogin, error }) {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
 
@@ -118,7 +118,13 @@ export default function LoginScreen({ onLogin }) {
             </div>
           </div>
 
-          <Button type="submit" size="lg" className="mt-8 w-full">
+          {error && (
+            <div className="mt-5 rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-[13px] text-red-700 font-medium">
+              {error}
+            </div>
+          )}
+
+          <Button type="submit" size="lg" className="mt-6 w-full">
             Sign In
           </Button>
 

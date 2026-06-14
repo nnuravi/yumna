@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useApp } from '../../context/AppContext'
-import { REPAYMENTS_STAGES, REPAYMENTS_CARDS, formatSAR } from '../../data/mockData'
+import { REPAYMENTS_STAGES, formatSAR } from '../../data/mockData'
 
 const ROLE_STAGE_MAP = {
   collections: ['rp_active', 'rp_overdue', 'rp_escalation_l1'],
@@ -1265,10 +1265,10 @@ function DetailView({ card, adminRole, onBack, onUpdate, cards, addToast }) {
 // ── Main Component ────────────────────────────────────────────────────────────
 
 export default function RepaymentsPipeline({ onBreadcrumb }) {
-  const { state, addToast } = useApp()
+  const { state, addToast, dispatch } = useApp()
   const adminRole = state.currentUser?.adminRole || 'super'
 
-  const [cards, setCards] = useState(REPAYMENTS_CARDS)
+  const cards = state.repayments
   const [selected, setSelected] = useState(null)
   const [search, setSearch] = useState('')
   const [viewMode, setViewMode] = useState('kanban')
@@ -1279,7 +1279,7 @@ export default function RepaymentsPipeline({ onBreadcrumb }) {
   }, [selected])
 
   const updateCard = (updated) => {
-    setCards(prev => prev.map(c => c.id === updated.id ? updated : c))
+    dispatch({ type: 'UPDATE_CARD', payload: { collection: 'repayments', id: updated.id, patch: updated } })
     if (selected?.id === updated.id) setSelected(updated)
   }
 

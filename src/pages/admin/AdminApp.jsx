@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { useApp } from '../../context/AppContext'
 import ToastStack from '../../components/Toast'
 import Avatar from '../../components/Avatar'
@@ -118,21 +117,21 @@ const ALL_NAV = [
   },
 ]
 
-export default function AdminApp() {
+export default function AdminApp({ onSignOut }) {
   const [activeSection, setActiveSection] = useState('overview')
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [yumnaiOpen, setYumnaiOpen] = useState(false)
   const [yumnaiMinimized, setYumnaiMinimized] = useState(false)
   const [yumnaiWidth, setYumnaiWidth] = useState(400)
   const [breadcrumb, setBreadcrumb] = useState(null)
+  const [showProfile, setShowProfile] = useState(false)
   const { state } = useApp()
-  const navigate = useNavigate()
   const user = state.currentUser
 
-  if (!user) { navigate('/'); return null }
+  if (!user) return null
 
   const adminRole = user.adminRole
-  const adminNotes = state.notes.admin.filter(n => !n.read).length
+  const adminNotes = state.notifications.filter(n => n.recipientRole === 'admin' && !n.read).length
 
   const myStageIds = adminRole === 'super'
     ? PIPELINE_CARDS.map(c => c.id)
@@ -287,7 +286,9 @@ export default function AdminApp() {
             {/* User + collapse */}
             <div className="border-t border-[var(--color-line)] p-3">
               <div className={`flex items-center ${sidebarOpen ? 'gap-2.5' : 'flex-col gap-2'}`}>
-                <Avatar initials={user.initials} bg={user.avatar} size="sm" />
+                <button onClick={() => setShowProfile(true)} className="shrink-0 rounded-full hover:ring-2 hover:ring-[var(--color-primary)] transition-all">
+                  <Avatar initials={user.initials} bg={user.avatar} size="sm" />
+                </button>
                 <div className="flex-1 min-w-0 overflow-hidden"
                   style={{ opacity: sidebarOpen ? 1 : 0, maxWidth: sidebarOpen ? '150px' : '0px', transition: 'opacity 0.22s var(--ease-entrance), max-width 0.32s var(--ease-entrance)' }}>
                   <div className="text-[12px] font-semibold text-ink truncate">{user.name}</div>
@@ -299,6 +300,16 @@ export default function AdminApp() {
                     style={{ transform: sidebarOpen ? 'rotate(0deg)' : 'rotate(180deg)', transition: 'transform 0.32s var(--ease-entrance)' }}>
                     <polyline points="15 18 9 12 15 6"/>
                   </svg>
+                </button>
+              </div>
+              {/* Sign out — only visible when sidebar is expanded */}
+              <div style={{ overflow: 'hidden', maxHeight: sidebarOpen ? '40px' : '0px', opacity: sidebarOpen ? 1 : 0, transition: 'max-height 0.3s var(--ease-entrance), opacity 0.22s var(--ease-entrance)', marginTop: sidebarOpen ? '8px' : '0' }}>
+                <button onClick={onSignOut}
+                  className="w-full flex items-center gap-2 px-3 h-8 rounded-xl text-[12px] font-medium text-red-600 hover:bg-red-50 transition-colors">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+                  </svg>
+                  Sign out
                 </button>
               </div>
             </div>
@@ -330,6 +341,42 @@ export default function AdminApp() {
       )}
 
       <ToastStack />
+
+      {/* Profile panel */}
+      {showProfile && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.35)', backdropFilter: 'blur(4px)' }}
+          onClick={() => setShowProfile(false)}>
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm mx-4 p-6" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-[15px] font-semibold text-ink">My Profile</h2>
+              <button onClick={() => setShowProfile(false)} className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-[var(--color-page)] transition-colors">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+            <div className="flex items-center gap-4 mb-6">
+              <Avatar initials={user.initials} bg={user.avatar} size="lg" />
+              <div>
+                <div className="font-semibold text-ink text-[15px]">{user.name}</div>
+                <div className="text-[12px] text-muted mt-0.5">{user.title}</div>
+                <div className="text-[11px] text-muted mt-0.5 capitalize">{user.adminRole} Admin</div>
+              </div>
+            </div>
+            <div className="space-y-3 mb-6">
+              <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-[var(--color-page)]">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-muted)" strokeWidth="1.8" strokeLinecap="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                <span className="text-[12px] text-ink-soft">{user.id}@yumna.sa</span>
+              </div>
+            </div>
+            <button onClick={onSignOut}
+              className="w-full flex items-center justify-center gap-2 h-10 rounded-xl text-[13px] font-semibold text-red-600 bg-red-50 hover:bg-red-100 transition-colors">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+              </svg>
+              Sign out
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

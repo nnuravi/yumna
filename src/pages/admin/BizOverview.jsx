@@ -43,7 +43,6 @@ function fmtNum(v) {
 function generateAISummary(item, type) {
   if (type === 'credit') {
     const status = item.Status
-    const score = item['Simah Score']
     const utilisation = item.creditUtilisation
     const manual = item.manualReview
     const reviewer = item.reviewedBy
@@ -55,13 +54,13 @@ function generateAISummary(item, type) {
       if (manual && note) {
         return {
           headline: `Manually approved by ${reviewer}`,
-          body: `This application was reviewed and approved by ${reviewer} following a detailed assessment. ${note} The applicant's SIMAH score of ${score} exceeds the minimum threshold, and all submitted documentation has been verified. Credit limit of SAR ${limit} has been activated under the ${creditType} classification.`,
+          body: `This application was reviewed and approved by ${reviewer} following a detailed assessment. ${note} All submitted documentation has been verified. Credit limit of SAR ${limit} has been activated under the ${creditType} classification.`,
           tone: 'positive',
         }
       }
       return {
         headline: 'Automatically approved — all conditions met',
-        body: `The application passed all automated scoring checks. SIMAH score of ${score} meets or exceeds the minimum threshold of 600. Credit utilisation of ${utilisation} is within the acceptable range. All KYC documents were verified during onboarding. A credit limit of SAR ${limit} has been assigned under ${creditType} classification.`,
+        body: `The application passed all automated checks. Credit utilisation of ${utilisation} is within the acceptable range. All KYC documents were verified during onboarding. A credit limit of SAR ${limit} has been assigned under ${creditType} classification.`,
         tone: 'positive',
       }
     }
@@ -70,16 +69,15 @@ function generateAISummary(item, type) {
       if (manual && note) {
         return {
           headline: `Manually declined by ${reviewer}`,
-          body: `This application was manually reviewed and declined by ${reviewer}. Reviewer note: "${note}" Automated checks also flagged the following: SIMAH score of ${score}${score < 600 ? ' falls below the minimum threshold of 600' : ' was within range, but other conditions were not met'}. Credit utilisation of ${utilisation}${parseFloat(utilisation) > 75 ? ' exceeds the 75% ceiling' : ''}. The applicant may reapply once the flagged conditions are resolved.`,
+          body: `This application was manually reviewed and declined by ${reviewer}. Reviewer note: "${note}"${parseFloat(utilisation) > 75 ? ` Automated checks also flagged that credit utilisation of ${utilisation} exceeds the 75% ceiling.` : ''} The applicant may reapply once the flagged conditions are resolved.`,
           tone: 'critical',
         }
       }
       const reasons = []
-      if (score < 600) reasons.push(`SIMAH score of ${score} is below the minimum threshold of 600`)
       if (parseFloat(utilisation) > 75) reasons.push(`credit utilisation of ${utilisation} exceeds the maximum allowed 75%`)
       return {
-        headline: 'Automatically declined — scoring conditions not met',
-        body: `This application was declined by the automated scoring engine. Triggered condition${reasons.length > 1 ? 's' : ''}: ${reasons.join('; ')}. The requested SAR ${limit} credit limit under ${creditType} classification cannot be approved at this time. The applicant should address the flagged items and reapply after a minimum of 90 days.`,
+        headline: 'Automatically declined — conditions not met',
+        body: `This application was declined by the automated assessment engine. Triggered condition${reasons.length > 1 ? 's' : ''}: ${reasons.join('; ')}. The requested SAR ${limit} credit limit under ${creditType} classification cannot be approved at this time. The applicant should address the flagged items and reapply after a minimum of 90 days.`,
         tone: 'critical',
       }
     }
@@ -88,16 +86,16 @@ function generateAISummary(item, type) {
       if (manual && note) {
         return {
           headline: `Under manual review by ${reviewer}`,
-          body: `This application is currently being reviewed by ${reviewer}. ${note} SIMAH score of ${score} is within acceptable range. Outstanding items are being resolved before a final credit decision can be issued.`,
+          body: `This application is currently being reviewed by ${reviewer}. ${note} Outstanding items are being resolved before a final credit decision can be issued.`,
           tone: 'warning',
         }
       }
       const pendingReason = creditType === 'Full Credit'
-        ? 'Full Credit applications require a live SIMAH bureau pull and a full document verification pass before the credit limit can be calculated.'
+        ? 'Full Credit applications require a credit check and a full document verification pass before the credit limit can be calculated.'
         : 'Sales Ledger applications require validation of at least 3 months of trading history with the associated merchant before the limit can be confirmed.'
       return {
         headline: 'Pending review — additional verification required',
-        body: `${pendingReason} SIMAH score of ${score} is on record. The application has been queued for the credit scoring team. Expected turnaround: 4–8 business hours.`,
+        body: `${pendingReason} The application has been queued for the credit team. Expected turnaround: 4–8 business hours.`,
         tone: 'warning',
       }
     }
@@ -215,7 +213,6 @@ function keyFactsForType(item, type) {
     { label: 'Application ID', value: item.ID },
     { label: 'Type', value: item.Type },
     { label: 'Requested Limit', value: `SAR ${(item['Limit (SAR)'] || 0).toLocaleString('en-SA')}` },
-    { label: 'SIMAH Score', value: item['Simah Score'] },
     { label: 'Credit Utilisation', value: item.creditUtilisation },
     { label: 'Sector', value: item.sector },
     { label: 'Submitted', value: item.Date },
@@ -267,7 +264,7 @@ function timelineForType(item, type) {
   if (type === 'credit') {
     const events = [
       { icon: '📋', text: `Application ${item.ID} submitted by ${item.Client}`, time: item.Date, actor: 'Applicant' },
-      { icon: '🤖', text: `Automated scoring completed — SIMAH ${item['Simah Score']}`, time: `${item.Date} +30min`, actor: 'System' },
+      { icon: '🤖', text: 'Automated credit assessment completed', time: `${item.Date} +30min`, actor: 'System' },
     ]
     if (item.Status === 'Approve') {
       events.push({ icon: '✅', text: `Credit limit of SAR ${(item['Limit (SAR)']).toLocaleString('en-SA')} approved`, time: `${item.Date} +${item.manualReview ? '4hrs' : '1hr'}`, actor: item.reviewedBy })
@@ -896,7 +893,7 @@ function CreditView({ showSalesSummary, onDetail }) {
         <table className="w-full">
           <thead>
             <tr className="border-b border-slate-50">
-              {['ID', 'Client', 'Type', 'Limit', 'Score', 'Reviewed by', 'Status'].map(h => (
+              {['ID', 'Client', 'Type', 'Limit', 'Reviewed by', 'Status'].map(h => (
                 <th key={h} className="text-start px-5 py-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wide">{h}</th>
               ))}
             </tr>
@@ -910,7 +907,6 @@ function CreditView({ showSalesSummary, onDetail }) {
                 <td className="px-5 py-3.5 text-[13px] font-medium text-slate-800">{app.Client}</td>
                 <td className="px-5 py-3.5 text-[12px] text-slate-500">{app.Type}</td>
                 <td className="px-5 py-3.5 text-[13px] tabular-nums">{new Intl.NumberFormat('en-SA').format(app['Limit (SAR)'])}</td>
-                <td className="px-5 py-3.5 text-[13px] tabular-nums">{app['Simah Score']}</td>
                 <td className="px-5 py-3.5 text-[12px] text-slate-500">{app.reviewedBy}</td>
                 <td className="px-5 py-3.5">
                   <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold text-white"

@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useApp } from '../../context/AppContext'
 import {
-  DIRECT_FINANCE_STAGES, DIRECT_FINANCE_CARDS,
-  INVOICE_FINANCE_STAGES, INVOICE_FINANCE_CARDS,
+  DIRECT_FINANCE_STAGES, INVOICE_FINANCE_STAGES,
   MOCK_BUYERS, TEMPLATES, formatSAR,
 } from '../../data/mockData'
+import { IF_NEXT_STAGE, DF_NEXT_STAGE } from '../../data/stages'
 
 const DF_ROLE_STAGE_MAP = {
   credit:      ['df_approval'],
@@ -198,9 +198,106 @@ function groupByDay(entries) {
 }
 
 // ── ChatterPanel (modeled on Pipeline.jsx ChatterPanel) ────────────────────────
-function ChatterPanel({ correspondence, onSend }) {
+function SendNotificationModal({ card, onClose }) {
+  const { dispatch } = useApp()
+  const [msg, setMsg] = useState('')
+  const [channels, setChannels] = useState({ whatsapp: true, email: true, inapp: true })
+  const [sent, setSent] = useState(false)
+
+  const recipientId   = card?.buyerId || card?.sellerId || card?.merchantId || null
+  const recipientRole = card?.buyerId ? 'buyer' : 'seller'
+  const recipientName = card?.buyer || card?.seller || card?.merchant || 'Recipient'
+
+  const handleSend = () => {
+    if (!msg.trim() || !recipientId) return
+    const id = 'n-' + Date.now()
+    const now = new Date()
+    const time = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`
+    dispatch({ type: 'SEND_NOTIFICATION', payload: {
+      id, recipientId, recipientRole,
+      text: msg.trim(),
+      channels: Object.keys(channels).filter(k => channels[k]),
+      read: false, time,
+    }})
+    setSent(true)
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.3)', backdropFilter: 'blur(4px)' }}
+      onClick={onClose}>
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm mx-4 p-6" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-[14px] font-semibold text-ink">Send Notification</h3>
+          <button onClick={onClose} className="w-7 h-7 rounded-full flex items-center justify-center hover:bg-gray-100 transition-colors">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+        {sent ? (
+          <div className="text-center py-6 space-y-3">
+            <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center mx-auto">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <div className="text-[13px] font-semibold text-ink">Notification sent</div>
+            <div className="flex justify-center gap-1.5">
+              {Object.keys(channels).filter(k => channels[k]).map(ch => (
+                <span key={ch} className="px-2 py-0.5 rounded-full text-[10px] font-semibold text-white"
+                  style={{ background: ch === 'whatsapp' ? '#25D366' : ch === 'email' ? '#4f6ef7' : 'var(--color-primary)' }}>
+                  {ch === 'whatsapp' ? 'WhatsApp' : ch === 'email' ? 'Email' : 'In-App'} ✓
+                </span>
+              ))}
+            </div>
+            <button onClick={onClose} className="mt-2 text-[12px] text-muted hover:text-ink transition-colors">Close</button>
+          </div>
+        ) : (
+          <>
+            <div className="space-y-3 mb-4">
+              <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[#f8f6ff]">
+                <span className="text-[11px] font-semibold text-muted">To:</span>
+                <span className="text-[12px] font-semibold text-ink">{recipientName}</span>
+                <span className="ml-auto text-[10px] text-muted capitalize">{recipientRole}</span>
+              </div>
+              <textarea value={msg} onChange={e => setMsg(e.target.value)} rows={3} autoFocus
+                placeholder="Write your message…"
+                className="w-full px-3 py-2.5 rounded-xl border text-[12px] outline-none resize-none leading-relaxed"
+                style={{ borderColor: 'rgba(0,0,0,0.12)', fontFamily: 'inherit' }} />
+              <div className="space-y-1.5">
+                <div className="text-[11px] font-semibold text-muted">Send via:</div>
+                <div className="flex gap-2">
+                  {[
+                    { key: 'whatsapp', label: 'WhatsApp', color: '#25D366' },
+                    { key: 'email',    label: 'Email',    color: '#4f6ef7' },
+                    { key: 'inapp',    label: 'In-App',   color: 'var(--color-primary)' },
+                  ].map(({ key, label, color }) => (
+                    <label key={key} className="flex items-center gap-1.5 cursor-pointer">
+                      <input type="checkbox" checked={channels[key]} onChange={e => setChannels(c => ({ ...c, [key]: e.target.checked }))}
+                        className="rounded" style={{ accentColor: color }} />
+                      <span className="text-[12px] font-medium text-ink-soft">{label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={handleSend} disabled={!msg.trim() || !recipientId}
+                className="flex-1 h-9 rounded-xl text-[12px] font-semibold text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                style={{ background: 'var(--color-primary)' }}>
+                Send Notification
+              </button>
+              <button onClick={onClose} className="px-4 h-9 rounded-xl text-[12px] font-semibold border border-[var(--color-line)] text-muted hover:bg-[var(--color-page)] transition-colors">
+                Cancel
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function ChatterPanel({ correspondence, onSend, card }) {
   const [chatterMode, setChatterMode] = useState(null)
   const [draftText, setDraftText]     = useState('')
+  const [showNotify, setShowNotify]   = useState(false)
   const handleSend = () => {
     if (!draftText.trim()) return
     onSend(draftText.trim(), chatterMode)
@@ -273,7 +370,7 @@ function ChatterPanel({ correspondence, onSend }) {
         })()}
       </div>
       <div className="border-t border-slate-100 shrink-0">
-        <div className="px-4 py-3 flex gap-2">
+        <div className="px-4 py-3 flex gap-2 flex-wrap">
           {[{ id: 'message', label: 'Send message' }, { id: 'note', label: 'Log note' }].map(({ id, label }) => (
             <button key={id} onClick={() => setChatterMode(m => m === id ? null : id)}
               className="px-3 py-1.5 rounded-lg text-[12px] font-semibold border transition-all"
@@ -281,7 +378,13 @@ function ChatterPanel({ correspondence, onSend }) {
               {label}
             </button>
           ))}
+          <button onClick={() => setShowNotify(true)}
+            className="px-3 py-1.5 rounded-lg text-[12px] font-semibold border transition-all ml-auto"
+            style={{ background: '#f8f6ff', borderColor: 'var(--color-primary)', color: 'var(--color-primary)' }}>
+            Notify
+          </button>
         </div>
+        {showNotify && <SendNotificationModal card={card} onClose={() => setShowNotify(false)} />}
         {chatterMode && (
           <div className="px-4 pb-3" style={{ background: '#f5f5f5' }}>
             <textarea value={draftText} onChange={e => setDraftText(e.target.value)} rows={4} autoFocus
@@ -411,11 +514,6 @@ function InvoiceModal({ card, onClose }) {
 }
 
 // ── Direct Finance card detail ─────────────────────────────────────────────────
-const DF_NEXT_STAGE = {
-  df_new_request: 'df_approval',
-  df_approval:    'df_disburse',
-  df_disburse:    'df_payment_plan',
-}
 const DF_ACCEPT_LABEL = {
   df_approval: 'Confirm Approval →',
   df_disburse: 'Confirm Disbursement →',
@@ -726,7 +824,7 @@ function DFCardDetailPage({ card, onClose, onCardUpdate, onPrev, onNext, current
           {activeTab === 'documents' && <div className="p-6"><DocumentsTab documents={localCard.documents} /></div>}
         </div>
         </div>
-        <ChatterPanel correspondence={localCard.correspondence} onSend={handleSend} />
+        <ChatterPanel correspondence={localCard.correspondence} onSend={handleSend} card={localCard} />
       </div>
 
       {/* ── Action bar ── */}
@@ -778,15 +876,6 @@ function DFCardDetailPage({ card, onClose, onCardUpdate, onPrev, onNext, current
 
 // ── Invoice Finance card detail ────────────────────────────────────────────────
 // ── Invoice Finance card detail ────────────────────────────────────────────────
-const IF_NEXT_STAGE = {
-  if_new_invoice:     'if_buyer_approval',
-  if_buyer_approval:  'if_payment_plan',
-  if_payment_plan:    'if_advance_payment',
-  if_advance_payment: 'if_ship_notice',
-  if_ship_notice:     'if_delivery_notice',
-  if_delivery_notice: 'if_disbursement',
-  if_disbursement:    'if_active',
-}
 const IF_ACCEPT_LABEL = {
   if_disbursement: 'Confirm Disbursement →',
 }
@@ -1519,7 +1608,7 @@ function IFCardDetailPage({ card, onClose, onCardUpdate, onPrev, onNext, current
           {activeTab === 'documents' && <div className="p-6"><DocumentsTab documents={localCard.documents} /></div>}
         </div>
         </div>
-        <ChatterPanel correspondence={localCard.correspondence} onSend={handleSend} />
+        <ChatterPanel correspondence={localCard.correspondence} onSend={handleSend} card={localCard} />
       </div>
 
       {/* ── Action bar — full width, above nothing, below both panels ── */}
@@ -1723,13 +1812,12 @@ function KanbanBoard({ stages, filteredCards, onCardClick, showAboveLimit }) {
 
 // ── Main export ───────────────────────────────────────────────────────────────
 export default function FinanceRequestsPipeline({ onBreadcrumb }) {
-  const { state } = useApp()
+  const { state, dispatch } = useApp()
   const adminRole = state.currentUser?.adminRole
 
   const [activeSubView, setActiveSubView] = useState('invoice_finance')
 
   // Direct Financing state
-  const [frCards, setFrCards]               = useState(DIRECT_FINANCE_CARDS)
   const [selectedFrCard, setSelectedFrCard] = useState(null)
   const [frSearch, setFrSearch]             = useState('')
   const [frAssignee, setFrAssignee]         = useState('')
@@ -1739,12 +1827,24 @@ export default function FinanceRequestsPipeline({ onBreadcrumb }) {
   const [frFilters, setFrFilters]           = useState(false)
 
   // Invoice Finance state
-  const [ifCards, setIfCards]               = useState(INVOICE_FINANCE_CARDS)
   const [selectedIfCard, setSelectedIfCard] = useState(null)
   const [ifSearch, setIfSearch]             = useState('')
   const [ifAssignee, setIfAssignee]         = useState('')
   const [ifDaysMin, setIfDaysMin]           = useState('')
   const [ifFilters, setIfFilters]           = useState(false)
+
+  // Cards come from the shared store; runtime seller-submitted requests are
+  // merged in (deduped) so the admin sees them without a separate copy.
+  const ifCards = useMemo(() => {
+    const ids = new Set(state.invoiceFinance.map(c => c.id))
+    const extra = state.pendingRequests.filter(r => r.type === 'invoice_finance' && !ids.has(r.id))
+    return [...extra, ...state.invoiceFinance]
+  }, [state.invoiceFinance, state.pendingRequests])
+  const frCards = useMemo(() => {
+    const ids = new Set(state.directFinance.map(c => c.id))
+    const extra = state.pendingRequests.filter(r => r.type === 'direct_finance' && !ids.has(r.id))
+    return [...extra, ...state.directFinance]
+  }, [state.directFinance, state.pendingRequests])
 
   const selectedCard = selectedFrCard || selectedIfCard
   useEffect(() => {
@@ -1752,14 +1852,22 @@ export default function FinanceRequestsPipeline({ onBreadcrumb }) {
     return () => onBreadcrumb?.(null)
   }, [selectedFrCard, selectedIfCard])
 
-  // Direct handlers
-  const handleFrUpdate = (updated) => { setFrCards(prev => prev.map(c => c.id === updated.id ? updated : c)); setSelectedFrCard(updated) }
+  // Direct handlers — persist to the shared store.
+  const handleFrUpdate = (updated) => {
+    const collection = state.directFinance.some(c => c.id === updated.id) ? 'directFinance' : 'pendingRequests'
+    dispatch({ type: 'UPDATE_CARD', payload: { collection, id: updated.id, patch: updated } })
+    setSelectedFrCard(updated)
+  }
   const frIdx      = selectedFrCard ? frCards.findIndex(c => c.id === selectedFrCard.id) : -1
   const frLaneCards = selectedFrCard ? frCards.filter(c => c.stage === selectedFrCard.stage) : []
   const frLaneIdx   = selectedFrCard ? frLaneCards.findIndex(c => c.id === selectedFrCard.id) : 0
 
-  // IF handlers
-  const handleIfUpdate = (updated) => { setIfCards(prev => prev.map(c => c.id === updated.id ? updated : c)); setSelectedIfCard(updated) }
+  // IF handlers — persist to the shared store.
+  const handleIfUpdate = (updated) => {
+    const collection = state.invoiceFinance.some(c => c.id === updated.id) ? 'invoiceFinance' : 'pendingRequests'
+    dispatch({ type: 'UPDATE_CARD', payload: { collection, id: updated.id, patch: updated } })
+    setSelectedIfCard(updated)
+  }
   const ifIdx      = selectedIfCard ? ifCards.findIndex(c => c.id === selectedIfCard.id) : -1
   const ifLaneCards = selectedIfCard ? ifCards.filter(c => c.stage === selectedIfCard.stage) : []
   const ifLaneIdx   = selectedIfCard ? ifLaneCards.findIndex(c => c.id === selectedIfCard.id) : 0

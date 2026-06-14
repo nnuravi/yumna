@@ -279,7 +279,6 @@ function RiskTab({ req }) {
       </div>
       <div className="grid grid-cols-2 gap-3">
         {[
-          { label: 'SIMAH Score', value: '742', status: 'good' },
           { label: 'Credit Utilisation', value: '37%', status: 'good' },
           { label: 'Fraud Signals', value: 'None', status: 'good' },
           { label: 'AML Status', value: 'Clear', status: 'good' },

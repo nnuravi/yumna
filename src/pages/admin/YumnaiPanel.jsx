@@ -9,10 +9,15 @@ const SECTION_CONTEXT = {
   buyers:     { title: 'Buyer Health', subtitle: 'Yumnai\'s read on selected buyer' },
   tasks:      { title: 'Task Advisor', subtitle: 'Your workload and SLA watch' },
   templates:  { title: 'Legal Match', subtitle: 'Templates matched to pending applications' },
+  'Overview':         { title: 'Activity Pulse',     subtitle: 'Your finance overview' },
+  'Finance Requests': { title: 'Finance Assistant',  subtitle: 'Track & act on requests' },
+  'Sellers':          { title: 'Seller Insights',    subtitle: 'Your connected sellers' },
+  'Buyers':           { title: 'Buyer Insights',     subtitle: 'Your connected buyers' },
+  'All Transactions': { title: 'Transaction Review', subtitle: 'Full activity history' },
 }
 
 const CANNED_RESPONSES = {
-  'What needs my attention today?': (role, name) => `Hi ${name}! Based on current activity: ${role === 'risk' ? '1 card has missing bank statements (FR-0041). I\'ve drafted a request — just review and send.' : role === 'collections' ? 'FR-0043 is 20 days overdue. A formal notice is ready for your review.' : role === 'verifier' ? 'FR-0047 needs KYC documents. FR-0044 has a pending Nafath check.' : role === 'account_mgr' ? 'FR-0042 is approved — invoice needs to be generated today.' : role === 'credit' ? 'FR-0045 is waiting for SIMAH pull. Documents are all verified.' : 'Great question — here\'s your dashboard summary.'}`,
+  'What needs my attention today?': (role, name) => `Hi ${name}! Based on current activity: ${role === 'risk' ? '1 card has missing bank statements (FR-0041). I\'ve drafted a request — just review and send.' : role === 'collections' ? 'FR-0043 is 20 days overdue. A formal notice is ready for your review.' : role === 'verifier' ? 'FR-0047 needs KYC documents. FR-0044 has a pending Nafath check.' : role === 'account_mgr' ? 'FR-0042 is approved — invoice needs to be generated today.' : role === 'credit' ? 'FR-0045 is waiting for a credit check. Documents are all verified.' : 'Great question — here\'s your dashboard summary.'}`,
   'Show me overdue items': () => 'FR-0043 (Mohammed Al-Rashid · SAR 240,000) is 20 days overdue. FR-0037 (Al-Noor Trading) is also flagged in collections.',
   'Any compliance issues?': () => 'No compliance flags today. One template is due for annual review (HealthCare Framework v1.0). Two buyer accounts have incomplete KYC documentation.',
   'Summarise pipeline health': () => '9 active stages. 3 cards require immediate action: FR-0041 (missing docs), FR-0043 (overdue payment), FR-0047 (new — incomplete KYC). 2 cards are on track. Disbursement for FR-0042 is pending invoice generation.',
@@ -47,7 +52,7 @@ const SEED_HISTORY = [
 
 export default function YumnaiPanel({ activeSection, width = 400, onWidth, onClose, hidden = false }) {
   const { state } = useApp()
-  const adminRole = state.currentUser?.adminRole
+  const adminRole = state.currentUser?.adminRole || state.currentUser?.role
   const userName = state.currentUser?.name
   const persona = YUMNAI_PERSONAS[adminRole] || YUMNAI_PERSONAS.super
 

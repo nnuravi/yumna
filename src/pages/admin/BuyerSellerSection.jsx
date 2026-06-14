@@ -37,7 +37,6 @@ export default function BuyerSellerSection() {
                 <thead>
                   <tr className="border-b border-black/5 bg-card">
                     <th className="text-start px-4 py-3 eyebrow">Buyer</th>
-                    {!selectedBuyer && <th className="text-start px-4 py-3 eyebrow">SIMAH</th>}
                     <th className="text-start px-4 py-3 eyebrow">Credit Limit</th>
                     {!selectedBuyer && <th className="text-start px-4 py-3 eyebrow">Utilisation</th>}
                     <th className="text-start px-4 py-3 eyebrow">Risk</th>
@@ -63,7 +62,6 @@ export default function BuyerSellerSection() {
                             </div>
                           </div>
                         </td>
-                        {!selectedBuyer && <td className="px-4 py-3.5 text-[13px] font-semibold tabular">{b.simahScore}</td>}
                         <td className="px-4 py-3.5 text-[13px] tabular">{formatSAR(b.creditLimit)}</td>
                         {!selectedBuyer && (
                           <td className="px-4 py-3.5">
@@ -104,7 +102,7 @@ export default function BuyerSellerSection() {
                   <Avatar initials={selectedBuyer.initials} bg={selectedBuyer.risk === 'High' ? '#e5484d' : 'var(--color-primary)'} size="sm" />
                   <div className="flex-1">
                     <div className="font-semibold text-ink">{selectedBuyer.name}</div>
-                    <div className="text-[11px] text-muted">{selectedBuyer.city} · SIMAH {selectedBuyer.simahScore}</div>
+                    <div className="text-[11px] text-muted">{selectedBuyer.city}</div>
                   </div>
                   <Badge stage={selectedBuyer.risk} />
                 </div>
@@ -126,7 +124,6 @@ export default function BuyerSellerSection() {
                         {[
                           { label: 'Credit Limit', value: formatSAR(selectedBuyer.creditLimit) },
                           { label: 'Credit Used', value: formatSAR(selectedBuyer.creditUsed) },
-                          { label: 'SIMAH Score', value: selectedBuyer.simahScore },
                           { label: 'Risk Category', value: selectedBuyer.risk },
                         ].map(kpi => (
                           <div key={kpi.label} className="p-3 rounded-xl bg-card border border-black/5">

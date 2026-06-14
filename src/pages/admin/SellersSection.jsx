@@ -227,7 +227,7 @@ export default function SellersSection({ onBreadcrumb }) {
                             <Avatar initials={buyer.initials} bg={buyer.risk === 'High' ? '#737373' : 'var(--color-primary)'} size="sm" />
                             <div className="flex-1">
                               <div className="text-[13px] font-semibold text-slate-800">{buyer.name}</div>
-                              <div className="text-[11px] text-slate-400">SIMAH {buyer.simahScore} · {buyer.city}</div>
+                              <div className="text-[11px] text-slate-400">{buyer.city}</div>
                             </div>
                             <div className="text-right">
                               <div className="text-[11px] font-semibold mb-1" style={{ color: pct > 80 ? '#737373' : '#262626' }}>{pct}% used</div>
