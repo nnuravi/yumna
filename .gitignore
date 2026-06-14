@@ -4,3 +4,7 @@ dist/
 *.local
 .env
 .env.*
+
+# Local scratch files (not part of the app)
+/CREDIT MODEL.xlsm
+test image .png
